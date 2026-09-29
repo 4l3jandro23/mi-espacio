@@ -53,7 +53,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;max-width:100%}
 nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:center;padding:6px 6px calc(6px + env(safe-area-inset-bottom));z-index:5}
 nav .in{display:flex;gap:2px;max-width:760px;width:100%;justify-content:space-around}
-nav button{border:0;background:none;padding:6px 4px;border-radius:10px;font-size:11px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:1px;flex:1;min-width:0}
+nav button{border:0;background:none;padding:6px 2px;border-radius:10px;font-size:10.5px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:1px;flex:1;min-width:0}
 nav button span{font-size:19px;line-height:1.2}
 nav button.on{color:var(--accent);background:var(--accent-soft)}
 .bar{height:10px;border-radius:99px;background:var(--line);overflow:hidden}
@@ -76,6 +76,11 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 .kpi{background:var(--bg);border-radius:12px;padding:10px 12px}
 .kpi b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
 .hidden{display:none!important}
+.grid2 > *{min-width:0}
+input[type=range],input[type=checkbox]{accent-color:var(--accent)}
+.grid2 input{width:100%}
+nav button{white-space:nowrap;overflow:hidden}
+nav .in{gap:0}
 .why summary{font-size:12px;padding:4px 0}
 .why div{background:var(--bg);border-radius:10px;padding:10px 12px;margin-top:4px}
 details summary{cursor:pointer;color:var(--muted);font-size:13px;padding:6px 0}
@@ -84,7 +89,7 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px;padding:6px 0}
 .seg button{white-space:nowrap;padding:6px 12px;font-size:13px;border-radius:99px}
 .seg button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 label.f{display:block;margin:10px 0}
-label.f span{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+label.f > span{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
 body.locked .wrap,body.locked nav{visibility:hidden}
 .lock{position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px}
 .lockbox{text-align:center;max-width:300px;width:100%}
@@ -136,6 +141,7 @@ body.locked .wrap,body.locked nav{visibility:hidden}
 
 <nav id="nav" class="hidden"><div class="in">
   <button data-tab="hoy" class="on"><span>☀️</span>Hoy</button>
+  <button data-tab="prev"><span>🔮</span>Previsión</button>
   <button data-tab="mes"><span>📅</span>Meses</button>
   <button data-tab="hormiga"><span>🐜</span>Hormiga</button>
   <button data-tab="fijos"><span>🔁</span>Fijos</button>
@@ -273,7 +279,7 @@ function render() {
     AN.pendingFixed = AN.pendingFixed.filter(r => !fixedEnd(r) || fixedEnd(r) >= todayISO());
     if (cycleIdx == null || cycleIdx >= AN.cycles.length) cycleIdx = AN.cycles.length - 1;
   }
-  app.innerHTML = needsData ? '' : ({ hoy: vHoy, mes: vMes, hormiga: vHormiga, fijos: vFijos, movs: vMovs, deudas: vDeudas, ajustes: vAjustes, guia: vGuia })[tab]();
+  app.innerHTML = needsData ? '' : ({ hoy: vHoy, mes: vMes, hormiga: vHormiga, fijos: vFijos, movs: vMovs, deudas: vDeudas, ajustes: vAjustes, guia: vGuia, prev: vPrev })[tab]();
   bind();
 }
 const goTab = t => { tab = t; render(); scrollTo(0, 0); };
@@ -324,14 +330,15 @@ function weekCard(A) {
     <div class="small muted" style="margin-top:6px">${spent <= cap ? `Te quedan ${eur0(cap - spent)} hasta el domingo.` : `Te has pasado ${eur0(spent - cap)}. No pasa nada: el número de “Hoy” ya se ha ajustado para el resto del mes.`}</div></div>`;
 }
 function projectionCard(A) {
-  const rate = recentRate();
+  const rate = spendModel().mean;
   const end = A.free - rate * A.days;
   const msg = end >= 0
-    ? `Si sigues como las últimas 4 semanas (≈ ${eur0(rate)}/día), llegarías al cobro con unos <b>${eur0(end)}</b> de margen. 👌`
-    : `Si sigues como las últimas 4 semanas (≈ ${eur0(rate)}/día), te faltarían unos <b>${eur0(-end)}</b> antes de cobrar, y la cuenta se quedaría en negativo. Para llegar justo, baja a unos <b>${eur(Math.max(0, A.perDay))}/día</b> (${eur0(Math.max(0, rate - A.perDay))} menos al día). Es lo que ha pasado otros meses, pero este puede ser distinto: el número de arriba ya lo tiene en cuenta.`;
+    ? `Si sigues como las últimas 8 semanas (≈ ${eur0(rate)}/día), llegarías al cobro con unos <b>${eur0(end)}</b> de margen. 👌`
+    : `Si sigues como las últimas 8 semanas (≈ ${eur0(rate)}/día), te faltarían unos <b>${eur0(-end)}</b> antes de cobrar, y la cuenta se quedaría en negativo. Para llegar justo, baja a unos <b>${eur(Math.max(0, A.perDay))}/día</b> (${eur0(Math.max(0, rate - A.perDay))} menos al día). Es lo que ha pasado otros meses, pero este puede ser distinto: el número de arriba ya lo tiene en cuenta.`;
   const up = upcoming(A, 14);
   return `<div class="card"><h2>🔮 Cómo llegarás a fin de mes</h2><div class="note ${end < 0 ? 'warm' : ''}"><span>${msg}</span></div>
     ${up.length ? `<h3>Próximos 14 días</h3>${up.map(u => `<div class="row"><span class="l">${u.icon} ${fdateL(u.date)} · ${esc(u.what)}</span><span class="num ${u.amount > 0 ? 'pos' : ''}">${u.amount == null ? '' : eur(u.amount)}</span></div>`).join('')}` : ''}
+    <button data-go="prev" class="primary" style="margin-top:8px">🔮 Ver la previsión completa</button>
     ${why('La previsión coge lo que te queda libre (arriba) y le resta lo que sueles gastar al día. Solo es una estimación: si cambias el ritmo, cambia.')}</div>`;
 }
 
@@ -412,6 +419,176 @@ function minBalCard() {
   return `<div class="card"><h2>Saldo más bajo antes de cobrar</h2>
     <div class="chart" style="height:130px;align-items:center">${m.map(x => `<div class="c" style="justify-content:center"><small class="num">${eur0(x.min)}</small><div style="height:90px;width:100%;max-width:38px;display:flex;flex-direction:column;justify-content:center"><div style="height:45px;display:flex;align-items:flex-end">${x.min > 0 ? `<i style="display:block;width:100%;height:${x.min / max * 45}px;background:var(--accent);border-radius:4px 4px 0 0"></i>` : ''}</div><div style="height:1px;background:var(--muted)"></div><div style="height:45px">${x.min < 0 ? `<i style="display:block;width:100%;height:${-x.min / max * 45}px;background:var(--warm);border-radius:0 0 4px 4px"></i>` : ''}</div></div><small>${esc(x.label.slice(0, 3))}</small></div>`).join('')}</div>
     <div class="small muted" style="margin-top:6px">Lo más bajo que llegó la cuenta de BBVA cada mes. Por debajo de la línea es descubierto. El objetivo es que todas las barras queden por encima.</div></div>`;
+}
+
+// ---- PREVISIÓN ----
+let simDaily = null, simHorizon = 'mes', simExtra = '', simExtraDate = '', simFamily = false;
+const WD = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábados', 'domingos'];
+const dow = iso => (new Date(iso + 'T12:00:00').getDay() + 6) % 7;
+const monthLen = iso => { const d = new Date(iso + 'T12:00:00'); return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); };
+
+// Cómo gastas cada día de la semana (últimas 8 semanas con datos).
+function spendModel() {
+  const last = lastDataDate(), from = addD(last, -55);
+  const wd = [0, 0, 0, 0, 0, 0, 0], cats = {};
+  let total = 0, horm = 0;
+  for (const t of AN.list) if (isVar(t) && t.date >= from && t.date <= last) {
+    const v = -t.amt; wd[dow(t.date)] += v; total += v; if (t.hormiga) horm += v; cats[t.cat] = (cats[t.cat] || 0) + v;
+  }
+  const rate = wd.map(x => x / 8), mean = total / 56 || 1;
+  return { rate, mean, weights: rate.map(r => r / mean), hormShare: total ? horm / total : 0, cats: Object.entries(cats).map(([k, v]) => [k, v / total]).sort((a, b) => b[1] - a[1]) };
+}
+function typicalPay() {
+  const p = AN.list.filter(t => t.cat === 'Nómina').map(t => t.amt).sort((a, b) => a - b);
+  return p.length ? p[Math.floor(p.length / 2)] : 0;
+}
+function payDays(n) {
+  const out = [AN.current.end];
+  const adj = iso => { const w = dow(iso); return w === 5 ? addD(iso, -1) : w === 6 ? addD(iso, -2) : iso; };
+  let d = new Date(AN.current.end + 'T12:00:00');
+  for (let i = 1; i < n; i++) {
+    const m = new Date(d.getFullYear(), d.getMonth() + i, 1);
+    const day = Math.min(AN.payDay || 28, new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate());
+    out.push(adj(new Date(Date.UTC(m.getFullYear(), m.getMonth(), day)).toISOString().slice(0, 10)));
+  }
+  return out;
+}
+// Simula día a día. daily = gasto medio diario del día a día (se reparte según cómo gastas cada día de la semana).
+function simulate(daily, horizonEnd, opt) {
+  opt = opt || {};
+  const model = spendModel();
+  const start = Object.values(S.balances).reduce((a, b) => a + (b ? b.amount : 0), 0);
+  const d0 = Object.values(S.balances).map(b => b.date).sort().pop() || lastDataDate();
+  const pays = payDays(5), pay = typicalPay();
+  const famAvg = opt.family ? Math.max(0, AN.full.reduce((a, c) => a + (c.byCat['Ayuda familiar'] || 0), 0) / (AN.full.length || 1)) : 0;
+  const pendingLeft = AN.pendingFixed.map(r => Object.assign({}, r));
+  const active = (r, iso) => !fixedEnd(r) || fixedEnd(r) >= iso;
+  let bal = start, min = { v: start, d: d0 }, firstNeg = null;
+  const points = [{ d: d0, v: start }], events = [];
+  for (let d = addD(d0, 1); d <= horizonEnd; d = addD(d, 1)) {
+    const dom = +d.slice(8), ml = monthLen(d);
+    const hit = r => Math.min(r.day, ml) === dom;
+    if (d < AN.current.end) {
+      const lastDay = d === addD(AN.current.end, -1); // lo pendiente que no cae antes del cobro se cobra igualmente este mes
+      const firstDay = d === addD(d0, 1);
+      const payDom = AN.payDay || 28;
+      // Lo que se paga justo al cobrar (alquiler…) sale en cuanto empieza el mes, no a final.
+      for (let i = pendingLeft.length - 1; i >= 0; i--) { const r = pendingLeft[i]; if ((hit(r) || lastDay || (firstDay && r.day >= payDom - 3 && Fin.daysBetween(new Date(AN.current.start), new Date(d)) <= 6)) && active(r, d)) { bal -= r.amount; events.push({ d, what: r.shop, amt: -r.amount, bal }); pendingLeft.splice(i, 1); } }
+    } else {
+      for (const r of AN.recurringAll) if (hit(r) && active(r, d)) { bal -= r.amount; events.push({ d, what: r.shop, amt: -r.amount, bal }); }
+    }
+    if (pays.includes(d) && pay) { bal += pay; events.push({ d, what: 'Nómina', amt: pay, bal, pay: true }); if (famAvg) { bal += famAvg; } }
+    for (const x of debtList()) if (x.dir === 'debo' && debtLeft(x) > 0 && x.due === d) { bal -= debtLeft(x); events.push({ d, what: 'Pagar a ' + x.who, amt: -debtLeft(x), bal }); }
+    if (opt.extra && opt.extraDate === d) { bal -= opt.extra; events.push({ d, what: 'Gasto extra', amt: -opt.extra, bal }); }
+    bal -= daily * model.weights[dow(d)];
+    points.push({ d, v: bal });
+    if (bal < min.v) min = { v: bal, d };
+    if (bal < 0 && !firstNeg) firstNeg = d;
+  }
+  // pendientes cuyo día ya pasó en el mes (se cobran igualmente antes del cobro)
+  return { points, events, end: bal, min, firstNeg, start, d0, model, pays };
+}
+function cycleOutlook(daily) {
+  const pays = payDays(4), pay = typicalPay(), model = spendModel(), out = [];
+  for (let i = 0; i < 3; i++) {
+    const s = pays[i], e = pays[i + 1], days = Fin.daysBetween(new Date(s), new Date(e));
+    const charge = r => { const sd = new Date(s + 'T12:00:00'); const m = r.day >= sd.getDate() ? sd.getMonth() : sd.getMonth() + 1; const c = new Date(Date.UTC(sd.getFullYear(), m, Math.min(r.day, 28))); return c.toISOString().slice(0, 10); };
+    const fixed = AN.recurringAll.filter(r => !fixedEnd(r) || fixedEnd(r) >= charge(r)).reduce((a, r) => a + r.amount, 0);
+    const label = new Date(addD(s, 6) + 'T12:00:00').toLocaleDateString('es-ES', { month: 'long' });
+    const sustain = (pay - fixed - (+S.settings.reserve || 0)) / days;
+    out.push({ label, s, e, days, pay, fixed, variable: daily * days, net: pay - fixed - daily * days, sustain });
+  }
+  return out;
+}
+function chartSVG(series, pays) {
+  const all = series.flatMap(s => s.points.map(p => p.v));
+  let lo = Math.min(0, ...all), hi = Math.max(0, ...all);
+  const pad = (hi - lo) * 0.08 || 50; lo -= pad; hi += pad;
+  const n = series[0].points.length - 1 || 1, W = Math.max(280, Math.min(700, (document.getElementById('app').clientWidth || 600) - 34)), H = W < 450 ? 180 : 220;
+  const x = i => i / n * W, y = v => H - (v - lo) / (hi - lo) * H;
+  const path = pts => pts.map((p, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.v).toFixed(1)).join(' ');
+  const ticks = [lo + pad, 0, hi - pad].filter((v, i, a) => a.indexOf(v) === i);
+  const dates = series[0].points.map(p => p.d);
+  const payMarks = pays.map(pd => dates.indexOf(pd)).filter(i => i > 0);
+  const months = dates.map((d, i) => ({ d, i })).filter(o => o.d.slice(8) === '01' && x(o.i) > 44 && x(o.i) < W - 44);
+  return `<svg viewBox="-4 -8 ${W + 8} ${H + 30}" style="width:100%;height:auto;display:block" role="img" aria-label="Previsión de saldo día a día">
+    <rect x="0" y="${y(0)}" width="${W}" height="${Math.max(0, H - y(0))}" style="fill:var(--warm-soft)" opacity=".7"/>
+    <line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" style="stroke:var(--muted)" stroke-width="1"/>
+    <text x="4" y="${y(0) - 4}" font-size="11" style="fill:var(--muted)">0 €</text>
+    ${payMarks.map(i => `<line x1="${x(i)}" x2="${x(i)}" y1="0" y2="${H}" style="stroke:var(--accent)" stroke-dasharray="3 4" opacity=".6"/><text x="${x(i) + 3}" y="10" font-size="11" style="fill:var(--accent)">💼 cobro</text>`).join('')}
+    ${months.map(o => `<text x="${x(o.i)}" y="${H + 16}" font-size="11" style="fill:var(--muted)" text-anchor="middle">${new Date(o.d + 'T12:00:00').toLocaleDateString('es-ES', { month: 'short' })}</text>`).join('')}
+    <text x="0" y="${H + 16}" font-size="11" style="fill:var(--muted)">${fdate(dates[0])}</text>
+    <text x="${W}" y="${H + 16}" font-size="11" style="fill:var(--muted)" text-anchor="end">${fdate(dates[dates.length - 1])}</text>
+    ${series.map(s => `<path d="${path(s.points)}" fill="none" style="stroke:${s.color}" stroke-width="${s.w || 2.5}" ${s.dash ? 'stroke-dasharray="6 5"' : ''} stroke-linejoin="round" stroke-linecap="round"/>`).join('')}
+    ${series.filter(s => s.markMin).map(s => { const i = s.points.findIndex(p => p.d === s.min.d); return i < 0 ? '' : `<circle cx="${x(i)}" cy="${y(s.min.v)}" r="5" style="fill:${s.color}"/><text x="${Math.min(W - 80, Math.max(0, x(i) - 40))}" y="${Math.min(H - 4, y(s.min.v) + 18)}" font-size="12" font-weight="700" style="fill:${s.color}">${eur0(s.min.v)}</text>`; }).join('')}
+  </svg>`;
+}
+function vPrev() {
+  const o = opts();
+  const owe = debtList().filter(d => d.dir === 'debo' && debtLeft(d) > 0 && (!d.due || d.due <= AN.current.end));
+  const A = Fin.dailyAllowance(AN, S.balances, Object.assign({}, o, { extra: owe.reduce((a, d) => a + debtLeft(d), 0) }));
+  const model = spendModel();
+  const usual = Math.round(model.mean);
+  const plan = Math.max(0, Math.floor(A.perDay));
+  if (simDaily == null) simDaily = usual;
+  const horizonEnd = simHorizon === 'mes' ? addD(AN.current.end, -1) : addD(payDays(4)[3], -1);
+  const extra = +String(simExtra).replace(',', '.') || 0;
+  const eo = { extra, extraDate: simExtraDate || addD(todayISO(), 3), family: simFamily };
+  const base = simulate(usual, horizonEnd, { family: simFamily });
+  const sim = simulate(simDaily, horizonEnd, eo);
+  const endLabel = simHorizon === 'mes' ? `el día antes de cobrar (${fdateL(horizonEnd)})` : `el ${fdateL(horizonEnd)}`;
+  const same = simDaily === usual && !extra;
+  const head = sim.firstNeg
+    ? `<div class="note warm"><b class="t">Con ${eur0(simDaily)}/día, el ${fdateL(sim.firstNeg)} la cuenta bajaría de 0</b>Llegaría hasta <b>${eur0(sim.min.v)}</b> (${fdateL(sim.min.d)}). Para no bajar de 0 este mes, el día a día tendría que quedarse en unos <b>${eur(Math.max(0, A.perDay))}/día</b>.</div>`
+    : `<div class="note"><b class="t">Con ${eur0(simDaily)}/día no bajas de 0 👏</b>Lo más bajo sería <b>${eur0(sim.min.v)}</b> (${fdateL(sim.min.d)}) y ${endLabel} tendrías unos <b>${eur0(sim.end)}</b>.</div>`;
+  const wdMax = model.rate.indexOf(Math.max(...model.rate)), wdMin = model.rate.indexOf(Math.min(...model.rate));
+  const out = cycleOutlook(simDaily);
+  const monthVar = simDaily * Math.max(1, Fin.daysBetween(new Date(sim.d0), new Date(AN.current.end)));
+  const keyEvents = sim.events.filter(e => e.d <= horizonEnd).slice(0, simHorizon === 'mes' ? 20 : 40);
+  return `<div class="card"><h2>🔮 Cómo será tu mes</h2>
+    <div class="seg"><button data-hz="mes" class="${simHorizon === 'mes' ? 'on' : ''}">Hasta el cobro</button><button data-hz="3m" class="${simHorizon === '3m' ? 'on' : ''}">Próximos 3 meses</button></div>
+    ${head}
+    ${chartSVG([
+      ...(same ? [] : [{ points: base.points, color: 'var(--muted)', w: 2, dash: true }]),
+      { points: sim.points, color: sim.firstNeg ? 'var(--warm)' : 'var(--accent)', min: sim.min, markMin: true }
+    ], sim.pays)}
+    <div class="legend">${same ? '' : `<span><i style="background:var(--muted)"></i>Como hasta ahora (${eur0(usual)}/día)</span>`}<span><i style="background:${sim.firstNeg ? 'var(--warm)' : 'var(--accent)'}"></i>Tu simulación (${eur0(simDaily)}/día)</span><span><i style="background:var(--warm-soft)"></i>Zona de negativo</span></div>
+    <div class="small muted" style="margin-top:6px">Empieza en tu saldo del ${fdate(sim.d0)} (${eur0(sim.start)}) y va restando tus fijos en su día y el día a día. ${simFamily ? 'Incluye la ayuda familiar media.' : 'No cuenta la ayuda familiar.'}</div>
+  </div>
+  <div class="card"><h2>🎚️ ¿Qué pasaría si…?</h2>
+    <label class="f"><span>Gasto del día a día: <b id="simv">${eur0(simDaily)}</b> al día (≈ <span id="simw">${eur0(simDaily * 7)}</span>/semana)</span><input type="range" id="simd" min="5" max="${Math.max(60, usual + 10)}" step="1" value="${simDaily}" style="width:100%"></label>
+    <div class="toolbar"><button data-sim="${usual}">Como hasta ahora · ${eur0(usual)}</button><button data-sim="${plan}">El plan · ${eur0(plan)}</button><button data-sim="${Math.round(usual - model.mean * model.hormShare * 0.3)}">Hormiga −30 % · ${eur0(usual - model.mean * model.hormShare * 0.3)}</button><button data-sim="${Math.round(usual - model.mean * model.hormShare * 0.5)}">Hormiga −50 % · ${eur0(usual - model.mean * model.hormShare * 0.5)}</button></div>
+    <div class="grid2" style="margin-top:6px"><label class="f"><span>Un gasto extra puntual (€)</span><input id="simx" type="text" inputmode="decimal" value="${esc(simExtra)}" placeholder="ej. 60"></label>
+    <label class="f"><span>¿Qué día?</span><input id="simxd" type="date" value="${esc(eo.extraDate)}"></label></div>
+    <label class="small"><input type="checkbox" id="simfam" ${simFamily ? 'checked' : ''}> Contar la ayuda familiar media</label>
+  </div>
+  ${simHorizon === '3m' ? `<div class="card"><h2>📆 Los próximos 3 meses</h2>
+    ${out.map(m => `<div style="padding:8px 0;border-bottom:1px solid var(--line)"><div style="display:flex;justify-content:space-between"><b>${esc(m.label.charAt(0).toUpperCase() + m.label.slice(1))}</b><b class="num ${m.net >= 0 ? 'pos' : ''}">${m.net >= 0 ? '+' : ''}${eur0(m.net)}</b></div>
+      <div class="small muted">Nómina ${eur0(m.pay)} − fijos ${eur0(m.fixed)} − día a día ${eur0(m.variable)}. Para cuadrar: hasta <b>${eur0(Math.max(0, m.sustain))}/día</b>.</div></div>`).join('')}
+    <div class="small muted" style="margin-top:6px">${out.some(m => m.fixed < out[0].fixed) ? 'Cuando acaba Mapfre, los fijos bajan y cuadrar el mes es más fácil. ' : ''}El primer mes es el difícil porque empiezas con menos margen. Si no bajas de 0 en este, los siguientes son bastante más holgados.</div></div>` : ''}
+  <div class="card"><h2>🗓️ Días clave</h2>
+    ${keyEvents.map(e => `<div class="row"><span class="l">${e.pay ? '💼' : e.what.startsWith('Pagar') ? '🤝' : e.what === 'Gasto extra' ? '🛍️' : '📌'} ${fdateL(e.d)} · ${esc(e.what)}<br><span class="small muted">saldo previsto después: ${eur0(e.bal)}</span></span><span class="num ${e.amt > 0 ? 'pos' : ''}">${eur(e.amt)}</span></div>`).join('') || '<p class="small muted">No hay cargos previstos en este periodo.</p>'}
+  </div>
+  <div class="card"><h2>🧾 En qué se te irá este mes</h2><div class="small muted" style="margin-bottom:6px">Reparto de unos ${eur0(monthVar)} de día a día hasta el cobro, según cómo gastas normalmente.</div>
+    ${model.cats.slice(0, 7).map(([k, sh]) => `<div class="row"><span>${(Fin.CATS[k] || Fin.CATS.Otros).icon} ${esc(k)}</span><span class="num">${eur0(monthVar * sh)}</span></div>`).join('')}
+  </div>
+  <div class="card"><h2>📅 Tus días caros</h2>
+    <div class="chart" style="height:110px">${model.rate.map((r, i) => `<div class="c"><small class="num">${eur0(r)}</small><div class="stk"><i style="height:${r / Math.max(...model.rate) * 70}px;background:${i === wdMax ? 'var(--warm)' : 'var(--blue)'}"></i></div><small>${'LMXJVSD'[i]}</small></div>`).join('')}</div>
+    <div class="small" style="margin-top:8px">Los <b>${WD[wdMax]}</b> gastas de media ${eur0(model.rate[wdMax])}, y los ${WD[wdMin]} ${eur0(model.rate[wdMin])}. Si planificas el ${WD[wdMax]} (qué vas a hacer y cuánto quieres gastar), es donde más se nota.</div>
+    ${why('La previsión reparte tu gasto diario según lo que sueles gastar cada día de la semana en las últimas 8 semanas. Los fijos se restan el día del mes en que suelen cobrarse, y la nómina entra el día de cobro (si cae en finde, el viernes antes). Es una estimación: sirve para ver hacia dónde vas, no es exacta al euro.')}
+  </div>`;
+}
+function bindPrev() {
+  const $ = id => document.getElementById(id);
+  document.querySelectorAll('[data-hz]').forEach(el => el.onclick = () => { simHorizon = el.dataset.hz; render(); });
+  document.querySelectorAll('[data-sim]').forEach(el => el.onclick = () => { simDaily = Math.max(5, +el.dataset.sim); render(); });
+  if ($('simd')) {
+    $('simd').oninput = e => { $('simv').textContent = eur0(+e.target.value); $('simw').textContent = eur0(+e.target.value * 7); };
+    $('simd').onchange = e => { simDaily = +e.target.value; const y = scrollY; render(); scrollTo(0, y); };
+    $('simx').onchange = e => { simExtra = e.target.value; const y = scrollY; render(); scrollTo(0, y); };
+    $('simxd').onchange = e => { simExtraDate = e.target.value; const y = scrollY; render(); scrollTo(0, y); };
+    $('simfam').onchange = e => { simFamily = e.target.checked; const y = scrollY; render(); scrollTo(0, y); };
+  }
 }
 
 // ---- HOY ----
@@ -746,7 +923,7 @@ function bind() {
   document.querySelectorAll('[data-set]').forEach(el => el.onchange = () => { set('settings', el.dataset.set, el.value); save(); render(); });
   document.querySelectorAll('[data-bal]').forEach(el => el.onchange = () => { set('balances', el.dataset.bal, { amount: +el.value, date: todayISO() }); save(); render(); });
   document.querySelectorAll('[data-end]').forEach(el => el.onchange = () => { set('fixedEnds', el.dataset.end, el.value || null); save(); render(); });
-  bindDeudas(); bindSync();
+  bindDeudas(); bindSync(); bindPrev();
   if ($('exp')) $('exp').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = 'midinero-copia-' + new Date().toISOString().slice(0, 10) + '.json'; a.click(); };
   if ($('impb')) { $('impb').onclick = () => $('bfile').click(); $('bfile').onchange = async e => { try { const d = JSON.parse(await e.target.files[0].text()); if (!d.txs) throw 0; const now = Date.now(); d._t = d._t || {}; for (const M of Sync.MAPS) for (const k of Object.keys(d[M] || {})) d._t[M + '/' + k] = now; S = normalize(d); save(); render(); toast('Copia restaurada.'); } catch (_) { toast('Ese archivo no es una copia válida.'); } }; }
   if ($('wipe')) $('wipe').onclick = () => { if (confirm('¿Borrar todos los datos de ESTE dispositivo? Si tienes la sincronización activa, se desconecta; tus otros dispositivos no se tocan.')) { setSyncCfg({}); S = fresh(); save(); render(); } };
