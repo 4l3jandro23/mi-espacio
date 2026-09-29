@@ -238,3 +238,26 @@ body.hubmode header, body.hubmode nav#nav { display: none !important; }
 @media (prefers-reduced-motion: reduce) { .tile, .sheet, .sheet-veil, .sun-glow { animation: none !important; } .tile { transition: none; } }
 .ev-row input[type=checkbox] { width: 20px; height: 20px; padding: 0; flex: none; accent-color: var(--ink); }
 .ev-row .ev-sw { flex: 0 0 auto; min-width: 0; }
+
+/* ---------- Apple ---------- */
+.cal-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 4px 4px 2px; }
+.ap-bar { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.ap-bar .pill-btn { padding: 5px 12px; font-size: 13px; }
+.di-src { font-weight: 500; color: var(--muted); }
+.di-apple .di-bar { background: repeating-linear-gradient(180deg, var(--c) 0 4px, transparent 4px 7px); }
+.hub-hrow { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.hub-hrow .hub-h { margin: 0 0 0 2px; }
+.hub-hrow .pill-btn { padding: 6px 12px; font-size: 13px; }
+.ap-status { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; padding: 18px; border-radius: 22px; background: var(--card); border: 1px solid var(--line); }
+.ap-status.ok { border-color: var(--accent); background: color-mix(in srgb, var(--accent-soft) 60%, var(--card)); }
+.ap-status b { font-family: var(--display); font-size: 20px; }
+.ap-card { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 6px 18px; }
+.ap-card p { margin: 10px 0; }
+.ap-step { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.ap-step:last-child { border-bottom: 0; }
+.ap-n { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: var(--bg); display: grid; place-items: center; font-family: var(--display); font-weight: 700; }
+.ap-body { color: var(--muted); margin-top: 3px; line-height: 1.55; }
+.ap-body b, .ap-body i { color: var(--ink); }
+.ap-code { display: inline-block; margin: 6px 0; padding: 6px 10px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); color: var(--ink); font-size: 13px; word-break: break-all; user-select: all; }
+.ev-apple { margin-top: 12px; color: var(--ink); font-weight: 600; font-size: 14px; display: flex; gap: 8px; align-items: center; }
+.ev-apple input { width: 20px; height: 20px; accent-color: var(--ink); }

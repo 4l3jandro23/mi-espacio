@@ -227,6 +227,7 @@ body.locked .wrap,body.locked nav{visibility:hidden}
 <script src="sync.js"></script>
 <script src="cuaderno.js"></script>
 <script src="hub.js"></script>
+<script src="apple.js"></script>
 <script src="vendor/qrcode.min.js"></script>
 <script src="vendor/jsQR.min.js"></script>
 <script>
@@ -236,7 +237,7 @@ const DEFAULTS = { myName: '', family: '', savings: '', hormigaMax: 10, reserve:
 let S = load();
 let tab = 'inicio', cycleIdx = null, filterCat = '', search = '';
 
-function fresh() { return { txs: {}, balances: {}, settings: Object.assign({}, DEFAULTS), overrides: {}, fixedEnds: {}, debts: {}, pages: {}, events: {}, _t: {} }; }
+function fresh() { return { txs: {}, balances: {}, settings: Object.assign({}, DEFAULTS), overrides: {}, fixedEnds: {}, debts: {}, pages: {}, events: {}, apple: {}, _t: {} }; }
 function normalize(s) {
   const f = fresh();
   for (const k of Object.keys(f)) if (k !== 'settings') s[k] = s[k] || f[k];
@@ -340,7 +341,7 @@ const debtLeft = d => Fin.round2(d.amount - (d.payments || []).reduce((a, p) => 
 function render() {
   const txs = Object.values(S.txs);
   const has = txs.length > 0;
-  const HUB = ['inicio', 'cal', 'cuaderno'];
+  const HUB = ['inicio', 'cal', 'cuaderno', 'apple'];
   const needsData = !has && !['deudas', 'ajustes', ...HUB].includes(tab);
   const hubMode = HUB.includes(tab);
   document.body.classList.toggle('nbmode', tab === 'cuaderno');
@@ -360,7 +361,7 @@ function render() {
     AN.pendingFixed = AN.pendingFixed.filter(r => !fixedEnd(r) || fixedEnd(r) >= todayISO());
     if (cycleIdx == null || cycleIdx >= AN.cycles.length) cycleIdx = AN.cycles.length - 1;
   }
-  app.innerHTML = needsData ? '' : ({ hoy: vHoy, mes: vMes, hormiga: vHormiga, fijos: vFijos, movs: vMovs, deudas: vDeudas, ajustes: vAjustes, guia: vGuia, prev: vPrev, cuaderno: vCuaderno, inicio: vInicio, cal: vCal })[tab]();
+  app.innerHTML = needsData ? '' : ({ hoy: vHoy, mes: vMes, hormiga: vHormiga, fijos: vFijos, movs: vMovs, deudas: vDeudas, ajustes: vAjustes, guia: vGuia, prev: vPrev, cuaderno: vCuaderno, inicio: vInicio, cal: vCal, apple: vApple })[tab]();
   bind();
 }
 const goTab = t => { tab = t; render(); scrollTo(0, 0); };
@@ -972,6 +973,7 @@ function bindSync() {
 function vAjustes() {
   const s = S.settings;
   let h = `<div class="card"><h2>☁️ Sincronizar PC y móvil</h2><div id="syncinfo">${syncInfo()}</div></div>
+  <div class="card"><h2>🍎 Calendario y Recordatorios de Apple</h2><p class="small">${appleOn() ? 'Conectado · ' + agoTxt(appleData().at) : 'Tráete tus eventos y recordatorios de Apple, y manda allí lo que crees aquí.'}</p><button data-go="apple">${appleOn() ? 'Ver' : 'Conectar'}</button></div>
   <div class="card"><h2>🧭 Plan y consejos</h2><button data-go="guia">Abrir</button></div>
   <div class="card"><h2>🔒 PIN</h2><p class="small">La app pide el PIN al abrirla y cuando vuelves a ella tras más de un minuto fuera.</p><button id="pinchange">Cambiar PIN</button></div>`;
   h += `<div class="card"><h2>Datos</h2>`;
@@ -1006,7 +1008,7 @@ function bind() {
   document.querySelectorAll('[data-set]').forEach(el => el.onchange = () => { set('settings', el.dataset.set, el.value); save(); render(); });
   document.querySelectorAll('[data-bal]').forEach(el => el.onchange = () => { set('balances', el.dataset.bal, { amount: +el.value, date: todayISO() }); save(); render(); });
   document.querySelectorAll('[data-end]').forEach(el => el.onchange = () => { set('fixedEnds', el.dataset.end, el.value || null); save(); render(); });
-  bindDeudas(); bindSync(); bindPrev(); bindCuaderno(); bindHub();
+  bindDeudas(); bindSync(); bindPrev(); bindCuaderno(); bindHub(); if (tab === 'apple' || tab === 'cal' || tab === 'inicio') bindApple();
   if ($('exp')) $('exp').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = 'midinero-copia-' + new Date().toISOString().slice(0, 10) + '.json'; a.click(); };
   if ($('impb')) { $('impb').onclick = () => $('bfile').click(); $('bfile').onchange = async e => { try { const d = JSON.parse(await e.target.files[0].text()); if (!d.txs) throw 0; const now = Date.now(); d._t = d._t || {}; for (const M of Sync.MAPS) for (const k of Object.keys(d[M] || {})) d._t[M + '/' + k] = now; S = normalize(d); save(); render(); toast('Copia restaurada.'); } catch (_) { toast('Ese archivo no es una copia válida.'); } }; }
   if ($('wipe')) $('wipe').onclick = () => { if (confirm('¿Borrar todos los datos de ESTE dispositivo? Si tienes la sincronización activa, se desconecta; tus otros dispositivos no se tocan.')) { setSyncCfg({}); S = fresh(); save(); render(); } };

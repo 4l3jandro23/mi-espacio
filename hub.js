@@ -63,6 +63,7 @@ function itemsOn(iso, withPay) {
     }
     for (const d of debtList()) if (d.due === iso && debtLeft(d) > 0) out.push({ kind: 'pay', title: (d.dir === 'debo' ? 'Pagar a ' : 'Te paga ') + d.who + ' · ' + eur(debtLeft(d)), icon: '🤝', color: '#F2A93B', sort: -1.2 });
   }
+  if (typeof appleItemsOn === 'function') out.push(...appleItemsOn(iso));
   const di = nbPages().find(p => p.kind === 'diario:' + iso);
   if (di) out.push({ kind: 'diary', id: di.id, title: 'Entrada del diario', icon: '📔', color: '#9B7BEA', sort: 2000 });
   return out.sort((a, b) => a.sort - b.sort);
@@ -99,7 +100,7 @@ function vInicio() {
   const hi = h < 6 ? 'Buenas noches' : h < 13 ? 'Buenos días' : h < 21 ? 'Buenas tardes' : 'Buenas noches';
   const m = moneyCtx();
   const tasksPage = nbPages().find(p => /^tareas$/i.test((p.title || '').trim()));
-  const pendingTasks = nbPages().reduce((a, p) => a + (p.blocks || []).filter(b => b.t === 'todo' && !b.checked && (b.html || '').replace(/<[^>]+>/g, '').trim()).length, 0);
+  const pendingTasks = appleData().reminders.filter(r => !r.date || r.date <= hAdd(today, 7)).length + nbPages().reduce((a, p) => a + (p.blocks || []).filter(b => b.t === 'todo' && !b.checked && (b.html || '').replace(/<[^>]+>/g, '').trim()).length, 0);
   const diaryToday = nbPages().find(p => p.kind === 'diario:' + today);
   const week = [...Array(7)].map((_, i) => hAdd(today, i + 1)).map(d => ({ d, items: itemsOn(d).filter(i => i.kind !== 'diary') })).filter(x => x.items.length);
   const recent = nbPages().filter(p => !/^diario:/.test(p.kind || '')).sort((a, b) => b.updated - a.updated).slice(0, 6);
@@ -137,14 +138,25 @@ function vInicio() {
       </div>
     </section>
 
+    ${remsHTML()}
     ${week.length ? `<section class="hub-sec"><h2 class="hub-h">Próximos días</h2><div class="agenda">${week.map(w => `<button class="ag-row" data-calday="${w.d}"><span class="ag-date"><b>${+w.d.slice(8)}</b><small>${new Date(w.d + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short' })}</small></span><span class="ag-items">${w.items.slice(0, 3).map(i => `<span class="ag-it"><i style="background:${i.color}"></i>${i.time ? hm(i.time) + ' · ' : ''}${esc(i.title)}</span>`).join('')}${w.items.length > 3 ? `<span class="muted small">y ${w.items.length - 3} más</span>` : ''}</span></button>`).join('')}</div></section>` : ''}
 
     ${recent.length ? `<section class="hub-sec"><h2 class="hub-h">Páginas recientes</h2><div class="pages-strip">${recent.map(p => `<button class="pg-chip" data-nbopen="${p.id}"><span>${esc(p.icon || '📄')}</span>${esc(nbTitle(p))}</button>`).join('')}</div></section>` : ''}
   </div>`;
 }
 function dayItemHTML(i) {
-  const attr = i.kind === 'ev' ? `data-editev="${i.id}"` : i.kind === 'diary' ? `data-nbopen="${i.id}"` : 'data-hubgo="fijos"';
-  return `<button class="di di-${i.kind}" ${attr} style="--c:${i.color}"><span class="di-time">${i.time ? hm(i.time) : i.icon || 'Todo el día'}</span><span class="di-bar"></span><span class="di-t">${esc(i.title)}${i.end ? `<small> hasta las ${hm(i.end)}</small>` : ''}</span></button>`;
+  const attr = i.kind === 'ev' ? `data-editev="${i.id}"` : i.kind === 'diary' ? `data-nbopen="${i.id}"` : i.kind === 'apple' || i.kind === 'rem' ? `data-appleitem="${i.kind}:${i.id}"` : 'data-hubgo="fijos"';
+  const time = i.kind === 'rem' ? (i.time ? '☐ ' + hm(i.time) : '☐') : i.time ? hm(i.time) : i.icon || 'Todo el día';
+  const src = i.kind === 'apple' || i.kind === 'rem' ? `<small class="di-src"> · ${esc(i.cal || 'Apple')}</small>` : '';
+  return `<button class="di di-${i.kind}" ${attr} style="--c:${i.color}"><span class="di-time">${time}</span><span class="di-bar"></span><span class="di-t">${esc(i.title)}${i.end ? `<small> hasta las ${hm(i.end)}</small>` : ''}${src}</span></button>`;
+}
+
+function remsHTML() {
+  const today = todayISO();
+  const rs = appleData().reminders.filter(r => !r.date || r.date <= hAdd(today, 2)).sort((a, b) => (a.date || '9') < (b.date || '9') ? -1 : 1).slice(0, 8);
+  if (!rs.length && !(IS_APPLE && appleOn())) return '';
+  return `<section class="hub-sec"><div class="hub-hrow"><h2 class="hub-h">Recordatorios</h2>${IS_APPLE ? '<button class="pill-btn" data-applerem>＋ Recordatorio</button>' : ''}</div>
+    <div class="day-list">${rs.length ? rs.map(r => `<button class="di di-rem" data-appleitem="rem:${r.id}" style="--c:${appleColor(r.list)}"><span class="di-time">☐</span><span class="di-bar"></span><span class="di-t">${esc(r.title)}<small class="di-src"> · ${r.date ? (r.date < today ? 'vencía ' : '') + fmtDay(r.date, { weekday: 'short', day: 'numeric', month: 'short' }) + (r.time ? ' ' + r.time : '') : esc(r.list || 'sin fecha')}</small></span></button>`).join('') : '<div class="empty-day">Nada pendiente en Recordatorios.</div>'}</div></section>`;
 }
 
 // ---------- CALENDARIO ----------
@@ -162,7 +174,7 @@ function vCal() {
     const all = itemsOn(iso).filter(i => i.kind !== 'diary');
     // En la celda, los pagos se resumen en una línea discreta para no tapar tus planes.
     const charges = all.filter(i => i.kind === 'pay' && i.amt), cobro = all.some(i => i.kind === 'pay' && i.icon === '💼');
-    const its = all.filter(i => i.kind === 'ev').concat(cobro ? [{ kind: 'pay', title: '💼 Cobro', color: '#2FA98C' }] : [], charges.length ? [{ kind: 'pay', title: '↻ −' + eur0(charges.reduce((a, i) => a + i.amt, 0)), color: '#8A90AE' }] : []);
+    const its = all.filter(i => i.kind === 'ev' || i.kind === 'apple' || i.kind === 'rem').concat(cobro ? [{ kind: 'pay', title: '💼 Cobro', color: '#2FA98C' }] : [], charges.length ? [{ kind: 'pay', title: '↻ −' + eur0(charges.reduce((a, i) => a + i.amt, 0)), color: '#8A90AE' }] : []);
     const out = iso.slice(0, 7) !== calMonth.slice(0, 7);
     const cls = ['cc', out && 'out', iso === today && 'today', iso === calSel && 'sel', hDow(iso) >= 5 && 'we'].filter(Boolean).join(' ');
     return `<button class="${cls}" data-calday="${iso}" aria-label="${fmtDay(iso)}${its.length ? ', ' + its.length + ' cosas' : ''}"><span class="cc-n">${+iso.slice(8)}</span><span class="cc-evs">${its.slice(0, 3).map(i => `<i class="${i.kind}" style="--c:${i.color}">${esc(i.title)}</i>`).join('')}${its.length > 3 ? `<em>+${its.length - 3}</em>` : ''}</span></button>`;
@@ -186,7 +198,8 @@ function vCal() {
       <div class="cal-grid-wrap">
         <div class="cal-wd">${['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(d => `<span>${d}</span>`).join('')}</div>
         <div class="cal-grid">${cells.map(cellHTML).join('')}</div>
-        <label class="cal-toggle"><input type="checkbox" id="calpay" ${calShowPay ? 'checked' : ''}> Ver pagos y cobros de Mi Dinero</label>
+        <div class="cal-foot"><label class="cal-toggle"><input type="checkbox" id="calpay" ${calShowPay ? 'checked' : ''}> Ver pagos y cobros de Mi Dinero</label>
+          <div class="ap-bar"><span>🍎 ${appleOn() ? 'Apple · ' + agoTxt(appleData().at) : 'Calendario de Apple'}</span>${IS_APPLE && appleOn() ? '<button class="pill-btn" data-applefetch>Traer</button>' : ''}<button class="pill-btn" data-hubgo="apple">${appleOn() ? 'Ajustes' : 'Conectar'}</button></div></div>
       </div>
       <aside class="cal-day">
         <div class="cd-head"><div class="cd-num">${+calSel.slice(8)}</div><div><div class="cd-wd">${fmtDay(calSel, { weekday: 'long' })}</div><div class="muted">${new Date(calSel + 'T12:00:00').toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}${calSel === today ? ' · hoy' : ''}</div></div></div>
@@ -212,6 +225,7 @@ function openEvSheet(id, dateISO) {
     <div class="ev-row"><label>Repetir<select id="evr">${Object.entries(REPEATS).map(([k, n]) => `<option value="${k}" ${e.repeat === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
       <label class="${e.cat === 'cumple' ? '' : 'hidden'}" id="evyl">Año de nacimiento<input type="number" id="evy" min="1900" max="2100" value="${esc(e.year || '')}" placeholder="opcional"></label></div>
     <label class="ev-notes">Notas<textarea id="evn" rows="3" placeholder="Dirección, qué llevar…">${esc(e.notes || '')}</textarea></label>
+    ${IS_APPLE && !ev ? `<label class="ev-sw ev-apple"><input type="checkbox" id="evap" ${appleOn() ? 'checked' : ''}> Añadir también a mi Calendario de Apple</label>` : ''}
     <div class="sheet-acts">${ev ? '<button id="evdel" class="danger">Borrar</button>' : '<span></span>'}<span style="flex:1"></span><button id="evx">Cancelar</button><button id="evok" class="primary">${ev ? 'Guardar' : 'Añadir'}</button></div>
   </div>`;
   document.body.appendChild(box);
@@ -229,6 +243,7 @@ function openEvSheet(id, dateISO) {
     const out = { id: id || 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title, date: $('evd').value || todayISO(), allDay: all, start: all ? '' : $('evs').value, end2: all ? '' : $('eve').value, cat, repeat: $('evr').value, notes: $('evn').value.trim(), year: cat === 'cumple' && +$('evy').value ? +$('evy').value : undefined };
     if (!out.allDay && !out.start) out.allDay = true;
     set('events', out.id, out); save(); close(); calSel = out.date; calMonth = out.date.slice(0, 8) + '01'; render();
+    if ($('evap') && $('evap').checked) setTimeout(() => sendEventToApple(out), 150);
   };
   box.addEventListener('keydown', k => { if (k.key === 'Escape') close(); if (k.key === 'Enter' && k.target.id === 'evt') $('evok').click(); });
   setTimeout(() => $('evt').focus(), 30);
