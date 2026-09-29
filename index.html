@@ -83,6 +83,22 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px;padding:6px 0}
 .seg button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 label.f{display:block;margin:10px 0}
 label.f span{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+body.locked .wrap,body.locked nav{visibility:hidden}
+.lock{position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px}
+.lockbox{text-align:center;max-width:300px;width:100%}
+.dots{display:flex;gap:16px;justify-content:center;margin:18px 0 8px}
+.dots i{width:14px;height:14px;border-radius:50%;border:2px solid var(--muted)}
+.dots i.on{background:var(--ink);border-color:var(--ink)}
+.dots.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+@media (prefers-reduced-motion:reduce){.dots.shake{animation:none}}
+.pad{display:grid;grid-template-columns:repeat(3,72px);gap:14px;justify-content:center;margin:18px 0}
+.pad button{width:72px;height:72px;border-radius:50%;font-size:26px;font-weight:500;padding:0}
+.pad button:active{background:var(--accent-soft)}
+.scan{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px;color:#fff}
+.scan video{width:min(90vw,420px);border-radius:16px;background:#000}
+.qr{background:#fff;padding:12px;border-radius:12px;display:inline-block;line-height:0}
+.qr img,.qr svg{width:220px;height:220px;image-rendering:pixelated}
 @media (max-width:420px){.big{font-size:38px}.grid2{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -99,11 +115,22 @@ label.f span{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
     <p>Arrastra tus extractos o pulsa el botón:</p>
     <div class="drop" id="drop">📄 <b>BBVA</b>: Excel de movimientos (.xlsx)<br>📄 <b>Revolut</b>: extracto en CSV<br><span class="muted small">Puedes cargarlos todos a la vez. Si repites un archivo, no se duplica nada.</span></div>
     <p class="small muted">🔒 Todo se procesa en este dispositivo. Si activas la sincronización, lo que sube a tu GitHub va cifrado con tu contraseña.</p>
-    <p><button id="goSync">¿Ya la usas en otro dispositivo? Conectar</button></p>
+    <p><button id="goSync">📱 ¿Ya la usas en otro dispositivo? Vincular</button></p>
+    <p class="small muted">Lo que cargues se queda guardado; la próxima vez solo tienes que añadir los extractos nuevos.</p>
   </div>
 
   <main id="app"></main>
 </div>
+
+<div id="lock" class="lock hidden" role="dialog" aria-label="Bloqueo con PIN"><div class="lockbox">
+  <div style="font-size:34px">🔒</div><h2 id="locktitle" style="margin-top:6px">Introduce tu PIN</h2>
+  <div class="dots" id="dots"><i></i><i></i><i></i><i></i></div>
+  <div class="small muted" id="lockmsg" style="min-height:20px"></div>
+  <div class="pad" id="pad"><button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><span></span><button data-k="0">0</button><button data-k="del" aria-label="Borrar">⌫</button></div>
+  <button id="lockforgot" class="small" style="border:0;background:none;color:var(--muted)">He olvidado el PIN</button>
+  <button id="lockcancel" class="small hidden" style="border:0;background:none;color:var(--muted)">Cancelar</button>
+</div></div>
+<div id="scan" class="scan hidden"><video id="scanvideo" playsinline muted></video><div id="scanmsg"></div><button id="scanclose">Cerrar</button></div>
 
 <nav id="nav" class="hidden"><div class="in">
   <button data-tab="hoy" class="on"><span>☀️</span>Hoy</button>
@@ -117,6 +144,8 @@ label.f span{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
 <script src="vendor/xlsx.full.min.js"></script>
 <script src="engine.js"></script>
 <script src="sync.js"></script>
+<script src="vendor/qrcode.min.js"></script>
+<script src="vendor/jsQR.min.js"></script>
 <script>
 'use strict';
 const KEY = 'midinero.v1';
@@ -496,36 +525,56 @@ function bindDeudas() {
 function syncInfo() {
   const c = syncCfg();
   if (!c.token || !c.pass) return `
-    <p class="small">Para tener los mismos datos en el PC y en el móvil. Se guarda una copia <b>cifrada con tu contraseña</b> en un gist secreto de tu GitHub: GitHub solo ve un bloque ilegible.</p>
-    <p class="small"><b>1.</b> <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">Crea un token en GitHub</a>: nombre “Mi Dinero”, caducidad 1 año, y en <i>Account permissions › Gists</i> elige <b>Read and write</b>. Nada más. Copia el token.<br>
-    <b>2.</b> Pégalo aquí y elige una contraseña. <b>Usa la misma en todos tus dispositivos.</b> Si la olvidas no se puede recuperar (pero puedes volver a cargar los extractos).</p>
-    <label class="f"><span>Token de GitHub</span><input id="stoken" type="password" autocomplete="off" placeholder="github_pat_…"></label>
-    <label class="f"><span>Contraseña para cifrar (mínimo 8 caracteres)</span><input id="spass" type="password" autocomplete="new-password"></label>
-    <button id="sconnect" class="primary">Conectar</button>`;
-  return `<p class="small">✅ Conectado. Los cambios se sincronizan solos al hacerlos y al abrir la app.</p>
+    <p class="small">Para ver lo mismo en el PC y en el móvil. Se guarda una copia <b>cifrada</b> en tu GitHub: sin la clave, que solo tienen tus dispositivos, es un bloque ilegible.</p>
+    <h3>¿Ya lo tienes activado en otro dispositivo?</h3>
+    <p class="small">En el otro, entra en ⚙️ › <b>Vincular otro dispositivo</b> y aquí escanea el QR que te sale.</p>
+    <div class="toolbar"><button id="sscan" class="primary">📷 Escanear QR</button></div>
+    <details><summary>No puedo usar la cámara: pegar el código</summary><div class="toolbar" style="margin-top:6px"><input id="scode" placeholder="MD1.…" style="flex:1;min-width:160px"><button id="slink">Vincular</button></div></details>
+    <h3>¿Es el primero?</h3>
+    <p class="small"><b>1.</b> <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">Crea un token en GitHub</a>: nombre “Mi Dinero”, caducidad 1 año y, en <i>Account permissions › Gists</i>, <b>Read and write</b>. Nada más. Pulsa <i>Generate token</i> y cópialo.<br><b>2.</b> Pégalo aquí y pulsa Activar.</p>
+    <div class="toolbar"><input id="stoken" type="password" autocomplete="off" placeholder="github_pat_…" style="flex:1;min-width:160px"><button id="sconnect">Activar</button></div>`;
+  return `<p class="small">✅ Activada. Los cambios se sincronizan solos al hacerlos y al abrir la app.</p>
     <p class="small muted">${esc(syncing ? 'Sincronizando…' : syncMsg || (c.last ? 'Última vez: ' + new Date(c.last).toLocaleString('es-ES') : ''))}</p>
-    <div class="toolbar"><button id="snow">Sincronizar ahora</button><button id="soff">Desconectar este dispositivo</button></div>`;
+    <div class="toolbar"><button id="sqr" class="primary">📱 Vincular otro dispositivo</button><button id="snow">Sincronizar ahora</button><button id="soff">Desconectar</button></div>
+    <div id="sqrbox" class="hidden" style="text-align:center;margin-top:12px">
+      <p class="small">En el otro dispositivo abre Mi Dinero › ⚙️ › <b>Escanear QR</b> y apunta aquí.</p>
+      <div class="qr" id="qrimg"></div>
+      <details style="text-align:left"><summary>O copia el código</summary><div class="toolbar" style="margin-top:6px"><input id="scodeout" readonly style="flex:1;min-width:160px"><button id="scopy">Copiar</button></div></details>
+      <p class="small muted">🔑 Este código da acceso a tus datos: no lo compartas con nadie.</p>
+    </div>`;
 }
 function bindSync() {
   const $ = id => document.getElementById(id);
   if ($('sconnect')) $('sconnect').onclick = async () => {
-    const token = $('stoken').value.trim(), pass = $('spass').value;
+    const token = $('stoken').value.trim();
     if (!/^(github_pat_|ghp_)/.test(token)) { toast('Eso no parece un token de GitHub (empieza por github_pat_).'); return; }
-    if (pass.length < 8) { toast('La contraseña tiene que tener al menos 8 caracteres.'); return; }
-    setSyncCfg({ token, pass });
-    $('sconnect').disabled = true; $('sconnect').textContent = 'Conectando…';
+    setSyncCfg({ token, pass: randomKey() });
+    $('sconnect').disabled = true; $('sconnect').textContent = 'Activando…';
     await doSync();
-    if (syncMsg) { const m = syncMsg; setSyncCfg({}); syncMsg = ''; render(); toast(m.replace('⚠️ ', '')); }
-    else { render(); toast('¡Conectado! Haz lo mismo en tu otro dispositivo, con la misma contraseña.'); }
+    if (syncMsg) {
+      const m = syncMsg; setSyncCfg({}); syncMsg = ''; render();
+      toast(/contraseña/.test(m) ? 'Ya tienes la sincronización activada en otro dispositivo. En ese, ve a ⚙️ › Vincular otro dispositivo y escanea aquí el QR.' : m.replace('⚠️ ', ''));
+    } else { render(); toast('¡Activada! Ahora, en tu otro dispositivo: Mi Dinero › ⚙️ › Escanear QR, y aquí pulsa “Vincular otro dispositivo”.'); }
   };
+  if ($('sscan')) $('sscan').onclick = openScanner;
+  if ($('slink')) $('slink').onclick = () => linkWith($('scode').value);
+  if ($('sqr')) $('sqr').onclick = () => {
+    const box = $('sqrbox'); box.classList.toggle('hidden'); if (box.classList.contains('hidden')) return;
+    const q = qrcode(0, 'M'); q.addData(linkURL()); q.make();
+    $('qrimg').innerHTML = q.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+    $('scodeout').value = linkCode();
+  };
+  if ($('scopy')) $('scopy').onclick = async () => { try { await navigator.clipboard.writeText($('scodeout').value); toast('Copiado.'); } catch (e) { $('scodeout').select(); } };
   if ($('snow')) $('snow').onclick = () => doSync();
   if ($('soff')) $('soff').onclick = () => { if (confirm('¿Desconectar la sincronización en este dispositivo? Los datos se quedan aquí; solo deja de sincronizar.')) { setSyncCfg({}); render(); } };
+  if ($('pinchange')) $('pinchange').onclick = () => lock('change');
 }
 
 // ---- AJUSTES ----
 function vAjustes() {
   const s = S.settings;
-  let h = `<div class="card"><h2>☁️ Sincronizar PC y móvil</h2><div id="syncinfo">${syncInfo()}</div></div>`;
+  let h = `<div class="card"><h2>☁️ Sincronizar PC y móvil</h2><div id="syncinfo">${syncInfo()}</div></div>
+  <div class="card"><h2>🔒 PIN</h2><p class="small">La app pide el PIN al abrirla y cuando vuelves a ella tras más de un minuto fuera.</p><button id="pinchange">Cambiar PIN</button></div>`;
   h += `<div class="card"><h2>Datos</h2>`;
   if (AN) { const first = AN.list[0].date, last = lastDataDate(); h += `<p class="small">Tienes <b>${AN.list.length}</b> movimientos, del ${fdate(first)}/${first.slice(0, 4)} al ${fdate(last)}/${last.slice(0, 4)}.</p>`; }
   else h += `<p class="small">Aún no hay movimientos. Pulsa <b>Cargar extractos</b> o conecta la sincronización.</p>`;
@@ -563,8 +612,103 @@ function bind() {
   if ($('wipe')) $('wipe').onclick = () => { if (confirm('¿Borrar todos los datos de ESTE dispositivo? Si tienes la sincronización activa, se desconecta; tus otros dispositivos no se tocan.')) { setSyncCfg({}); S = fresh(); save(); render(); } };
 }
 
+// ---------- PIN ----------
+const pinHash = async pin => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('midinero-pin|' + pin)))].map(b => b.toString(16).padStart(2, '0')).join('');
+let lockMode = null, pinBuf = '', pinFirst = '', hiddenAt = 0;
+function lock(mode) {
+  lockMode = mode; pinBuf = ''; pinFirst = '';
+  document.body.classList.add('locked');
+  document.getElementById('lock').classList.remove('hidden');
+  paintLock('');
+}
+function unlock() { lockMode = null; document.body.classList.remove('locked'); document.getElementById('lock').classList.add('hidden'); }
+function paintLock(msg) {
+  document.getElementById('locktitle').textContent = lockMode === 'enter' ? 'Introduce tu PIN' : pinFirst ? 'Repite el PIN' : 'Crea un PIN de 4 cifras';
+  document.getElementById('lockmsg').textContent = msg || (lockMode === 'create' && !pinFirst ? 'Lo pedirá cada vez que abras la app.' : '');
+  document.querySelectorAll('#dots i').forEach((d, i) => d.classList.toggle('on', i < pinBuf.length));
+  document.getElementById('lockforgot').classList.toggle('hidden', lockMode !== 'enter');
+  document.getElementById('lockcancel').classList.toggle('hidden', lockMode !== 'change');
+}
+async function pinKey(k) {
+  if (!lockMode) return;
+  if (k === 'del') pinBuf = pinBuf.slice(0, -1);
+  else if (/^\d$/.test(k) && pinBuf.length < 4) pinBuf += k;
+  paintLock('');
+  if (pinBuf.length < 4) return;
+  const entered = pinBuf;
+  if (lockMode === 'enter') {
+    if (await pinHash(entered) === S.settings.pinHash) unlock();
+    else { pinBuf = ''; paintLock('PIN incorrecto. Prueba otra vez.'); const b = document.getElementById('dots'); b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); }
+  } else if (!pinFirst) { pinFirst = entered; pinBuf = ''; paintLock(''); }
+  else if (pinFirst === entered) { set('settings', 'pinHash', await pinHash(entered)); save(); unlock(); render(); }
+  else { pinFirst = ''; pinBuf = ''; paintLock('No coinciden. Vuelve a empezar.'); }
+}
+document.querySelectorAll('#pad [data-k]').forEach(b => b.onclick = () => pinKey(b.dataset.k));
+document.addEventListener('keydown', e => { if (!lockMode) return; if (/^\d$/.test(e.key)) pinKey(e.key); else if (e.key === 'Backspace') pinKey('del'); });
+document.getElementById('lockforgot').onclick = () => {
+  if (confirm('Si has olvidado el PIN, hay que borrar los datos de ESTE dispositivo y crear uno nuevo. Si tienes la sincronización, luego los recuperas vinculándolo otra vez con el QR. ¿Seguir?')) {
+    setSyncCfg({}); S = fresh(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} render(); lock('create');
+  }
+};
+document.getElementById('lockcancel').onclick = () => unlock();
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') hiddenAt = Date.now();
+  else if (S.settings.pinHash && !lockMode && hiddenAt && Date.now() - hiddenAt > 60e3) lock('enter');
+});
+
+// ---------- vincular dispositivos ----------
+const b64url = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64url = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
+function linkCode() { const c = syncCfg(); return 'MD1.' + b64url(JSON.stringify({ t: c.token, k: c.pass, g: c.gistId || '' })); }
+function linkURL() { return location.origin + location.pathname + '#vincular=' + linkCode(); }
+function parseLink(text) {
+  const m = String(text || '').trim().match(/MD1\.([A-Za-z0-9_-]+)/);
+  if (!m) return null;
+  try { const o = JSON.parse(unb64url(m[1])); return o.t && o.k ? o : null; } catch (e) { return null; }
+}
+async function linkWith(text) {
+  const o = parseLink(text);
+  if (!o) { toast('Ese código no es válido. Cópialo entero desde el otro dispositivo (⚙️ › Vincular otro dispositivo).'); return false; }
+  setSyncCfg({ token: o.t, pass: o.k, gistId: o.g || undefined });
+  await doSync();
+  if (syncMsg) { const m = syncMsg; setSyncCfg({}); syncMsg = ''; render(); toast(m.replace('⚠️ ', '')); return false; }
+  render(); toast('¡Vinculado! Ya tienes aquí los mismos datos que en el otro dispositivo.');
+  return true;
+}
+function randomKey() { return b64url(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))); }
+
+let scanStream = null;
+async function openScanner() {
+  const box = document.getElementById('scan'), video = document.getElementById('scanvideo'), msg = document.getElementById('scanmsg');
+  box.classList.remove('hidden'); msg.textContent = 'Apunta al código QR del otro dispositivo…';
+  try { scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false }); }
+  catch (e) { msg.textContent = 'No puedo usar la cámara. Da permiso a la cámara o pega el código a mano.'; return; }
+  video.srcObject = scanStream; await video.play().catch(() => {});
+  const cv = document.createElement('canvas'), ctx = cv.getContext('2d', { willReadFrequently: true });
+  const tick = async () => {
+    if (!scanStream) return;
+    if (video.readyState >= 2) {
+      const w = Math.min(640, video.videoWidth), h = Math.round(video.videoHeight * w / video.videoWidth);
+      cv.width = w; cv.height = h; ctx.drawImage(video, 0, 0, w, h);
+      const code = jsQR(ctx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: 'dontInvert' });
+      if (code && parseLink(code.data)) { closeScanner(); await linkWith(code.data); return; }
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+function closeScanner() { if (scanStream) scanStream.getTracks().forEach(t => t.stop()); scanStream = null; document.getElementById('scan').classList.add('hidden'); }
+document.getElementById('scanclose').onclick = closeScanner;
+
 render();
-if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
+if (S.settings.pinHash) lock('enter'); else lock('create');
+if (/^#vincular=/.test(location.hash)) { const code = location.hash; history.replaceState(null, '', location.pathname); linkWith(code); }
+else doSync();
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  const hadCtrl = !!navigator.serviceWorker.controller; let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadCtrl && !reloaded && !lockMode) { reloaded = true; location.reload(); } });
+  navigator.serviceWorker.register('sw.js').then(r => r.update()).catch(() => {});
+}
 try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
 </script>
 </body>
