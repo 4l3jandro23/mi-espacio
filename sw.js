@@ -1,6 +1,6 @@
 // Guarda la app para que funcione sin conexión. Nunca ve tus movimientos: solo cachea estos archivos.
-const CACHE_VERSION = 'midinero-v1';
-const FILES = ['./', 'index.html', 'engine.js', 'vendor/xlsx.full.min.js', 'manifest.json', 'icons/icon-192.png', 'icons/icon-180.png'];
+const CACHE_VERSION = 'midinero-v2';
+const FILES = ['./', 'index.html', 'engine.js', 'sync.js', 'vendor/xlsx.full.min.js', 'manifest.json', 'icons/icon-192.png', 'icons/icon-180.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE_VERSION).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE_VERSION).map(k => caches.delete(k))))); self.clients.claim(); });
 self.addEventListener('fetch', e => {

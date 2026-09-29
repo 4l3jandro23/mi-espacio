@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<!-- Seguridad: la página no puede conectarse a ningún servidor. Tus datos no salen de este navegador. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file: 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<!-- Seguridad: la página solo puede conectarse a GitHub (para sincronizar, y lo que sube va cifrado). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file: 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src https://api.github.com https://gist.githubusercontent.com; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -89,8 +89,8 @@ label.f span{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
 <body>
 <div class="wrap">
   <header>
-    <h1>Mi Dinero</h1>
-    <button id="btnImport" class="primary">Cargar extractos</button>
+    <div><h1>Mi Dinero</h1><div id="syncst" class="small muted"></div></div>
+    <div style="display:flex;gap:8px"><button id="btnImport" class="primary">Cargar extractos</button><button id="btnCfg" aria-label="Ajustes">⚙️</button></div>
     <input id="file" type="file" multiple accept=".xlsx,.xls,.csv" class="hidden">
   </header>
 
@@ -98,7 +98,8 @@ label.f span{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
     <h2>Empieza aquí</h2>
     <p>Arrastra tus extractos o pulsa el botón:</p>
     <div class="drop" id="drop">📄 <b>BBVA</b>: Excel de movimientos (.xlsx)<br>📄 <b>Revolut</b>: extracto en CSV<br><span class="muted small">Puedes cargarlos todos a la vez. Si repites un archivo, no se duplica nada.</span></div>
-    <p class="small muted">🔒 Todo se procesa en este dispositivo. La página tiene bloqueado conectarse a internet, así que tus movimientos no salen de aquí.</p>
+    <p class="small muted">🔒 Todo se procesa en este dispositivo. Si activas la sincronización, lo que sube a tu GitHub va cifrado con tu contraseña.</p>
+    <p><button id="goSync">¿Ya la usas en otro dispositivo? Conectar</button></p>
   </div>
 
   <main id="app"></main>
@@ -109,12 +110,13 @@ label.f span{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
   <button data-tab="mes"><span>📅</span>Meses</button>
   <button data-tab="hormiga"><span>🐜</span>Hormiga</button>
   <button data-tab="fijos"><span>🔁</span>Fijos</button>
-  <button data-tab="movs"><span>🧾</span>Movimientos</button>
-  <button data-tab="ajustes"><span>⚙️</span>Ajustes</button>
+  <button data-tab="movs"><span>🧾</span>Movim.</button>
+  <button data-tab="deudas"><span>🤝</span>Deudas</button>
 </div></nav>
 
 <script src="vendor/xlsx.full.min.js"></script>
 <script src="engine.js"></script>
+<script src="sync.js"></script>
 <script>
 'use strict';
 const KEY = 'midinero.v1';
@@ -122,11 +124,57 @@ const DEFAULTS = { myName: '', family: '', hormigaMax: 10, reserve: 70, payDay: 
 let S = load();
 let tab = 'hoy', cycleIdx = null, filterCat = '', search = '';
 
-function load() {
-  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.txs) { s.settings = Object.assign({}, DEFAULTS, s.settings); s.overrides = s.overrides || {}; s.balances = s.balances || {}; return s; } } catch (e) {}
-  return { txs: {}, balances: {}, settings: Object.assign({}, DEFAULTS), overrides: {} };
+function fresh() { return { txs: {}, balances: {}, settings: Object.assign({}, DEFAULTS), overrides: {}, fixedEnds: {}, debts: {}, _t: {} }; }
+function normalize(s) {
+  const f = fresh();
+  for (const k of Object.keys(f)) if (k !== 'settings') s[k] = s[k] || f[k];
+  s.settings = Object.assign({}, DEFAULTS, s.settings);
+  return s;
 }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { alert('No he podido guardar en este navegador (¿modo privado?). Los datos se perderán al cerrar.'); } }
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if (s && s.txs) {
+      if (!s._t) { // datos de antes de sincronizar: se marcan para que ganen a los valores por defecto de otro dispositivo
+        s._t = {};
+        for (const M of Sync.MAPS) for (const k of Object.keys(s[M] || {})) if (M !== 'settings' || String(s.settings[k]) !== String(DEFAULTS[k])) s._t[M + '/' + k] = 1;
+      }
+      return normalize(s);
+    }
+  } catch (e) {}
+  return fresh();
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { alert('No he podido guardar en este navegador (¿modo privado?). Los datos se perderán al cerrar.'); } scheduleSync(); }
+// Cambia un valor y apunta cuándo, para que la sincronización sepa qué cambio es más nuevo.
+function set(M, k, v) { S[M][k] = v; S._t[M + '/' + k] = Date.now(); }
+
+// ---------- sincronización ----------
+const SKEY = 'midinero.sync'; // token y contraseña: solo en este dispositivo, nunca se suben ni se exportan
+function syncCfg() { try { return JSON.parse(localStorage.getItem(SKEY)) || {}; } catch (e) { return {}; } }
+function setSyncCfg(c) { try { localStorage.setItem(SKEY, JSON.stringify(c)); } catch (e) {} }
+let syncTimer = null, syncing = false, syncAgain = false, syncMsg = '';
+function scheduleSync() { const c = syncCfg(); if (!c.token || !c.pass) return; clearTimeout(syncTimer); syncTimer = setTimeout(doSync, 1500); }
+function paintSync() {
+  const c = syncCfg(), el = document.getElementById('syncst');
+  if (!el) return;
+  if (!c.token || !c.pass) { el.textContent = ''; return; }
+  el.textContent = syncing ? '☁️ Sincronizando…' : syncMsg || (c.last ? '☁️ Sincronizado ' + new Date(c.last).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
+}
+async function doSync() {
+  const c = syncCfg();
+  if (!c.token || !c.pass) return;
+  if (syncing) { syncAgain = true; return; }
+  syncing = true; syncMsg = ''; paintSync();
+  try {
+    const r = await Sync.sync(S, c);
+    c.gistId = r.gistId; c.last = Date.now(); setSyncCfg(c);
+    if (r.changedLocal) { S = normalize(r.state); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} render(); }
+  } catch (e) { syncMsg = '⚠️ ' + e.message; }
+  syncing = false; paintSync();
+  if (tab === 'ajustes') { const el = document.getElementById('syncinfo'); if (el) el.innerHTML = syncInfo(); }
+  if (syncAgain) { syncAgain = false; doSync(); }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') doSync(); });
 
 const eur = (n, d) => (n < 0 ? '−' : '') + Math.abs(n).toLocaleString('es-ES', { minimumFractionDigits: d == null ? 2 : d, maximumFractionDigits: d == null ? 2 : d, useGrouping: 'always' }) + ' €';
 const eur0 = n => eur(n, 0);
@@ -161,7 +209,7 @@ async function importFiles(files) {
       let added = 0;
       for (const t of res.txs) { if (!S.txs[t.id]) added++; S.txs[t.id] = t; }
       const bank = res.txs[0] ? res.txs[0].bank : '?';
-      if (res.balance != null && (!S.balances[bank] || res.balanceDate >= (S.balances[bank].date || ''))) S.balances[bank] = { amount: res.balance, date: res.balanceDate };
+      if (res.balance != null && (!S.balances[bank] || res.balanceDate >= (S.balances[bank].date || ''))) set('balances', bank, { amount: res.balance, date: res.balanceDate });
       msgs.push(`${bank}: ${res.txs.length} movimientos leídos, ${added} nuevos.`);
     } catch (e) { msgs.push(`${f.name}: ${e.message}`); }
   }
@@ -172,20 +220,35 @@ function toast(t) { alert(t); }
 
 // ---------- render ----------
 let AN = null;
+const todayISO = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+const fixedKey = r => r.shop + '|' + Math.round(r.amount);
+const fixedEnd = r => S.fixedEnds[fixedKey(r)] || '';
+const debtList = () => Object.values(S.debts).filter(Boolean);
+const debtLeft = d => Fin.round2(d.amount - (d.payments || []).reduce((a, p) => a + p.amount, 0));
 function render() {
   const txs = Object.values(S.txs);
   const has = txs.length > 0;
-  document.getElementById('empty').classList.toggle('hidden', has);
-  document.getElementById('nav').classList.toggle('hidden', !has);
-  const app = document.getElementById('app');
-  if (!has) { app.innerHTML = ''; return; }
-  AN = Fin.analyze(txs, opts());
-  if (cycleIdx == null || cycleIdx >= AN.cycles.length) cycleIdx = AN.cycles.length - 1;
+  const needsData = !has && !['deudas', 'ajustes'].includes(tab);
+  document.getElementById('empty').classList.toggle('hidden', !needsData);
+  document.getElementById('nav').classList.toggle('hidden', !has && !debtList().length && tab === 'hoy');
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
-  app.innerHTML = ({ hoy: vHoy, mes: vMes, hormiga: vHormiga, fijos: vFijos, movs: vMovs, ajustes: vAjustes })[tab]();
+  const app = document.getElementById('app');
+  paintSync();
+  AN = has ? Fin.analyze(txs, opts()) : null;
+  if (AN) {
+    // Fijos con fecha de fin (p. ej. un seguro que no renuevas): fuera del cálculo cuando acaban.
+    AN.recurringAll = AN.recurring;
+    AN.recurring = AN.recurring.filter(r => !fixedEnd(r) || fixedEnd(r) >= todayISO());
+    AN.pendingFixed = AN.pendingFixed.filter(r => !fixedEnd(r) || fixedEnd(r) >= todayISO());
+    if (cycleIdx == null || cycleIdx >= AN.cycles.length) cycleIdx = AN.cycles.length - 1;
+  }
+  app.innerHTML = needsData ? '' : ({ hoy: vHoy, mes: vMes, hormiga: vHormiga, fijos: vFijos, movs: vMovs, deudas: vDeudas, ajustes: vAjustes })[tab]();
   bind();
 }
-document.querySelectorAll('nav button').forEach(b => b.onclick = () => { tab = b.dataset.tab; render(); scrollTo(0, 0); });
+const goTab = t => { tab = t; render(); scrollTo(0, 0); };
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => goTab(b.dataset.tab));
+document.getElementById('btnCfg').onclick = () => goTab('ajustes');
+document.getElementById('goSync').onclick = () => goTab('ajustes');
 
 function lastDataDate() { return AN.list[AN.list.length - 1].date; }
 function daysOld() { return Fin.daysBetween(new Date(lastDataDate()), new Date(new Date().toISOString().slice(0, 10))); }
@@ -193,7 +256,10 @@ function daysOld() { return Fin.daysBetween(new Date(lastDataDate()), new Date(n
 // ---- HOY ----
 function vHoy() {
   const o = opts();
-  const A = Fin.dailyAllowance(AN, S.balances, o);
+  const owe = debtList().filter(d => d.dir === 'debo' && debtLeft(d) > 0);
+  const oweSoon = owe.filter(d => !d.due || d.due <= AN.current.end);
+  const A = Fin.dailyAllowance(AN, S.balances, Object.assign({}, o, { extra: oweSoon.reduce((a, d) => a + debtLeft(d), 0) }));
+  const owedMe = debtList().filter(d => d.dir === 'meDeben' && debtLeft(d) > 0).reduce((a, d) => a + debtLeft(d), 0);
   const cur = AN.current;
   const spentVar = cur.variable;
   const budget = Math.max(0, cur.income - AN.recurring.reduce((a, r) => a + r.amount, 0) - o.reserve);
@@ -213,8 +279,10 @@ function vHoy() {
     <details style="margin-top:8px"><summary>¿De dónde sale este número?</summary>
       ${Object.entries(S.balances).map(([b, v]) => `<div class="row"><span class="l">Saldo ${esc(b)} <span class="muted small">(${fdate(v.date)})</span></span><span class="num">${eur(v.amount)}</span></div>`).join('')}
       ${AN.pendingFixed.map(r => `<div class="row"><span class="l muted">− ${esc(r.shop)} <span class="small">(sobre el día ${r.day})</span></span><span class="num muted">−${eur(r.amount)}</span></div>`).join('')}
+      ${oweSoon.map(d => `<div class="row"><span class="l muted">− Debes a ${esc(d.who)}${d.concept ? ' (' + esc(d.concept) + ')' : ''}</span><span class="num muted">−${eur(debtLeft(d))}</span></div>`).join('')}
       <div class="row"><span class="l muted">− Apartado para imprevistos y servicios del piso</span><span class="num muted">−${eur(A.reserve)}</span></div>
       <div class="row"><b>Libre hasta cobrar</b><b class="num">${eur(A.free)}</b></div>
+      ${owedMe > 0 ? `<div class="small muted" style="margin-top:6px">Te deben ${eur(owedMe)}. No lo cuento hasta que te lo paguen.</div>` : ''}
     </details>
   </div>`;
   h += `<div class="card"><h2>Este mes (${esc(cur.label)}) · día ${Math.min(cycleDay, cycleDays)} de ${cycleDays}</h2>
@@ -245,7 +313,13 @@ function insights() {
   const net = AN.avg.net;
   const fam = full.reduce((a, c) => a + (c.byCat['Ayuda familiar'] || 0), 0) / n;
   out.push({ tone: net < 0 ? 'warm' : '', t: net < 0 ? `📉 De media gastas ${eur0(-net)} más de lo que entra cada mes` : `📈 De media te sobran ${eur0(net)} al mes`, d: `Entran unos ${eur0(AN.avg.income)} al mes${fam > 1 ? ` (incluye ${eur0(fam)} de ayuda familiar)` : ''} y salen ${eur0(AN.avg.fixed)} en fijos + ${eur0(AN.avg.variable)} en el día a día. Con recortar solo la mitad de lo hormiga (${eur0(AN.avg.hormiga / 2)}) ${net < 0 && AN.avg.hormiga / 2 > -net ? 'ya cuadrarías el mes.' : 'ya se nota mucho.'}` });
-  const subs = AN.subs.filter(s => s.active);
+  for (const r of AN.recurring.filter(r => fixedEnd(r))) {
+    const d = new Date(fixedEnd(r) + 'T12:00:00');
+    const from = new Date(d.getFullYear(), d.getMonth() + 1, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+    out.unshift({ t: `🎉 Desde ${from}, ${eur(r.amount)} más al mes`, d: `${esc(r.shop)} termina el ${d.toLocaleDateString('es-ES')}. Son <b>${eur0(r.amount * 12)} al año</b> que dejas de pagar. Lo ideal es que ese dinero sirva primero para no quedarte en negativo antes de cobrar.` });
+  }
+  const ended = s => AN.recurringAll.some(r => r.shop === s.shop && Math.round(r.amount) === Math.round(s.amount) && fixedEnd(r) && fixedEnd(r) < todayISO());
+  const subs = AN.subs.filter(s => s.active && !ended(s));
   if (subs.length) out.push({ tone: 'blue', t: `🔁 Pagos automáticos: ${eur0(subs.reduce((a, s) => a + s.amount, 0))} al mes`, d: `${subs.map(s => `${esc(s.shop)} ${eur(s.amount)}`).join(' · ')}. Al año son ${eur0(subs.reduce((a, s) => a + s.yearly, 0))}. Mira en <b>Fijos</b> si todos te compensan.` });
   const cats = {}; full.forEach(c => Object.entries(c.byCat).forEach(([k, v]) => { if ((Fin.CATS[k] || {}).type === 'var') cats[k] = (cats[k] || 0) - v / n; }));
   const top = Object.entries(cats).sort((a, b) => b[1] - a[1]).slice(0, 3);
@@ -319,13 +393,16 @@ function subsTips(act) {
   return tips.length ? `<div class="note blue" style="margin-top:10px"><b>Preguntas que vale la pena hacerse</b>${tips.join(' ')}</div>` : '';
 }
 function vFijos() {
-  const rec = AN.recurring, subs = AN.subs;
-  const totalRec = rec.reduce((a, r) => a + r.amount, 0);
+  const rec = AN.recurringAll, subs = AN.subs;
+  const totalRec = AN.recurring.reduce((a, r) => a + r.amount, 0);
+  const later = AN.recurring.filter(r => !fixedEnd(r)).reduce((a, r) => a + r.amount, 0);
   const fees = AN.list.filter(t => t.cat === 'Comisiones del banco');
   const servicios = AN.list.filter(t => /servicios del piso/i.test(t.shop));
   const lastServ = servicios[servicios.length - 1];
   let h = `<div class="card"><h2>Fijos de cada mes: ${eur0(totalRec)}</h2>
-    ${rec.map(r => `<div class="row"><span class="l">${Fin.CATS[r.cat].icon} ${esc(r.shop)} <span class="small muted">· día ${r.day}</span></span><span class="num">${eur(r.amount)}</span></div>`).join('')}
+    ${rec.map(r => { const e = fixedEnd(r), done = e && e < todayISO(); return `<div class="row" style="${done ? 'opacity:.55' : ''}"><span class="l">${Fin.CATS[r.cat].icon} ${esc(r.shop)} <span class="small muted">· día ${r.day}</span>${e ? ` <span class="pill ${done ? 'blue' : ''}">${done ? 'terminado' : 'hasta ' + fdate(e) + '/' + e.slice(0, 4)}</span>` : ''}<br><label class="small muted">Termina el <input type="date" data-end="${esc(fixedKey(r))}" value="${esc(e)}" style="padding:2px 6px;font-size:12px"></label></span><span class="num">${eur(r.amount)}</span></div>`; }).join('')}
+    ${later < totalRec ? `<div class="note" style="margin-top:10px">Cuando acaben los que tienen fecha, tus fijos bajarán a <b>${eur0(later)}</b> al mes.</div>` : ''}
+    <div class="small muted" style="margin-top:6px">Si un pago va a dejar de cobrarse (no renuevas, te das de baja…), pon la fecha y dejo de contarlo a partir de ese día.</div>
     ${lastServ ? `<div class="note blue" style="margin-top:10px"><b>Servicios del piso: van aparte</b>El último pago fue el ${fdate(lastServ.date)} (${eur(-lastServ.amt)}: “${esc(lastServ.kind || lastServ.desc)}”). Si se pagan cada varios meses, ve apartando algo cada mes para que no te pille. Ahora apartas ${eur0(+S.settings.reserve)}/mes (en Ajustes).</div>` : ''}
   </div>`;
   h += `<div class="card"><h2>Suscripciones y pagos automáticos</h2>
@@ -353,41 +430,137 @@ function vMovs() {
   </div>`;
 }
 
+// ---- DEUDAS ----
+let debtDir = 'meDeben';
+function debtMatch(d) { // un movimiento del banco que parece el pago de esta deuda
+  if (!d.who) return null;
+  const who = Fin.strip(d.who).split(' ')[0];
+  if (who.length < 3) return null;
+  const left = debtLeft(d), used = new Set((d.payments || []).map(p => p.tx));
+  const sign = d.dir === 'meDeben' ? 1 : -1;
+  return Object.values(S.txs).find(t => !used.has(t.id) && t.date >= d.date && Math.sign(t.amt) === sign && Math.abs(Math.abs(t.amt) - left) < 0.01 && Fin.strip(t.desc + ' ' + t.kind + ' ' + (t.obs || '')).includes(who)) || null;
+}
+function vDeudas() {
+  const all = debtList().sort((a, b) => (a.due || '9') < (b.due || '9') ? -1 : 1);
+  const open = all.filter(d => debtLeft(d) > 0), closed = all.filter(d => debtLeft(d) <= 0);
+  const sum = dir => open.filter(d => d.dir === dir).reduce((a, d) => a + debtLeft(d), 0);
+  const item = d => {
+    const left = debtLeft(d), paid = d.amount - left, m = left > 0 ? debtMatch(d) : null;
+    const late = left > 0 && d.due && d.due < todayISO();
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--line)">
+      <div style="display:flex;justify-content:space-between;gap:10px"><span class="l"><b>${esc(d.who)}</b>${d.concept ? ' · ' + esc(d.concept) : ''}</span><b class="num ${d.dir === 'meDeben' ? 'pos' : ''}">${eur(left > 0 ? left : d.amount)}</b></div>
+      <div class="small muted">${fdate(d.date)}/${d.date.slice(2, 4)}${d.due ? ` · ${late ? '<span class="pill warm">vencía el ' + fdate(d.due) + '</span>' : 'para el ' + fdate(d.due)}` : ''}${paid > 0 && left > 0 ? ` · pagado ${eur(paid)} de ${eur(d.amount)}` : ''}${left <= 0 ? ' · saldada' : ''}</div>
+      ${m ? `<div class="note blue" style="margin:8px 0 0">Parece pagada: ${esc(m.shop)} el ${fdate(m.date)} (${eur(m.amt)}). <button data-dmatch="${esc(d.id)}" data-tx="${esc(m.id)}" style="margin-left:6px;padding:4px 10px">Sí, marcar</button></div>` : ''}
+      <div class="toolbar" style="margin:8px 0 0">${left > 0 ? `<button data-dpay="${esc(d.id)}" style="padding:5px 10px">✓ Pagada</button><button data-dpart="${esc(d.id)}" style="padding:5px 10px">Pago parcial</button>` : ''}<button data-ddel="${esc(d.id)}" style="padding:5px 10px" class="muted">Borrar</button></div>
+    </div>`;
+  };
+  const group = (dir, title) => { const l = open.filter(d => d.dir === dir); return l.length ? `<h3>${title}</h3>${l.map(item).join('')}` : ''; };
+  return `<div class="card"><h2>🤝 Deudas</h2>
+    <div class="grid2"><div class="kpi"><span class="small muted">Te deben</span><b class="pos">${eur(sum('meDeben'))}</b></div><div class="kpi"><span class="small muted">Debes</span><b>${eur(sum('debo'))}</b></div></div>
+    <p class="small muted">Lo que debes y vence antes del próximo cobro (o no tiene fecha) lo resto del número de “Hoy”. Lo que te deben no lo cuento hasta que te lo paguen.</p>
+  </div>
+  <div class="card"><h2>Apuntar</h2>
+    <div class="seg"><button data-ddir="meDeben" class="${debtDir === 'meDeben' ? 'on' : ''}">Me deben</button><button data-ddir="debo" class="${debtDir === 'debo' ? 'on' : ''}">Debo yo</button></div>
+    <label class="f"><span>${debtDir === 'meDeben' ? '¿Quién te debe?' : '¿A quién le debes?'}</span><input id="dwho" placeholder="Nombre" autocomplete="off" list="dpeople"></label>
+    <datalist id="dpeople">${[...new Set(all.map(d => d.who))].map(w => `<option value="${esc(w)}">`).join('')}</datalist>
+    <label class="f"><span>Concepto (opcional)</span><input id="dconcept" placeholder="Cena, entradas, préstamo…"></label>
+    <div class="grid2"><label class="f"><span>Importe (€)</span><input id="damount" type="text" inputmode="decimal" placeholder="0,00"></label>
+    <label class="f"><span>Para cuándo (opcional)</span><input id="ddue" type="date"></label></div>
+    <button id="dadd" class="primary">Apuntar</button>
+  </div>
+  ${open.length ? `<div class="card">${group('meDeben', 'Te deben')}${group('debo', 'Debes')}</div>` : ''}
+  ${closed.length ? `<div class="card"><details><summary>Ya saldadas (${closed.length})</summary>${closed.map(item).join('')}</details></div>` : ''}`;
+}
+function bindDeudas() {
+  const $ = id => document.getElementById(id);
+  document.querySelectorAll('[data-ddir]').forEach(el => el.onclick = () => { debtDir = el.dataset.ddir; render(); });
+  if ($('dadd')) $('dadd').onclick = () => {
+    const who = $('dwho').value.trim(), amount = Fin.round2(parseFloat(String($('damount').value).replace(',', '.')));
+    if (!who || !(amount > 0)) { toast('Pon un nombre y un importe.'); return; }
+    const id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    set('debts', id, { id, dir: debtDir, who, concept: $('dconcept').value.trim(), amount, date: todayISO(), due: $('ddue').value || '', payments: [] });
+    save(); render();
+  };
+  const upd = (id, f) => { const d = JSON.parse(JSON.stringify(S.debts[id])); f(d); set('debts', id, d); save(); render(); };
+  document.querySelectorAll('[data-dpay]').forEach(el => el.onclick = () => upd(el.dataset.dpay, d => d.payments.push({ amount: debtLeft(d), date: todayISO() })));
+  document.querySelectorAll('[data-dpart]').forEach(el => el.onclick = () => {
+    const d = S.debts[el.dataset.dpart];
+    const v = Fin.round2(parseFloat(String(prompt(`¿Cuánto se ha pagado? (quedan ${eur(debtLeft(d))})`) || '').replace(',', '.')));
+    if (v > 0) upd(d.id, x => x.payments.push({ amount: Math.min(v, debtLeft(x)), date: todayISO() }));
+  });
+  document.querySelectorAll('[data-dmatch]').forEach(el => el.onclick = () => { const t = S.txs[el.dataset.tx]; upd(el.dataset.dmatch, d => d.payments.push({ amount: debtLeft(d), date: t.date, tx: t.id })); });
+  document.querySelectorAll('[data-ddel]').forEach(el => el.onclick = () => { if (confirm('¿Borrar esta deuda?')) { set('debts', el.dataset.ddel, null); save(); render(); } });
+}
+
+// ---- SINCRONIZAR ----
+function syncInfo() {
+  const c = syncCfg();
+  if (!c.token || !c.pass) return `
+    <p class="small">Para tener los mismos datos en el PC y en el móvil. Se guarda una copia <b>cifrada con tu contraseña</b> en un gist secreto de tu GitHub: GitHub solo ve un bloque ilegible.</p>
+    <p class="small"><b>1.</b> <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">Crea un token en GitHub</a>: nombre “Mi Dinero”, caducidad 1 año, y en <i>Account permissions › Gists</i> elige <b>Read and write</b>. Nada más. Copia el token.<br>
+    <b>2.</b> Pégalo aquí y elige una contraseña. <b>Usa la misma en todos tus dispositivos.</b> Si la olvidas no se puede recuperar (pero puedes volver a cargar los extractos).</p>
+    <label class="f"><span>Token de GitHub</span><input id="stoken" type="password" autocomplete="off" placeholder="github_pat_…"></label>
+    <label class="f"><span>Contraseña para cifrar (mínimo 8 caracteres)</span><input id="spass" type="password" autocomplete="new-password"></label>
+    <button id="sconnect" class="primary">Conectar</button>`;
+  return `<p class="small">✅ Conectado. Los cambios se sincronizan solos al hacerlos y al abrir la app.</p>
+    <p class="small muted">${esc(syncing ? 'Sincronizando…' : syncMsg || (c.last ? 'Última vez: ' + new Date(c.last).toLocaleString('es-ES') : ''))}</p>
+    <div class="toolbar"><button id="snow">Sincronizar ahora</button><button id="soff">Desconectar este dispositivo</button></div>`;
+}
+function bindSync() {
+  const $ = id => document.getElementById(id);
+  if ($('sconnect')) $('sconnect').onclick = async () => {
+    const token = $('stoken').value.trim(), pass = $('spass').value;
+    if (!/^(github_pat_|ghp_)/.test(token)) { toast('Eso no parece un token de GitHub (empieza por github_pat_).'); return; }
+    if (pass.length < 8) { toast('La contraseña tiene que tener al menos 8 caracteres.'); return; }
+    setSyncCfg({ token, pass });
+    $('sconnect').disabled = true; $('sconnect').textContent = 'Conectando…';
+    await doSync();
+    if (syncMsg) { const m = syncMsg; setSyncCfg({}); syncMsg = ''; render(); toast(m.replace('⚠️ ', '')); }
+    else { render(); toast('¡Conectado! Haz lo mismo en tu otro dispositivo, con la misma contraseña.'); }
+  };
+  if ($('snow')) $('snow').onclick = () => doSync();
+  if ($('soff')) $('soff').onclick = () => { if (confirm('¿Desconectar la sincronización en este dispositivo? Los datos se quedan aquí; solo deja de sincronizar.')) { setSyncCfg({}); render(); } };
+}
+
 // ---- AJUSTES ----
 function vAjustes() {
   const s = S.settings;
-  const first = AN.list[0].date, last = lastDataDate();
-  return `<div class="card"><h2>Datos</h2>
-    <p class="small">Tienes <b>${AN.list.length}</b> movimientos, del ${fdate(first)}/${first.slice(0, 4)} al ${fdate(last)}/${last.slice(0, 4)}.</p>
-    ${Object.entries(S.balances).map(([b, v]) => `<label class="f"><span>Saldo actual ${esc(b)} (del extracto del ${fdate(v.date)}; corrígelo si ha cambiado)</span><input type="number" step="0.01" data-bal="${esc(b)}" value="${v.amount}"></label>`).join('')}
-    <p class="small muted">🔒 Todo está guardado solo en este navegador. La página tiene bloqueadas las conexiones a internet.</p>
+  let h = `<div class="card"><h2>☁️ Sincronizar PC y móvil</h2><div id="syncinfo">${syncInfo()}</div></div>`;
+  h += `<div class="card"><h2>Datos</h2>`;
+  if (AN) { const first = AN.list[0].date, last = lastDataDate(); h += `<p class="small">Tienes <b>${AN.list.length}</b> movimientos, del ${fdate(first)}/${first.slice(0, 4)} al ${fdate(last)}/${last.slice(0, 4)}.</p>`; }
+  else h += `<p class="small">Aún no hay movimientos. Pulsa <b>Cargar extractos</b> o conecta la sincronización.</p>`;
+  h += `${Object.entries(S.balances).map(([b, v]) => `<label class="f"><span>Saldo actual ${esc(b)} (del extracto del ${fdate(v.date)}; corrígelo si ha cambiado)</span><input type="number" step="0.01" data-bal="${esc(b)}" value="${v.amount}"></label>`).join('')}
+    <p class="small muted">🔒 Tus datos están en este dispositivo. La página solo puede conectarse a GitHub, y solo si activas la sincronización (con los datos cifrados).</p>
     <div class="toolbar"><button id="exp">Descargar copia</button><button id="impb">Restaurar copia</button><input id="bfile" type="file" accept=".json" class="hidden"><button id="wipe">Borrar todo</button></div>
   </div>
   <div class="card"><h2>Ajustes</h2>
     <label class="f"><span>Apartar cada mes para imprevistos y servicios del piso (€)</span><input type="number" data-set="reserve" value="${esc(s.reserve)}"></label>
     <label class="f"><span>Objetivo de recorte en hormiga (%)</span><input type="number" data-set="goalCut" min="0" max="90" value="${esc(s.goalCut)}"></label>
     <label class="f"><span>Qué cuenta como “hormiga”: compras de menos de (€)</span><input type="number" data-set="hormigaMax" value="${esc(s.hormigaMax)}"></label>
-    <label class="f"><span>Día de cobro (vacío = lo detecto yo: ahora ${AN.payDay})</span><input type="number" min="1" max="31" data-set="payDay" value="${esc(s.payDay)}"></label>
+    <label class="f"><span>Día de cobro (vacío = lo detecto yo${AN ? ': ahora ' + AN.payDay : ''})</span><input type="number" min="1" max="31" data-set="payDay" value="${esc(s.payDay)}"></label>
     <label class="f"><span>Tu nombre como sale en los bancos (para detectar pasos entre tus cuentas)</span><input data-set="myName" value="${esc(s.myName)}"></label>
     <label class="f"><span>Familia que te ayuda (nombres separados por coma)</span><input data-set="family" value="${esc(s.family)}"></label>
   </div>
   <div class="card"><h2>Cómo actualizar</h2>
-    <p class="small"><b>BBVA</b>: web bbva.es › tu cuenta › Movimientos › elige fechas › descargar Excel.<br><b>Revolut</b>: app › cuenta en euros › ··· › Extractos › Excel o CSV.<br>Súbelos aquí cuando quieras. Lo que ya estaba no se duplica.</p>
+    <p class="small"><b>BBVA</b>: web bbva.es › tu cuenta › Movimientos › elige fechas › descargar Excel.<br><b>Revolut</b>: app › cuenta en euros › ··· › Extractos › Excel o CSV.<br>Súbelos aquí cuando quieras. Lo que ya estaba no se duplica, y con la sincronización llega solo al otro dispositivo.</p>
   </div>`;
+  return h;
 }
 
 function bind() {
   const $ = id => document.getElementById(id);
   document.querySelectorAll('[data-cyc]').forEach(el => el.onclick = () => { cycleIdx = +el.dataset.cyc; render(); });
   document.querySelectorAll('[data-cat]').forEach(el => el.onclick = () => { filterCat = el.dataset.cat; search = ''; tab = 'movs'; render(); scrollTo(0, 0); });
-  if ($('cut')) $('cut').oninput = e => { const v = +e.target.value; $('cutv').textContent = v + '%'; $('cutm').textContent = eur0(AN.avg.hormiga * v / 100); $('cuty').textContent = eur0(AN.avg.hormiga * 12 * v / 100); S.settings.goalCut = v; save(); };
+  if ($('cut')) $('cut').oninput = e => { const v = +e.target.value; $('cutv').textContent = v + '%'; $('cutm').textContent = eur0(AN.avg.hormiga * v / 100); $('cuty').textContent = eur0(AN.avg.hormiga * 12 * v / 100); set('settings', 'goalCut', v); save(); };
   if ($('q')) { $('q').oninput = e => { search = e.target.value; const pos = e.target.selectionStart; render(); const q = $('q'); q.focus(); q.setSelectionRange(pos, pos); }; $('fc').onchange = e => { filterCat = e.target.value; render(); }; }
-  document.querySelectorAll('select[data-mk]').forEach(el => el.onchange = () => { S.overrides[el.dataset.mk] = el.value; save(); render(); });
-  document.querySelectorAll('[data-set]').forEach(el => el.onchange = () => { S.settings[el.dataset.set] = el.value; save(); render(); });
-  document.querySelectorAll('[data-bal]').forEach(el => el.onchange = () => { S.balances[el.dataset.bal] = { amount: +el.value, date: new Date().toISOString().slice(0, 10) }; save(); render(); });
+  document.querySelectorAll('select[data-mk]').forEach(el => el.onchange = () => { set('overrides', el.dataset.mk, el.value); save(); render(); });
+  document.querySelectorAll('[data-set]').forEach(el => el.onchange = () => { set('settings', el.dataset.set, el.value); save(); render(); });
+  document.querySelectorAll('[data-bal]').forEach(el => el.onchange = () => { set('balances', el.dataset.bal, { amount: +el.value, date: todayISO() }); save(); render(); });
+  document.querySelectorAll('[data-end]').forEach(el => el.onchange = () => { set('fixedEnds', el.dataset.end, el.value || null); save(); render(); });
+  bindDeudas(); bindSync();
   if ($('exp')) $('exp').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = 'midinero-copia-' + new Date().toISOString().slice(0, 10) + '.json'; a.click(); };
-  if ($('impb')) { $('impb').onclick = () => $('bfile').click(); $('bfile').onchange = async e => { try { const d = JSON.parse(await e.target.files[0].text()); if (!d.txs) throw 0; S = d; S.settings = Object.assign({}, DEFAULTS, S.settings); save(); render(); toast('Copia restaurada.'); } catch (_) { toast('Ese archivo no es una copia válida.'); } }; }
-  if ($('wipe')) $('wipe').onclick = () => { if (confirm('¿Borrar todos los movimientos y ajustes de este navegador?')) { S = { txs: {}, balances: {}, settings: Object.assign({}, DEFAULTS), overrides: {} }; save(); render(); } };
+  if ($('impb')) { $('impb').onclick = () => $('bfile').click(); $('bfile').onchange = async e => { try { const d = JSON.parse(await e.target.files[0].text()); if (!d.txs) throw 0; const now = Date.now(); d._t = d._t || {}; for (const M of Sync.MAPS) for (const k of Object.keys(d[M] || {})) d._t[M + '/' + k] = now; S = normalize(d); save(); render(); toast('Copia restaurada.'); } catch (_) { toast('Ese archivo no es una copia válida.'); } }; }
+  if ($('wipe')) $('wipe').onclick = () => { if (confirm('¿Borrar todos los datos de ESTE dispositivo? Si tienes la sincronización activa, se desconecta; tus otros dispositivos no se tocan.')) { setSyncCfg({}); S = fresh(); save(); render(); } };
 }
 
 render();

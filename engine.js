@@ -334,10 +334,11 @@
     const money = Object.values(balances || {}).reduce((a, b) => a + (b && typeof b.amount === 'number' ? b.amount : 0), 0);
     const pending = an.pendingFixed.reduce((a, r) => a + r.amount, 0);
     const reserve = +opts.reserve || 0;
+    const extra = +opts.extra || 0; // deudas que vencen antes del cobro
     const end = new Date(an.current.end);
     const days = Math.max(1, daysBetween(today, end));
-    const free = money - pending - reserve;
-    return { money: round2(money), pending: round2(pending), reserve, free: round2(free), days, perDay: round2(free / days), perWeek: round2(free / days * 7), nextPay: an.current.end };
+    const free = money - pending - reserve - extra;
+    return { money: round2(money), pending: round2(pending), reserve, extra: round2(extra), free: round2(free), days, perDay: round2(free / days), perWeek: round2(free / days * 7), nextPay: an.current.end };
   }
 
   const API = { parseBBVA, parseRevolut, parseCSV, analyze, dailyAllowance, categorize, merchant, merchantKey, CATS, HORMIGA_CATS, strip, round2, daysBetween };
