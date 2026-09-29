@@ -4,7 +4,7 @@
   'use strict';
   const API = 'https://api.github.com';
   const FILE = 'midinero-sync.enc.json';
-  const MAPS = ['settings', 'overrides', 'balances', 'fixedEnds', 'debts', 'pages'];
+  const MAPS = ['settings', 'overrides', 'balances', 'fixedEnds', 'debts', 'pages', 'events'];
 
   const b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
   const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));

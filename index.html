@@ -8,10 +8,10 @@
 <meta name="referrer" content="no-referrer">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
-<meta name="theme-color" content="#2f7d6d">
+<meta name="theme-color" content="#1B1F3B">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Mi Dinero">
-<title>Mi Dinero</title>
+<meta name="apple-mobile-web-app-title" content="Mi Espacio">
+<title>Mi Espacio</title>
 <style>
 :root{
   --bg:#f6f4ef; --card:#ffffff; --ink:#1f2328; --muted:#6b6f76; --line:#e6e2d9;
@@ -174,12 +174,13 @@ body.locked .wrap,body.locked nav{visibility:hidden}
 .qr img,.qr svg{width:220px;height:220px;image-rendering:pixelated}
 @media (max-width:420px){.big{font-size:38px}.grid2{grid-template-columns:1fr 1fr}}
 </style>
+<link rel="stylesheet" href="hub.css">
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div><h1>Mi Dinero</h1><div id="syncst" class="small muted"></div></div>
-    <div style="display:flex;gap:8px"><button id="btnNb" aria-label="Mi cuaderno" title="Mi cuaderno">📓</button><button id="btnImport" class="primary">Cargar extractos</button><button id="btnCfg" aria-label="Ajustes">⚙️</button></div>
+    <div style="display:flex;align-items:center;gap:10px"><button id="btnHome" class="homebtn" aria-label="Volver al inicio" title="Volver al inicio">‹</button><div><h1>Mi Dinero</h1><div id="syncst" class="small muted"></div></div></div>
+    <div style="display:flex;gap:8px"><button id="btnImport" class="primary">Cargar extractos</button><button id="btnCfg" aria-label="Ajustes">⚙️</button></div>
     <input id="file" type="file" multiple accept=".xlsx,.xls,.csv" class="hidden">
   </header>
 
@@ -188,7 +189,7 @@ body.locked .wrap,body.locked nav{visibility:hidden}
     <p>Arrastra tus extractos o pulsa el botón:</p>
     <div class="drop" id="drop">📄 <b>BBVA</b>: Excel de movimientos (.xlsx)<br>📄 <b>Revolut</b>: extracto en CSV<br><span class="muted small">Puedes cargarlos todos a la vez. Si repites un archivo, no se duplica nada.</span></div>
     <p class="small muted">🔒 Todo se procesa en este dispositivo. Si activas la sincronización, lo que sube a tu GitHub va cifrado con tu contraseña.</p>
-    <p><button id="goSync">📱 ¿Ya la usas en otro dispositivo? Vincular</button> <button id="goNb">📓 Ir a mi cuaderno</button></p>
+    <p><button id="goSync">📱 ¿Ya la usas en otro dispositivo? Vincular</button></p>
     <p class="small muted">Lo que cargues se queda guardado; la próxima vez solo tienes que añadir los extractos nuevos.</p>
   </div>
 
@@ -205,6 +206,12 @@ body.locked .wrap,body.locked nav{visibility:hidden}
 </div></div>
 <div id="scan" class="scan hidden"><video id="scanvideo" playsinline muted></video><div id="scanmsg"></div><button id="scanclose">Cerrar</button></div>
 
+<nav id="hubnav" class="hubnav hidden" aria-label="Apartados">
+  <button data-hub="inicio"><b>☀︎</b>Inicio</button>
+  <button data-hub="cal"><b>◷</b>Calendario</button>
+  <button data-hub="cuaderno"><b>▤</b>Páginas</button>
+  <button data-hub="hoy"><b>€</b>Dinero</button>
+</nav>
 <nav id="nav" class="hidden"><div class="in">
   <button data-tab="hoy" class="on"><span>☀️</span>Hoy</button>
   <button data-tab="prev"><span>🔮</span>Previsión</button>
@@ -219,6 +226,7 @@ body.locked .wrap,body.locked nav{visibility:hidden}
 <script src="engine.js"></script>
 <script src="sync.js"></script>
 <script src="cuaderno.js"></script>
+<script src="hub.js"></script>
 <script src="vendor/qrcode.min.js"></script>
 <script src="vendor/jsQR.min.js"></script>
 <script>
@@ -226,9 +234,9 @@ body.locked .wrap,body.locked nav{visibility:hidden}
 const KEY = 'midinero.v1';
 const DEFAULTS = { myName: '', family: '', savings: '', hormigaMax: 10, reserve: 70, payDay: '', goalCut: 30 };
 let S = load();
-let tab = 'hoy', cycleIdx = null, filterCat = '', search = '';
+let tab = 'inicio', cycleIdx = null, filterCat = '', search = '';
 
-function fresh() { return { txs: {}, balances: {}, settings: Object.assign({}, DEFAULTS), overrides: {}, fixedEnds: {}, debts: {}, pages: {}, _t: {} }; }
+function fresh() { return { txs: {}, balances: {}, settings: Object.assign({}, DEFAULTS), overrides: {}, fixedEnds: {}, debts: {}, pages: {}, events: {}, _t: {} }; }
 function normalize(s) {
   const f = fresh();
   for (const k of Object.keys(f)) if (k !== 'settings') s[k] = s[k] || f[k];
@@ -332,11 +340,16 @@ const debtLeft = d => Fin.round2(d.amount - (d.payments || []).reduce((a, p) => 
 function render() {
   const txs = Object.values(S.txs);
   const has = txs.length > 0;
-  const needsData = !has && !['deudas', 'ajustes', 'cuaderno'].includes(tab);
+  const HUB = ['inicio', 'cal', 'cuaderno'];
+  const needsData = !has && !['deudas', 'ajustes', ...HUB].includes(tab);
+  const hubMode = HUB.includes(tab);
   document.body.classList.toggle('nbmode', tab === 'cuaderno');
+  document.body.classList.toggle('hubmode', hubMode);
+  document.getElementById('hubnav').classList.toggle('hidden', !hubMode);
+  document.querySelectorAll('#hubnav [data-hub]').forEach(b => b.classList.toggle('on', b.dataset.hub === tab));
   document.getElementById('empty').classList.toggle('hidden', !needsData);
-  document.getElementById('nav').classList.toggle('hidden', !has && !debtList().length && tab === 'hoy');
-  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  document.getElementById('nav').classList.toggle('hidden', hubMode || (!has && !debtList().length && tab === 'hoy'));
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   const app = document.getElementById('app');
   paintSync();
   AN = has ? Fin.analyze(txs, opts()) : null;
@@ -347,14 +360,14 @@ function render() {
     AN.pendingFixed = AN.pendingFixed.filter(r => !fixedEnd(r) || fixedEnd(r) >= todayISO());
     if (cycleIdx == null || cycleIdx >= AN.cycles.length) cycleIdx = AN.cycles.length - 1;
   }
-  app.innerHTML = needsData ? '' : ({ hoy: vHoy, mes: vMes, hormiga: vHormiga, fijos: vFijos, movs: vMovs, deudas: vDeudas, ajustes: vAjustes, guia: vGuia, prev: vPrev, cuaderno: vCuaderno })[tab]();
+  app.innerHTML = needsData ? '' : ({ hoy: vHoy, mes: vMes, hormiga: vHormiga, fijos: vFijos, movs: vMovs, deudas: vDeudas, ajustes: vAjustes, guia: vGuia, prev: vPrev, cuaderno: vCuaderno, inicio: vInicio, cal: vCal })[tab]();
   bind();
 }
 const goTab = t => { tab = t; render(); scrollTo(0, 0); };
-document.querySelectorAll('nav button').forEach(b => b.onclick = () => goTab(b.dataset.tab));
+document.querySelectorAll('#nav button').forEach(b => b.onclick = () => goTab(b.dataset.tab));
 document.getElementById('btnCfg').onclick = () => goTab('ajustes');
-document.getElementById('btnNb').onclick = () => goTab('cuaderno');
-document.getElementById('goNb').onclick = () => goTab('cuaderno');
+document.getElementById('btnHome').onclick = () => goTab('inicio');
+document.querySelectorAll('#hubnav [data-hub]').forEach(b => b.onclick = () => goTab(b.dataset.hub));
 document.getElementById('goSync').onclick = () => goTab('ajustes');
 
 function lastDataDate() { return AN.list[AN.list.length - 1].date; }
@@ -678,8 +691,6 @@ function vHoy() {
   const cycleDay = Fin.daysBetween(new Date(cur.start), new Date(lastDataDate())) + 1;
   const cycleDays = cur.days;
   let h = '';
-  const nbN = nbPages().length;
-  h += `<a class="card nb-entry" data-go="cuaderno" href="#"><span style="font-size:28px">📓</span><span style="flex:1"><b>Mi cuaderno</b><br><span class="small muted">${nbN ? nbN + ' página' + (nbN === 1 ? '' : 's') + ' · tareas, ideas, diario…' : 'Tu espacio para todo: tareas, ideas, diario, listas…'}</span></span><span class="muted">›</span></a>`;
   if (!S.settings.myName) h += `<div class="note blue"><b class="t">Un ajuste rápido</b>En <b>Ajustes</b>, escribe tu nombre como sale en el banco y, si alguien de tu familia te pasa dinero, su nombre. Así separo tus traspasos entre cuentas y la ayuda familiar del resto.</div>`;
   if (old > 6) h += `<div class="note blue"><b class="t">Tus datos son de hace ${old} días</b>Carga los extractos nuevos para que las cuentas sean de hoy.</div>`;
   h += `<div class="card">
@@ -833,7 +844,7 @@ function vMovs() {
   const cats = Object.keys(Fin.CATS);
   let list = AN.list.slice().reverse();
   if (filterCat) list = list.filter(t => filterCat === '__h' ? t.hormiga : t.cat === filterCat);
-  if (search) { const q = Fin.strip(search); list = list.filter(t => Fin.strip(t.desc + ' ' + t.shop + ' ' + t.kind).includes(q)); }
+  if (search) { const q = Fin.strip(search); list = list.filter(t => Fin.strip(t.date + ' ' + t.desc + ' ' + t.shop + ' ' + t.kind).includes(q)); }
   const total = list.reduce((a, t) => a + t.amt, 0);
   const shown = list.slice(0, 300);
   return `<div class="card"><div class="toolbar"><input id="q" placeholder="Buscar (ej. glovo)" value="${esc(search)}" style="flex:1;min-width:140px">
@@ -995,7 +1006,7 @@ function bind() {
   document.querySelectorAll('[data-set]').forEach(el => el.onchange = () => { set('settings', el.dataset.set, el.value); save(); render(); });
   document.querySelectorAll('[data-bal]').forEach(el => el.onchange = () => { set('balances', el.dataset.bal, { amount: +el.value, date: todayISO() }); save(); render(); });
   document.querySelectorAll('[data-end]').forEach(el => el.onchange = () => { set('fixedEnds', el.dataset.end, el.value || null); save(); render(); });
-  bindDeudas(); bindSync(); bindPrev(); bindCuaderno();
+  bindDeudas(); bindSync(); bindPrev(); bindCuaderno(); bindHub();
   if ($('exp')) $('exp').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = 'midinero-copia-' + new Date().toISOString().slice(0, 10) + '.json'; a.click(); };
   if ($('impb')) { $('impb').onclick = () => $('bfile').click(); $('bfile').onchange = async e => { try { const d = JSON.parse(await e.target.files[0].text()); if (!d.txs) throw 0; const now = Date.now(); d._t = d._t || {}; for (const M of Sync.MAPS) for (const k of Object.keys(d[M] || {})) d._t[M + '/' + k] = now; S = normalize(d); save(); render(); toast('Copia restaurada.'); } catch (_) { toast('Ese archivo no es una copia válida.'); } }; }
   if ($('wipe')) $('wipe').onclick = () => { if (confirm('¿Borrar todos los datos de ESTE dispositivo? Si tienes la sincronización activa, se desconecta; tus otros dispositivos no se tocan.')) { setSyncCfg({}); S = fresh(); save(); render(); } };
@@ -1091,7 +1102,7 @@ document.getElementById('scanclose').onclick = closeScanner;
 
 render();
 if (S.settings.pinHash) lock('enter'); else lock('create');
-if (location.hash === '#cuaderno') { history.replaceState(null, '', location.pathname); goTab('cuaderno'); }
+if (/^#(cuaderno|cal)$/.test(location.hash)) { const t = location.hash.slice(1); history.replaceState(null, '', location.pathname); goTab(t); }
 if (/^#vincular=/.test(location.hash)) { const code = location.hash; history.replaceState(null, '', location.pathname); linkWith(code); }
 else doSync();
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {

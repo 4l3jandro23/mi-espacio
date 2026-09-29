@@ -29,6 +29,8 @@ const nbKids = pid => nbPages().filter(p => (p.parent || null) === (pid || null)
 const nbTitle = p => (p && p.title) || 'Sin título';
 const nbText = p => (p.blocks || []).map(b => (b.html || '').replace(/<[^>]+>/g, ' ')).join(' ');
 function nbAncestors(p) { const out = []; let x = p && nbP(p.parent); while (x && out.length < 20) { out.unshift(x); x = nbP(x.parent); } return out; }
+const NB_COVERS = ['linear-gradient(135deg,#FFE3CF,#FFB38A 50%,#D9B8F2)', 'linear-gradient(135deg,#E4EEFF,#A9C6FA 45%,#6E9BF0)', 'linear-gradient(135deg,#FFB38A,#C58BD9 50%,#5E4FB8)', 'linear-gradient(135deg,#DDF3EC,#8FD9C2 50%,#2FA98C)', 'linear-gradient(135deg,#FFF1D6,#F7C873 50%,#F2A93B)', 'linear-gradient(135deg,#3A3F80,#1F2350 60%,#121530)'];
+const nbCover = p => { if (p.cover != null) return NB_COVERS[p.cover % NB_COVERS.length]; let h = 0; for (const c of p.id) h = (h * 31 + c.charCodeAt(0)) | 0; return NB_COVERS[Math.abs(h) % NB_COVERS.length]; };
 const B = (t, html, extra) => Object.assign({ id: bId(), t, html: html || '' }, extra || {});
 
 // ---------- guardar ----------
@@ -131,8 +133,8 @@ function nbHome() {
   const favs = all.filter(p => p.fav), recent = all.slice().sort((a, b) => b.updated - a.updated).slice(0, 8);
   const hour = new Date().getHours();
   const hi = hour < 6 ? 'Buenas noches' : hour < 13 ? 'Buenos días' : hour < 21 ? 'Buenas tardes' : 'Buenas noches';
-  const card = p => `<a class="nb-card" data-open="${p.id}" href="#"><span style="font-size:22px">${esc(p.icon)}</span><b>${esc(nbTitle(p))}</b><span class="small muted">${new Date(p.updated).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span></a>`;
-  return `<div class="nb-page"><h1 style="font-size:28px;margin:6px 0 2px">${hi} 👋</h1><div class="muted">${nbDateTitle(todayISO())}</div>
+  const card = p => `<a class="nb-card" data-open="${p.id}" href="#" style="--cover:${nbCover(p)}"><span style="font-size:22px">${esc(p.icon)}</span><b>${esc(nbTitle(p))}</b><span class="small muted">${new Date(p.updated).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span></a>`;
+  return `<div class="nb-page"><h1 class="nb-hello">Tu cuaderno</h1><div class="muted">${nbDateTitle(todayISO())}</div>
     <div class="toolbar" style="margin:16px 0"><button class="primary" data-today>📅 Diario de hoy</button><button data-new="">+ Nueva página</button></div>
     ${!all.length ? `<div class="card"><h2>Tu cuaderno para todo</h2><p class="small">Para lo que quieras: tareas, ideas, diario, listas, viajes, preparar citas… Cada página puede tener subpáginas dentro, como carpetas.</p>
       <div class="toolbar"><button class="primary" id="nbseed">Empezar con una estructura básica</button><button data-new="">Empezar en blanco</button></div></div>` : ''}
@@ -154,10 +156,11 @@ function nbBlockHTML(b, i, blocks) {
 }
 function nbPageHTML(p) {
   const anc = nbAncestors(p);
-  return `<div class="nb-page">
-    <div class="nb-crumbs small muted">${anc.map(a => `<a data-open="${a.id}" href="#">${esc(a.icon)} ${esc(nbTitle(a))}</a> / `).join('')}<span>${esc(nbTitle(p))}</span></div>
+  return `<div class="nb-page has-cover">
+    <div class="nb-cover" style="--cover:${nbCover(p)}"></div>
+    <div class="nb-crumbs small muted" style="margin-top:10px">${anc.map(a => `<a data-open="${a.id}" href="#">${esc(a.icon)} ${esc(nbTitle(a))}</a> / `).join('')}<span>${esc(nbTitle(p))}</span></div>
     <div class="nb-headrow"><button class="nb-icon" id="nbicon" title="Cambiar icono">${esc(p.icon || '📄')}</button>
-      <div class="toolbar" style="margin:0"><button id="nbfav" title="Favorito">${p.fav ? '⭐' : '☆'}</button><button id="nbmore" title="Más opciones">⋯</button></div></div>
+      <div class="toolbar" style="margin:0"><button id="nbcov" title="Cambiar color de portada" aria-label="Cambiar color de portada">🎨</button><button id="nbfav" title="Favorito">${p.fav ? '⭐' : '☆'}</button><button id="nbmore" title="Más opciones">⋯</button></div></div>
     <h1 class="nb-title" id="nbtitle" contenteditable="true" spellcheck="true" data-ph="Sin título">${esc(p.title || '')}</h1>
     <div id="nbBlocks">${p.blocks.map((b, i) => nbBlockHTML(b, i, p.blocks)).join('')}</div>
     <div class="nb-add" id="nbadd">+ Añadir un bloque</div>
@@ -168,7 +171,7 @@ function vCuaderno() {
   const p = nbCur && nbP(nbCur);
   if (nbCur && !p) nbCur = null;
   return `<div class="nb">
-    <div class="nb-top"><button id="nbmenu" class="nb-burger" aria-label="Páginas">☰</button><b style="flex:1">📓 Mi cuaderno</b><button id="nbback">💰 Mi Dinero</button><button onclick="goTab('ajustes')" aria-label="Ajustes">⚙️</button></div>
+    <div class="nb-top"><button id="nbmenu" class="nb-burger" aria-label="Páginas">☰</button><b style="flex:1">📓 Mi cuaderno</b><button data-nbset aria-label="Ajustes">⚙️</button></div>
     <div class="nb-body">${nbSideHTML()}<main class="nb-main">${p ? nbPageHTML(p) : nbHome()}</main></div>
     ${nbSide ? '<div class="nb-veil" id="nbveil"></div>' : ''}
   </div>`;
@@ -356,7 +359,7 @@ function bindCuaderno() {
   };
   $('nbmenu').onclick = () => { nbSide = !nbSide; render(); };
   if ($('nbveil')) $('nbveil').onclick = () => { nbSide = false; render(); };
-  $('nbback').onclick = () => goTab('hoy');
+  root.querySelector('[data-nbset]').onclick = () => goTab('ajustes');
   $('nbq').oninput = e => { nbSearch = e.target.value; const pos = e.target.selectionStart; const side = document.querySelector('.nb-side'); side.outerHTML = nbSideHTML(); const q = $('nbq'); q.focus(); q.setSelectionRange(pos, pos); };
   if ($('nbseed')) $('nbseed').onclick = () => { nbSeed(); render(); };
   const blocks = $('nbBlocks');
@@ -369,6 +372,7 @@ function bindCuaderno() {
     title.oninput = () => { const p = nbCurPage(); p.title = title.textContent.trim(); nbTouch(p); $('nbTree').innerHTML = nbSearch ? $('nbTree').innerHTML : nbTree(null, 0); };
     title.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); const p = nbCurPage(); if (!p.blocks.length || !nbEl(p.blocks[0].id)) { const nb = B('text'); p.blocks.unshift(nb); nbTouch(p); nbRenderBlocks(); } nbFocus(p.blocks.find(b => nbEl(b.id)).id, 'start'); } };
     title.onpaste = e => { e.preventDefault(); document.execCommand('insertText', false, (e.clipboardData.getData('text/plain') || '').replace(/\s+/g, ' ')); };
+    $('nbcov').onclick = () => { const p = nbCurPage(); const cur = NB_COVERS.indexOf(nbCover(p)); p.cover = (cur + 1) % NB_COVERS.length; nbTouch(p); document.querySelector('.nb-cover').style.setProperty('--cover', nbCover(p)); };
     $('nbfav').onclick = () => { const p = nbCurPage(); p.fav = !p.fav; nbTouch(p); nbSaveNow(); $('nbfav').textContent = p.fav ? '⭐' : '☆'; };
     $('nbicon').onclick = e => nbIconPicker(e.currentTarget);
     $('nbmore').onclick = e => nbMoreMenu(e.currentTarget);
