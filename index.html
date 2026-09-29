@@ -8,6 +8,7 @@
 <meta name="referrer" content="no-referrer">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-32.png">
 <meta name="theme-color" content="#1B1F3B">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Mi Espacio">
@@ -227,6 +228,7 @@ body.locked .wrap,body.locked nav{visibility:hidden}
 <script src="sync.js"></script>
 <script src="cuaderno.js"></script>
 <script src="hub.js"></script>
+<script src="trabajo.js"></script>
 <script src="apple.js"></script>
 <script src="vendor/qrcode.min.js"></script>
 <script src="vendor/jsQR.min.js"></script>
@@ -237,7 +239,7 @@ const DEFAULTS = { myName: '', family: '', savings: '', hormigaMax: 10, reserve:
 let S = load();
 let tab = 'inicio', cycleIdx = null, filterCat = '', search = '';
 
-function fresh() { return { txs: {}, balances: {}, settings: Object.assign({}, DEFAULTS), overrides: {}, fixedEnds: {}, debts: {}, pages: {}, events: {}, apple: {}, _t: {} }; }
+function fresh() { return { txs: {}, balances: {}, settings: Object.assign({}, DEFAULTS), overrides: {}, fixedEnds: {}, debts: {}, pages: {}, events: {}, apple: {}, days: {}, _t: {} }; }
 function normalize(s) {
   const f = fresh();
   for (const k of Object.keys(f)) if (k !== 'settings') s[k] = s[k] || f[k];
@@ -338,10 +340,13 @@ const fixedKey = r => r.shop + '|' + Math.round(r.amount);
 const fixedEnd = r => S.fixedEnds[fixedKey(r)] || '';
 const debtList = () => Object.values(S.debts).filter(Boolean);
 const debtLeft = d => Fin.round2(d.amount - (d.payments || []).reduce((a, p) => a + p.amount, 0));
+const FIN_TABS = ['hoy', 'prev', 'mes', 'hormiga', 'fijos', 'movs', 'deudas', 'guia', 'ajustes'];
+let financeUnlocked = false, pendingTab = null;
 function render() {
+  if (FIN_TABS.includes(tab) && !financeUnlocked) { pendingTab = tab; tab = 'inicio'; if (!lockMode) lock(S.settings.pinHash ? 'enter' : 'create'); }
   const txs = Object.values(S.txs);
   const has = txs.length > 0;
-  const HUB = ['inicio', 'cal', 'cuaderno', 'apple'];
+  const HUB = ['inicio', 'cal', 'cuaderno', 'apple', 'espacio'];
   const needsData = !has && !['deudas', 'ajustes', ...HUB].includes(tab);
   const hubMode = HUB.includes(tab);
   document.body.classList.toggle('nbmode', tab === 'cuaderno');
@@ -361,7 +366,7 @@ function render() {
     AN.pendingFixed = AN.pendingFixed.filter(r => !fixedEnd(r) || fixedEnd(r) >= todayISO());
     if (cycleIdx == null || cycleIdx >= AN.cycles.length) cycleIdx = AN.cycles.length - 1;
   }
-  app.innerHTML = needsData ? '' : ({ hoy: vHoy, mes: vMes, hormiga: vHormiga, fijos: vFijos, movs: vMovs, deudas: vDeudas, ajustes: vAjustes, guia: vGuia, prev: vPrev, cuaderno: vCuaderno, inicio: vInicio, cal: vCal, apple: vApple })[tab]();
+  app.innerHTML = needsData ? '' : ({ hoy: vHoy, mes: vMes, hormiga: vHormiga, fijos: vFijos, movs: vMovs, deudas: vDeudas, ajustes: vAjustes, guia: vGuia, prev: vPrev, cuaderno: vCuaderno, inicio: vInicio, cal: vCal, apple: vApple, espacio: vEspacio })[tab]();
   bind();
 }
 const goTab = t => { tab = t; render(); scrollTo(0, 0); };
@@ -799,6 +804,7 @@ function vHormiga() {
   </div>`;
   h += `<div class="card"><h2>Por tipo</h2>${Object.entries(byCat).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<div class="row"><span>${Fin.CATS[k].icon} ${esc(k)}</span><span class="num">${eur0(v / n)}/mes</span></div>`).join('')}</div>`;
   h += `<div class="card"><h2>Qué días</h2><div class="chart" style="height:110px">${['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((d, i) => `<div class="c"><small class="num">${eur0(wd[i] / n / 4.3)}</small><div class="stk"><i style="height:${wd[i] / maxWd * 70}px;background:var(--warm)"></i></div><small>${d}</small></div>`).join('')}</div><div class="small muted" style="margin-top:6px">Gasto hormiga medio en cada día de la semana.</div></div>`;
+  h += officeVsTele();
   h += `<div class="card"><h2>Ideas que no son “prohíbete cosas”</h2>
     <div class="note blue"><b class="t">Una sola compra al día en el súper del barrio</b>Si vas a por una cosa, piensa si te falta algo más y aprovecha. Pasar de 3 visitas a 1 recorta sin darte cuenta.</div>
     <div class="note blue"><b class="t">El café o el bollo, en casa unos días</b>No hace falta dejarlo: si 2 de cada 5 días lo tomas en casa, ya es un 40 % menos.</div>
@@ -1008,7 +1014,7 @@ function bind() {
   document.querySelectorAll('[data-set]').forEach(el => el.onchange = () => { set('settings', el.dataset.set, el.value); save(); render(); });
   document.querySelectorAll('[data-bal]').forEach(el => el.onchange = () => { set('balances', el.dataset.bal, { amount: +el.value, date: todayISO() }); save(); render(); });
   document.querySelectorAll('[data-end]').forEach(el => el.onchange = () => { set('fixedEnds', el.dataset.end, el.value || null); save(); render(); });
-  bindDeudas(); bindSync(); bindPrev(); bindCuaderno(); bindHub(); if (tab === 'apple' || tab === 'cal' || tab === 'inicio') bindApple();
+  bindDeudas(); bindSync(); bindPrev(); bindCuaderno(); bindHub(); bindWork(); if (tab === 'apple' || tab === 'cal' || tab === 'inicio') bindApple();
   if ($('exp')) $('exp').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = 'midinero-copia-' + new Date().toISOString().slice(0, 10) + '.json'; a.click(); };
   if ($('impb')) { $('impb').onclick = () => $('bfile').click(); $('bfile').onchange = async e => { try { const d = JSON.parse(await e.target.files[0].text()); if (!d.txs) throw 0; const now = Date.now(); d._t = d._t || {}; for (const M of Sync.MAPS) for (const k of Object.keys(d[M] || {})) d._t[M + '/' + k] = now; S = normalize(d); save(); render(); toast('Copia restaurada.'); } catch (_) { toast('Ese archivo no es una copia válida.'); } }; }
   if ($('wipe')) $('wipe').onclick = () => { if (confirm('¿Borrar todos los datos de ESTE dispositivo? Si tienes la sincronización activa, se desconecta; tus otros dispositivos no se tocan.')) { setSyncCfg({}); S = fresh(); save(); render(); } };
@@ -1024,12 +1030,14 @@ function lock(mode) {
   paintLock('');
 }
 function unlock() { lockMode = null; document.body.classList.remove('locked'); document.getElementById('lock').classList.add('hidden'); }
+function finishUnlock() { financeUnlocked = true; unlock(); if (pendingTab) { tab = pendingTab; pendingTab = null; } render(); scrollTo(0, 0); }
 function paintLock(msg) {
-  document.getElementById('locktitle').textContent = lockMode === 'enter' ? 'Introduce tu PIN' : pinFirst ? 'Repite el PIN' : 'Crea un PIN de 4 cifras';
-  document.getElementById('lockmsg').textContent = msg || (lockMode === 'create' && !pinFirst ? 'Lo pedirá cada vez que abras la app.' : '');
+  document.getElementById('locktitle').textContent = lockMode === 'enter' ? 'PIN de Mi Dinero' : pinFirst ? 'Repite el PIN' : 'Crea un PIN para Mi Dinero';
+  document.getElementById('lockmsg').textContent = msg || (lockMode === 'create' && !pinFirst ? 'Solo se pide para entrar en Mi Dinero.' : '');
   document.querySelectorAll('#dots i').forEach((d, i) => d.classList.toggle('on', i < pinBuf.length));
   document.getElementById('lockforgot').classList.toggle('hidden', lockMode !== 'enter');
-  document.getElementById('lockcancel').classList.toggle('hidden', lockMode !== 'change');
+  document.getElementById('lockcancel').textContent = lockMode === 'change' ? 'Cancelar' : 'Volver';
+  document.getElementById('lockcancel').classList.remove('hidden');
 }
 async function pinKey(k) {
   if (!lockMode) return;
@@ -1039,23 +1047,27 @@ async function pinKey(k) {
   if (pinBuf.length < 4) return;
   const entered = pinBuf;
   if (lockMode === 'enter') {
-    if (await pinHash(entered) === S.settings.pinHash) unlock();
+    if (await pinHash(entered) === S.settings.pinHash) finishUnlock();
     else { pinBuf = ''; paintLock('PIN incorrecto. Prueba otra vez.'); const b = document.getElementById('dots'); b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); }
   } else if (!pinFirst) { pinFirst = entered; pinBuf = ''; paintLock(''); }
-  else if (pinFirst === entered) { set('settings', 'pinHash', await pinHash(entered)); save(); unlock(); render(); }
+  else if (pinFirst === entered) { const was = lockMode; set('settings', 'pinHash', await pinHash(entered)); save(); if (was === 'change') { unlock(); render(); } else finishUnlock(); }
   else { pinFirst = ''; pinBuf = ''; paintLock('No coinciden. Vuelve a empezar.'); }
 }
 document.querySelectorAll('#pad [data-k]').forEach(b => b.onclick = () => pinKey(b.dataset.k));
 document.addEventListener('keydown', e => { if (!lockMode) return; if (/^\d$/.test(e.key)) pinKey(e.key); else if (e.key === 'Backspace') pinKey('del'); });
 document.getElementById('lockforgot').onclick = () => {
-  if (confirm('Si has olvidado el PIN, hay que borrar los datos de ESTE dispositivo y crear uno nuevo. Si tienes la sincronización, luego los recuperas vinculándolo otra vez con el QR. ¿Seguir?')) {
-    setSyncCfg({}); S = fresh(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} render(); lock('create');
+  if (confirm('Vas a crear un PIN nuevo. Por seguridad, se borran de este dispositivo los datos de Mi Dinero (movimientos, saldos y deudas). Tus páginas y tu calendario no se tocan, y si tienes la sincronización activada los movimientos vuelven solos. ¿Seguir?')) {
+    S.txs = {}; S.balances = {}; S.debts = {}; S.overrides = {}; S.fixedEnds = {};
+    try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} lock('create');
   }
 };
-document.getElementById('lockcancel').onclick = () => unlock();
+document.getElementById('lockcancel').onclick = () => { pendingTab = null; unlock(); render(); };
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') hiddenAt = Date.now();
-  else if (S.settings.pinHash && !lockMode && hiddenAt && Date.now() - hiddenAt > 60e3) lock('enter');
+  else if (financeUnlocked && hiddenAt && Date.now() - hiddenAt > 60e3) {
+    financeUnlocked = false;
+    if (FIN_TABS.includes(tab) && !lockMode) { pendingTab = tab; tab = 'inicio'; render(); lock('enter'); }
+  }
 });
 
 // ---------- vincular dispositivos ----------
@@ -1103,7 +1115,6 @@ function closeScanner() { if (scanStream) scanStream.getTracks().forEach(t => t.
 document.getElementById('scanclose').onclick = closeScanner;
 
 render();
-if (S.settings.pinHash) lock('enter'); else lock('create');
 if (/^#(cuaderno|cal)$/.test(location.hash)) { const t = location.hash.slice(1); history.replaceState(null, '', location.pathname); goTab(t); }
 if (/^#vincular=/.test(location.hash)) { const code = location.hash; history.replaceState(null, '', location.pathname); linkWith(code); }
 else doSync();

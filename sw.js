@@ -1,6 +1,6 @@
 // Guarda la app para que funcione sin conexión. Nunca ve tus movimientos: solo cachea estos archivos.
-const CACHE_VERSION = 'midinero-v8';
-const FILES = ['./', 'index.html', 'engine.js', 'sync.js', 'cuaderno.js', 'hub.js', 'apple.js', 'hub.css', 'fonts/bricolage.woff2', 'fonts/figtree.woff2', 'fonts/figtree-italic.woff2', 'vendor/xlsx.full.min.js', 'vendor/qrcode.min.js', 'vendor/jsQR.min.js', 'manifest.json', 'icons/icon-192.png', 'icons/icon-180.png'];
+const CACHE_VERSION = 'midinero-v10';
+const FILES = ['./', 'index.html', 'engine.js', 'sync.js', 'cuaderno.js', 'hub.js', 'trabajo.js', 'apple.js', 'hub.css', 'fonts/bricolage.woff2', 'fonts/figtree.woff2', 'fonts/figtree-italic.woff2', 'vendor/xlsx.full.min.js', 'vendor/qrcode.min.js', 'vendor/jsQR.min.js', 'manifest.json', 'icons/icon-192.png', 'icons/icon-180.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE_VERSION).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' }))))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE_VERSION).map(k => caches.delete(k))))); self.clients.claim(); });
 self.addEventListener('fetch', e => {

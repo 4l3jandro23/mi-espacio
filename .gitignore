@@ -7,3 +7,4 @@ extractos/
 *.json
 !manifest.json
 .claude/
+icons/icon-master.png

@@ -359,7 +359,7 @@ function bindCuaderno() {
   };
   $('nbmenu').onclick = () => { nbSide = !nbSide; render(); };
   if ($('nbveil')) $('nbveil').onclick = () => { nbSide = false; render(); };
-  root.querySelector('[data-nbset]').onclick = () => goTab('ajustes');
+  root.querySelector('[data-nbset]').onclick = () => goTab('espacio');
   $('nbq').oninput = e => { nbSearch = e.target.value; const pos = e.target.selectionStart; const side = document.querySelector('.nb-side'); side.outerHTML = nbSideHTML(); const q = $('nbq'); q.focus(); q.setSelectionRange(pos, pos); };
   if ($('nbseed')) $('nbseed').onclick = () => { nbSeed(); render(); };
   const blocks = $('nbBlocks');

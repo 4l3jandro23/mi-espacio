@@ -261,3 +261,27 @@ body.hubmode header, body.hubmode nav#nav { display: none !important; }
 .ap-code { display: inline-block; margin: 6px 0; padding: 6px 10px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); color: var(--ink); font-size: 13px; word-break: break-all; user-select: all; }
 .ev-apple { margin-top: 12px; color: var(--ink); font-weight: 600; font-size: 14px; display: flex; gap: 8px; align-items: center; }
 .ev-apple input { width: 20px; height: 20px; accent-color: var(--ink); }
+
+/* ---------- horario de trabajo ---------- */
+.arc-work { fill: none; stroke: var(--sky-ink); stroke-width: 9; stroke-linecap: round; opacity: .16; }
+.sky-work { font-size: 14px; font-weight: 700; margin-top: 2px; }
+.mode-chips { display: inline-flex; gap: 4px; margin-top: 10px; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, .22); }
+.mode-chips button { border: 0; background: none; color: inherit; font-weight: 600; font-size: 13px; padding: 6px 11px; border-radius: 999px; }
+.mode-chips button.on { background: rgba(255, 255, 255, .85); color: #1B1F3B; }
+.mode-chips.compact { background: var(--bg); margin: 0 0 12px; }
+.mode-chips.compact button.on { background: var(--ink); color: var(--bg); }
+.work-line { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; font-size: 14px; margin: -4px 0 8px; }
+.work-line.off { color: var(--muted); }
+.cc-mode { position: absolute; top: 5px; right: 6px; font-size: 11px; }
+@media (max-width: 640px) { .cc-mode { top: 2px; right: 2px; font-size: 9px; } }
+.ev-clash { color: var(--warm); font-size: 13px; font-weight: 600; margin: -4px 0 10px; min-height: 0; }
+.ev-clash:empty { display: none; }
+.work-setup { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; padding: 16px 18px; border-radius: 22px; background: var(--card); border: 1px dashed var(--bar); }
+.work-setup b { font-family: var(--display); font-size: 17px; }
+.work-grid { display: flex; flex-direction: column; }
+.wg-row { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.wg-row:last-child { border-bottom: 0; }
+.wg-day { width: 110px; font-weight: 600; display: flex; gap: 8px; align-items: center; }
+.wg-t { display: inline-flex; align-items: center; gap: 6px; }
+.wg-t input { padding: 5px 6px; width: auto; }
+.wg-t.dim { opacity: .4; }

@@ -35,7 +35,7 @@ function occurs(ev, iso) {
 
 // Datos de Mi Dinero para el calendario (pagos fijos, cobros, deudas) y el inicio.
 function moneyCtx() {
-  if (!AN) return null;
+  if (!AN || !financeUnlocked) return null;
   if (moneyCtx._an === AN) return moneyCtx._c;
   const pays = new Set(AN.list.filter(t => t.cat === 'Nómina').map(t => t.date));
   try { payDays(4).forEach(d => pays.add(d)); } catch (e) {}
@@ -71,7 +71,7 @@ function itemsOn(iso, withPay) {
 
 // ---------- el arco del día ----------
 function skyPhase(h) { return h >= 6 && h < 10 ? 'dawn' : h >= 10 && h < 18 ? 'day' : h >= 18 && h < 21.5 ? 'dusk' : 'night'; }
-function dayArc(items) {
+function dayArc(items, spans) {
   const W = 340, H = 180, cx = W / 2, cy = 168, r = 150, H0 = 7, H1 = 24;
   const now = new Date(), h = now.getHours() + now.getMinutes() / 60;
   const pt = hh => { const t = Math.max(0, Math.min(1, (hh - H0) / (H1 - H0))); const a = Math.PI - t * Math.PI; return [cx + r * Math.cos(a), cy - r * Math.sin(a)]; };
@@ -79,12 +79,14 @@ function dayArc(items) {
   const up = h >= H0 && h < H1;
   const t = Math.max(0, Math.min(1, (h - H0) / (H1 - H0)));
   const ticks = [9, 12, 15, 18, 21].map(hh => { const [x, y] = pt(hh); const [xi, yi] = [cx + (r - 10) * Math.cos(Math.PI - (hh - H0) / (H1 - H0) * Math.PI), cy - (r - 10) * Math.sin(Math.PI - (hh - H0) / (H1 - H0) * Math.PI)]; return `<line x1="${x}" y1="${y}" x2="${xi}" y2="${yi}" class="arc-tick"/><text x="${cx + (r - 24) * Math.cos(Math.PI - (hh - H0) / (H1 - H0) * Math.PI)}" y="${cy - (r - 24) * Math.sin(Math.PI - (hh - H0) / (H1 - H0) * Math.PI) + 4}" class="arc-lbl">${hh}</text>`; }).join('');
+  const seg = (a, b) => { const [ax, ay] = pt(a), [bx, by] = pt(b); return `<path d="M ${ax} ${ay} A ${r} ${r} 0 0 1 ${bx} ${by}" class="arc-work"/>`; };
+  const work = (spans || []).map(([a, b]) => seg(Math.max(H0, a), Math.min(H1, b))).join('');
   const dots = items.filter(i => i.time).map(i => { const [x, y] = pt(toMin(i.time) / 60); return `<circle cx="${x}" cy="${y}" r="6" class="arc-ev" style="fill:${i.color}"><title>${esc(hm(i.time) + ' ' + i.title)}</title></circle>`; }).join('');
   return `<svg class="arc" viewBox="0 0 ${W} ${H}" role="img" aria-label="Tu día, de 7:00 a 24:00${up ? ', ahora son las ' + now.toTimeString().slice(0, 5) : ''}">
     <defs><filter id="glow" x="-2" y="-2" width="5" height="5"><feGaussianBlur stdDeviation="6"/></filter></defs>
     <path d="M ${x0} ${y0} A ${r} ${r} 0 0 1 ${x1} ${y1}" class="arc-track"/>
     ${up ? `<path d="M ${x0} ${y0} A ${r} ${r} 0 0 1 ${sx} ${sy}" class="arc-done"/>` : ''}
-    ${ticks}${dots}
+    ${work}${ticks}${dots}
     ${up ? `<circle cx="${sx}" cy="${sy}" r="16" class="sun-glow" filter="url(#glow)"/><circle cx="${sx}" cy="${sy}" r="10" class="sun"/>` : `<text x="${cx}" y="${cy - 40}" class="arc-moon" text-anchor="middle">☾</text>`}
     <line x1="${x0 - 8}" y1="${cy}" x2="${x1 + 8}" y2="${cy}" class="arc-horizon"/>
   </svg>`;
@@ -109,18 +111,19 @@ function vInicio() {
   tile.n = 0;
   return `<div class="hub">
     <section class="sky sky-${phase}">
-      <div class="sky-top"><span class="sky-hi">${hi}</span><button class="sky-gear" data-hubgo="ajustes" aria-label="Ajustes">⚙️</button></div>
+      <div class="sky-top"><span class="sky-hi">${hi}</span><button class="sky-gear" data-hubgo="espacio" aria-label="Ajustes">⚙️</button></div>
       <div class="sky-grid">
         <div class="sky-date">
           <div class="sky-wd">${cap(now.toLocaleDateString('es-ES', { weekday: 'long' }))}</div>
           <div class="sky-num">${now.getDate()}</div>
           <div class="sky-mo">${now.toLocaleDateString('es-ES', { month: 'long' })} · ${now.toTimeString().slice(0, 5)}</div>
         </div>
-        <div class="sky-arc">${dayArc(items)}<div class="sky-next">${nextTxt}</div></div>
+        <div class="sky-arc">${dayArc(items, workSpans(today))}${workNow(today) ? `<div class="sky-work">${workNow(today)}</div>` : ''}<div class="sky-next">${nextTxt}</div>${modeChips(today)}</div>
       </div>
       <div class="sky-acts"><button data-newev="${today}">＋ Evento</button><button data-hubtoday>📔 Diario de hoy</button><button data-hubnewpage>＋ Página</button></div>
     </section>
 
+    ${workSched() ? '' : workSetupCard()}
     <section class="hub-sec">
       <h2 class="hub-h">Hoy</h2>
       <div class="day-list">${items.length ? items.map(dayItemHTML).join('') : `<div class="empty-day">Día despejado. <button class="link" data-newev="${today}">Apunta algo</button></div>`}</div>
@@ -129,7 +132,7 @@ function vInicio() {
     <section class="hub-sec">
       <h2 class="hub-h">Tus apartados</h2>
       <div class="tiles">
-        ${tile('data-hubgo="hoy"', 'tile-money', '€', 'Mi Dinero', m ? `<b class="tile-big">${eur(Math.max(0, m.A.perDay))}</b><span>al día hasta el cobro</span>` : '<span>Carga tus extractos para empezar</span>')}
+        ${tile('data-hubgo="hoy"', 'tile-money', '€', 'Mi Dinero', m ? `<b class="tile-big">${eur(Math.max(0, m.A.perDay))}</b><span>al día hasta el cobro</span>` : AN ? '<span>🔒 Con PIN · toca para entrar</span>' : '<span>Carga tus extractos para empezar</span>')}
         ${tile('data-hubgo="cal"', 'tile-cal', '◷', 'Calendario', next ? `<span>${esc(next.title)} · ${hm(next.time)}</span>` : week[0] ? `<span>${fmtDay(week[0].d, { weekday: 'short', day: 'numeric' })}: ${esc(week[0].items[0].title)}</span>` : '<span>Nada en los próximos días</span>')}
         ${tile(tasksPage ? `data-nbopen="${tasksPage.id}"` : 'data-hubgo="cuaderno"', 'tile-tasks', '✓', 'Tareas', `<b class="tile-big">${pendingTasks}</b><span>${pendingTasks === 1 ? 'pendiente' : 'pendientes'}</span>`)}
         ${tile('data-hubtoday', 'tile-diary', '✎', 'Diario', diaryToday ? '<span>Hoy ya has escrito ✓</span>' : '<span>Hoy aún no has escrito</span>')}
@@ -159,6 +162,16 @@ function remsHTML() {
     <div class="day-list">${rs.length ? rs.map(r => `<button class="di di-rem" data-appleitem="rem:${r.id}" style="--c:${appleColor(r.list)}"><span class="di-time">☐</span><span class="di-bar"></span><span class="di-t">${esc(r.title)}<small class="di-src"> · ${r.date ? (r.date < today ? 'vencía ' : '') + fmtDay(r.date, { weekday: 'short', day: 'numeric', month: 'short' }) + (r.time ? ' ' + r.time : '') : esc(r.list || 'sin fecha')}</small></span></button>`).join('') : '<div class="empty-day">Nada pendiente en Recordatorios.</div>'}</div></section>`;
 }
 
+// ---------- ajustes sin PIN ----------
+function vEspacio() {
+  return `<div class="hub">
+    <header class="cal-head"><div><div class="cal-year">Mi Espacio</div><h1 class="cal-month">Ajustes</h1></div></header>
+    ${workSettingsHTML()}
+    <div class="card"><h2>🍎 Calendario y Recordatorios de Apple</h2><p class="small">${appleOn() ? 'Conectado · ' + agoTxt(appleData().at) : 'Tráete tus eventos y recordatorios de Apple, y manda allí lo que crees aquí.'}</p><button data-hubgo="apple">${appleOn() ? 'Ver' : 'Conectar'}</button></div>
+    <div class="card"><h2>🔒 Mi Dinero, PIN y sincronización</h2><p class="small">Saldos, copias de seguridad, cambiar el PIN y vincular tus dispositivos. Te pedirá el PIN.</p><button data-hubgo="ajustes">Abrir</button></div>
+  </div>`;
+}
+
 // ---------- CALENDARIO ----------
 function vCal() {
   const today = todayISO();
@@ -177,7 +190,8 @@ function vCal() {
     const its = all.filter(i => i.kind === 'ev' || i.kind === 'apple' || i.kind === 'rem').concat(cobro ? [{ kind: 'pay', title: '💼 Cobro', color: '#2FA98C' }] : [], charges.length ? [{ kind: 'pay', title: '↻ −' + eur0(charges.reduce((a, i) => a + i.amt, 0)), color: '#8A90AE' }] : []);
     const out = iso.slice(0, 7) !== calMonth.slice(0, 7);
     const cls = ['cc', out && 'out', iso === today && 'today', iso === calSel && 'sel', hDow(iso) >= 5 && 'we'].filter(Boolean).join(' ');
-    return `<button class="${cls}" data-calday="${iso}" aria-label="${fmtDay(iso)}${its.length ? ', ' + its.length + ' cosas' : ''}"><span class="cc-n">${+iso.slice(8)}</span><span class="cc-evs">${its.slice(0, 3).map(i => `<i class="${i.kind}" style="--c:${i.color}">${esc(i.title)}</i>`).join('')}${its.length > 3 ? `<em>+${its.length - 3}</em>` : ''}</span></button>`;
+    const md = workSched() && dayMode(iso) !== 'oficina' && (workSched()[hDow(iso)] || {}).on ? `<span class="cc-mode" title="${DAY_MODES[dayMode(iso)].n}">${DAY_MODES[dayMode(iso)].i}</span>` : '';
+    return `<button class="${cls}" data-calday="${iso}" aria-label="${fmtDay(iso)}${its.length ? ', ' + its.length + ' cosas' : ''}"><span class="cc-n">${+iso.slice(8)}</span>${md}<span class="cc-evs">${its.slice(0, 3).map(i => `<i class="${i.kind}" style="--c:${i.color}">${esc(i.title)}</i>`).join('')}${its.length > 3 ? `<em>+${its.length - 3}</em>` : ''}</span></button>`;
   };
   const agenda = () => {
     const rows = [];
@@ -198,11 +212,12 @@ function vCal() {
       <div class="cal-grid-wrap">
         <div class="cal-wd">${['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(d => `<span>${d}</span>`).join('')}</div>
         <div class="cal-grid">${cells.map(cellHTML).join('')}</div>
-        <div class="cal-foot"><label class="cal-toggle"><input type="checkbox" id="calpay" ${calShowPay ? 'checked' : ''}> Ver pagos y cobros de Mi Dinero</label>
+        <div class="cal-foot">${financeUnlocked || !AN ? `<label class="cal-toggle"><input type="checkbox" id="calpay" ${calShowPay ? 'checked' : ''}> Ver pagos y cobros de Mi Dinero</label>` : '<button class="cal-toggle link" data-hubgo="hoy" style="text-decoration:none">🔒 Entra en Mi Dinero para ver aquí tus pagos</button>'}
           <div class="ap-bar"><span>🍎 ${appleOn() ? 'Apple · ' + agoTxt(appleData().at) : 'Calendario de Apple'}</span>${IS_APPLE && appleOn() ? '<button class="pill-btn" data-applefetch>Traer</button>' : ''}<button class="pill-btn" data-hubgo="apple">${appleOn() ? 'Ajustes' : 'Conectar'}</button></div></div>
       </div>
       <aside class="cal-day">
         <div class="cd-head"><div class="cd-num">${+calSel.slice(8)}</div><div><div class="cd-wd">${fmtDay(calSel, { weekday: 'long' })}</div><div class="muted">${new Date(calSel + 'T12:00:00').toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}${calSel === today ? ' · hoy' : ''}</div></div></div>
+        ${workLine(calSel)}${modeChips(calSel, true)}
         <div class="day-list">${sel.length ? sel.map(dayItemHTML).join('') : '<div class="empty-day">Nada este día.</div>'}</div>
         ${spent && calSel <= today ? `<button class="cd-spent" data-hubgo="movs" data-q="${calSel}">Ese día gastaste <b>${eur(spent.v)}</b> en ${spent.n} ${spent.n === 1 ? 'compra' : 'compras'} ›</button>` : ''}
         <button class="add-line" data-newev="${calSel}">＋ Añadir al ${+calSel.slice(8)} de ${new Date(calSel + 'T12:00:00').toLocaleDateString('es-ES', { month: 'long' })}</button>
@@ -222,6 +237,7 @@ function openEvSheet(id, dateISO) {
     <div class="ev-cats">${Object.entries(CAL_CATS).map(([k, c]) => `<button type="button" data-cat="${k}" class="${e.cat === k ? 'on' : ''}" style="--c:${c.c}"><i></i>${c.n}</button>`).join('')}</div>
     <div class="ev-row"><label>Día<input type="date" id="evd" value="${esc(e.date)}"></label><label class="ev-sw"><input type="checkbox" id="evall" ${e.allDay ? 'checked' : ''}> Todo el día</label></div>
     <div class="ev-row ${e.allDay ? 'hidden' : ''}" id="evtimes"><label>Empieza<input type="time" id="evs" value="${esc(e.start || '')}"></label><label>Acaba<input type="time" id="eve" value="${esc(e.end2 || '')}"></label></div>
+    <div class="ev-clash" id="evclash"></div>
     <div class="ev-row"><label>Repetir<select id="evr">${Object.entries(REPEATS).map(([k, n]) => `<option value="${k}" ${e.repeat === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
       <label class="${e.cat === 'cumple' ? '' : 'hidden'}" id="evyl">Año de nacimiento<input type="number" id="evy" min="1900" max="2100" value="${esc(e.year || '')}" placeholder="opcional"></label></div>
     <label class="ev-notes">Notas<textarea id="evn" rows="3" placeholder="Dirección, qué llevar…">${esc(e.notes || '')}</textarea></label>
@@ -234,7 +250,10 @@ function openEvSheet(id, dateISO) {
   const close = () => box.remove();
   box.onclick = ev2 => { if (ev2.target === box) close(); };
   box.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { cat = b.dataset.cat; box.querySelectorAll('[data-cat]').forEach(x => x.classList.toggle('on', x === b)); $('evyl').classList.toggle('hidden', cat !== 'cumple'); if (cat === 'cumple') { $('evall').checked = true; $('evtimes').classList.add('hidden'); $('evr').value = 'year'; } });
-  $('evall').onchange = () => $('evtimes').classList.toggle('hidden', $('evall').checked);
+  const clash = () => { const m = $('evall').checked ? '' : clashesWork($('evd').value, $('evs').value, $('eve').value); $('evclash').textContent = m ? '💼 ' + m : ''; };
+  ['evd', 'evs', 'eve'].forEach(i => $(i).addEventListener('change', clash));
+  $('evall').onchange = () => { $('evtimes').classList.toggle('hidden', $('evall').checked); clash(); };
+  clash();
   $('evx').onclick = close;
   if ($('evdel')) $('evdel').onclick = () => { if (confirm(ev.repeat ? '¿Borrar este evento y todas sus repeticiones?' : '¿Borrar este evento?')) { set('events', id, null); save(); close(); render(); } };
   $('evok').onclick = () => {
