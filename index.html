@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Seguridad: la página no puede conectarse a ningún servidor. Tus datos no salen de este navegador. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file: 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="theme-color" content="#2f7d6d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mi Dinero">
+<title>Mi Dinero</title>
+<style>
+:root{
+  --bg:#f6f4ef; --card:#ffffff; --ink:#1f2328; --muted:#6b6f76; --line:#e6e2d9;
+  --accent:#2f7d6d; --accent-soft:#dcefe9; --warm:#b7791f; --warm-soft:#fbf0dc;
+  --blue:#3b6ea5; --blue-soft:#e3ecf6; --bar:#cfd8d4; --shadow:0 1px 2px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#141619; --card:#1d2024; --ink:#e8e6e1; --muted:#9aa0a6; --line:#2c3035;
+  --accent:#5fbfa9; --accent-soft:#1f3632; --warm:#e0a94f; --warm-soft:#3a2f1c;
+  --blue:#7fa8d6; --blue-soft:#1f2a38; --bar:#34403c; --shadow:none;
+}}
+:root[data-theme="dark"]{
+  --bg:#141619; --card:#1d2024; --ink:#e8e6e1; --muted:#9aa0a6; --line:#2c3035;
+  --accent:#5fbfa9; --accent-soft:#1f3632; --warm:#e0a94f; --warm-soft:#3a2f1c;
+  --blue:#7fa8d6; --blue-soft:#1f2a38; --bar:#34403c; --shadow:none;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+.wrap{max-width:760px;margin:0 auto;padding:16px 16px 96px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 14px}
+h1{font-size:20px;margin:0;letter-spacing:-.01em}
+h2{font-size:16px;margin:0 0 10px}
+h3{font-size:14px;margin:14px 0 6px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.muted{color:var(--muted)} .small{font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:0 0 12px;box-shadow:var(--shadow)}
+.big{font-size:44px;font-weight:700;letter-spacing:-.02em;line-height:1.05;font-variant-numeric:tabular-nums}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:7px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .l{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pill.warm{background:var(--warm-soft);color:var(--warm)} .pill.blue{background:var(--blue-soft);color:var(--blue)}
+.note{border-radius:12px;padding:12px 14px;margin:8px 0;background:var(--accent-soft)}
+.note.warm{background:var(--warm-soft)} .note.blue{background:var(--blue-soft)}
+.note > b:first-child{display:block;margin-bottom:2px}
+button,.btn{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:9px 14px;border-radius:10px;cursor:pointer}
+button.primary,.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;max-width:100%}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:center;padding:6px 6px calc(6px + env(safe-area-inset-bottom));z-index:5}
+nav .in{display:flex;gap:2px;max-width:760px;width:100%;justify-content:space-around}
+nav button{border:0;background:none;padding:6px 4px;border-radius:10px;font-size:11px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:1px;flex:1;min-width:0}
+nav button span{font-size:19px;line-height:1.2}
+nav button.on{color:var(--accent);background:var(--accent-soft)}
+.bar{height:10px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.bar i.warm{background:var(--warm)}
+.chart{display:flex;align-items:flex-end;gap:6px;height:150px;padding-top:8px}
+.chart .c{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;height:100%;justify-content:flex-end}
+.chart .stk{width:100%;max-width:38px;display:flex;flex-direction:column-reverse;border-radius:6px 6px 2px 2px;overflow:hidden}
+.chart .stk i{display:block}
+.chart small{font-size:10px;color:var(--muted);white-space:nowrap}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.drop{border:2px dashed var(--line);border-radius:16px;padding:22px;text-align:center;cursor:pointer}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.tx{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.tx .d{font-size:12px;color:var(--muted)}
+.tx select{font-size:12px;padding:3px 6px;border-radius:8px;max-width:190px}
+.pos{color:var(--accent)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi{background:var(--bg);border-radius:12px;padding:10px 12px}
+.kpi b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+.hidden{display:none!important}
+details summary{cursor:pointer;color:var(--muted);font-size:13px;padding:6px 0}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.seg{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px;scrollbar-width:none}
+.seg button{white-space:nowrap;padding:6px 12px;font-size:13px;border-radius:99px}
+.seg button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+label.f{display:block;margin:10px 0}
+label.f span{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+@media (max-width:420px){.big{font-size:38px}.grid2{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Mi Dinero</h1>
+    <button id="btnImport" class="primary">Cargar extractos</button>
+    <input id="file" type="file" multiple accept=".xlsx,.xls,.csv" class="hidden">
+  </header>
+
+  <div id="empty" class="card hidden">
+    <h2>Empieza aquí</h2>
+    <p>Arrastra tus extractos o pulsa el botón:</p>
+    <div class="drop" id="drop">📄 <b>BBVA</b>: Excel de movimientos (.xlsx)<br>📄 <b>Revolut</b>: extracto en CSV<br><span class="muted small">Puedes cargarlos todos a la vez. Si repites un archivo, no se duplica nada.</span></div>
+    <p class="small muted">🔒 Todo se procesa en este dispositivo. La página tiene bloqueado conectarse a internet, así que tus movimientos no salen de aquí.</p>
+  </div>
+
+  <main id="app"></main>
+</div>
+
+<nav id="nav" class="hidden"><div class="in">
+  <button data-tab="hoy" class="on"><span>☀️</span>Hoy</button>
+  <button data-tab="mes"><span>📅</span>Meses</button>
+  <button data-tab="hormiga"><span>🐜</span>Hormiga</button>
+  <button data-tab="fijos"><span>🔁</span>Fijos</button>
+  <button data-tab="movs"><span>🧾</span>Movimientos</button>
+  <button data-tab="ajustes"><span>⚙️</span>Ajustes</button>
+</div></nav>
+
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="engine.js"></script>
+<script>
+'use strict';
+const KEY = 'midinero.v1';
+const DEFAULTS = { myName: '', family: '', hormigaMax: 10, reserve: 70, payDay: '', goalCut: 30 };
+let S = load();
+let tab = 'hoy', cycleIdx = null, filterCat = '', search = '';
+
+function load() {
+  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.txs) { s.settings = Object.assign({}, DEFAULTS, s.settings); s.overrides = s.overrides || {}; s.balances = s.balances || {}; return s; } } catch (e) {}
+  return { txs: {}, balances: {}, settings: Object.assign({}, DEFAULTS), overrides: {} };
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { alert('No he podido guardar en este navegador (¿modo privado?). Los datos se perderán al cerrar.'); } }
+
+const eur = (n, d) => (n < 0 ? '−' : '') + Math.abs(n).toLocaleString('es-ES', { minimumFractionDigits: d == null ? 2 : d, maximumFractionDigits: d == null ? 2 : d, useGrouping: 'always' }) + ' €';
+const eur0 = n => eur(n, 0);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fdate = s => { const [y, m, d] = s.split('-'); return `${+d}/${+m}`; };
+const fdateL = s => new Date(s + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+const opts = () => ({ myName: S.settings.myName, family: String(S.settings.family || '').split(',').map(x => x.trim()).filter(Boolean), hormigaMax: +S.settings.hormigaMax || 10, payDay: +S.settings.payDay || 0, overrides: S.overrides, reserve: +S.settings.reserve || 0 });
+
+// ---------- importar ----------
+const $file = document.getElementById('file');
+document.getElementById('btnImport').onclick = () => $file.click();
+$file.onchange = () => { importFiles([...$file.files]); $file.value = ''; };
+const drop = document.getElementById('drop');
+drop.onclick = () => $file.click();
+['dragover', 'dragenter'].forEach(e => document.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(e => document.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove('over'); }));
+document.addEventListener('drop', ev => importFiles([...ev.dataTransfer.files]));
+
+async function importFiles(files) {
+  const msgs = [];
+  for (const f of files) {
+    try {
+      let res;
+      if (/\.xlsx?$/i.test(f.name)) {
+        const wb = XLSX.read(new Uint8Array(await f.arrayBuffer()), { type: 'array' });
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: '' });
+        res = Fin.parseBBVA(rows);
+      } else if (/\.csv$/i.test(f.name)) {
+        res = Fin.parseRevolut(await f.text());
+      } else if (/\.pdf$/i.test(f.name)) { msgs.push(`${f.name}: los PDF no se pueden leer bien. Descarga el Excel (BBVA) o el CSV (Revolut).`); continue; }
+      else { msgs.push(`${f.name}: formato no reconocido.`); continue; }
+      let added = 0;
+      for (const t of res.txs) { if (!S.txs[t.id]) added++; S.txs[t.id] = t; }
+      const bank = res.txs[0] ? res.txs[0].bank : '?';
+      if (res.balance != null && (!S.balances[bank] || res.balanceDate >= (S.balances[bank].date || ''))) S.balances[bank] = { amount: res.balance, date: res.balanceDate };
+      msgs.push(`${bank}: ${res.txs.length} movimientos leídos, ${added} nuevos.`);
+    } catch (e) { msgs.push(`${f.name}: ${e.message}`); }
+  }
+  save(); render();
+  if (msgs.length) toast(msgs.join('\n'));
+}
+function toast(t) { alert(t); }
+
+// ---------- render ----------
+let AN = null;
+function render() {
+  const txs = Object.values(S.txs);
+  const has = txs.length > 0;
+  document.getElementById('empty').classList.toggle('hidden', has);
+  document.getElementById('nav').classList.toggle('hidden', !has);
+  const app = document.getElementById('app');
+  if (!has) { app.innerHTML = ''; return; }
+  AN = Fin.analyze(txs, opts());
+  if (cycleIdx == null || cycleIdx >= AN.cycles.length) cycleIdx = AN.cycles.length - 1;
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  app.innerHTML = ({ hoy: vHoy, mes: vMes, hormiga: vHormiga, fijos: vFijos, movs: vMovs, ajustes: vAjustes })[tab]();
+  bind();
+}
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => { tab = b.dataset.tab; render(); scrollTo(0, 0); });
+
+function lastDataDate() { return AN.list[AN.list.length - 1].date; }
+function daysOld() { return Fin.daysBetween(new Date(lastDataDate()), new Date(new Date().toISOString().slice(0, 10))); }
+
+// ---- HOY ----
+function vHoy() {
+  const o = opts();
+  const A = Fin.dailyAllowance(AN, S.balances, o);
+  const cur = AN.current;
+  const spentVar = cur.variable;
+  const budget = Math.max(0, cur.income - AN.recurring.reduce((a, r) => a + r.amount, 0) - o.reserve);
+  const old = daysOld();
+  const avgH = AN.avg.hormiga;
+  const capH = Math.round(avgH * (1 - S.settings.goalCut / 100) / 5) * 5;
+  const hNow = cur.hormiga;
+  const cycleDay = Fin.daysBetween(new Date(cur.start), new Date(lastDataDate())) + 1;
+  const cycleDays = cur.days;
+  let h = '';
+  if (!S.settings.myName) h += `<div class="note blue"><b>Un ajuste rápido</b>En <b>Ajustes</b>, escribe tu nombre como sale en el banco y, si alguien de tu familia te pasa dinero, su nombre. Así separo tus traspasos entre cuentas y la ayuda familiar del resto.</div>`;
+  if (old > 6) h += `<div class="note blue"><b>Tus datos son de hace ${old} días</b>Carga los extractos nuevos para que las cuentas sean de hoy.</div>`;
+  h += `<div class="card">
+    <div class="muted small">Hasta el próximo cobro (≈ ${fdateL(A.nextPay)}, ${A.days} días)</div>
+    <div class="big">${A.free > 0 ? eur(A.perDay) : eur(0)}<span style="font-size:18px;font-weight:600" class="muted"> / día</span></div>
+    <div style="margin-top:4px">${A.free > 0 ? `o sea, unos <b>${eur0(A.perWeek)} a la semana</b> para todo lo que no es fijo: súper, comer fuera, planes, caprichos.` : `Este mes el dinero ya está justo para los fijos. Prioriza lo básico y mira <b>Fijos</b> por si hay algo que recortar.`}</div>
+    <details style="margin-top:8px"><summary>¿De dónde sale este número?</summary>
+      ${Object.entries(S.balances).map(([b, v]) => `<div class="row"><span class="l">Saldo ${esc(b)} <span class="muted small">(${fdate(v.date)})</span></span><span class="num">${eur(v.amount)}</span></div>`).join('')}
+      ${AN.pendingFixed.map(r => `<div class="row"><span class="l muted">− ${esc(r.shop)} <span class="small">(sobre el día ${r.day})</span></span><span class="num muted">−${eur(r.amount)}</span></div>`).join('')}
+      <div class="row"><span class="l muted">− Apartado para imprevistos y servicios del piso</span><span class="num muted">−${eur(A.reserve)}</span></div>
+      <div class="row"><b>Libre hasta cobrar</b><b class="num">${eur(A.free)}</b></div>
+    </details>
+  </div>`;
+  h += `<div class="card"><h2>Este mes (${esc(cur.label)}) · día ${Math.min(cycleDay, cycleDays)} de ${cycleDays}</h2>
+    <div class="grid2">
+      <div class="kpi"><span class="muted small">Gasto variable</span><b>${eur0(spentVar)}</b><span class="small muted">media: ${eur0(AN.avg.variable)}/mes</span></div>
+      <div class="kpi"><span class="muted small">Compras hormiga</span><b>${eur0(hNow)}</b><span class="small muted">${cur.hormigaN} compras · objetivo ≤ ${eur0(capH)}</span></div>
+    </div>
+    <div style="margin-top:12px" class="small muted">Hormiga del mes frente a tu objetivo</div>
+    <div class="bar" style="margin-top:4px"><i class="${hNow > capH ? 'warm' : ''}" style="width:${Math.min(100, capH ? hNow / capH * 100 : 0)}%"></i></div>
+    <div class="small muted" style="margin-top:6px">Objetivo = tu media (${eur0(avgH)}) −${S.settings.goalCut}%. Lo puedes cambiar en Ajustes.</div>
+  </div>`;
+  h += `<div class="card"><h2>Lo que dicen tus números</h2>${insights().map(i => `<div class="note ${i.tone || ''}"><b>${i.t}</b>${i.d}</div>`).join('')}</div>`;
+  return h;
+}
+
+function insights() {
+  const out = [], full = AN.full, n = full.length || 1;
+  const hTop = AN.hormiga.slice(0, 3);
+  out.push({ tone: 'warm', t: `🐜 ${eur0(AN.avg.hormiga)} al mes en compras pequeñas`, d: `Son unas ${Math.round(AN.avg.hormigaN)} compras de menos de ${S.settings.hormigaMax} € al mes (${(AN.avg.hormigaN / 30).toLocaleString('es-ES', { maximumFractionDigits: 1 })} al día). Al año, unos <b>${eur0(AN.avg.hormiga * 12)}</b>. Donde más: ${hTop.map(x => `${esc(x.shop)} (${Math.round(x.n / n)} veces/mes, ${eur0(x.total / n)})`).join(', ')}.` });
+  // descubierto
+  const neg = full.map(c => { const b = c.txs.filter(t => t.bank === 'BBVA' && t.bal != null).map(t => t.bal); return b.length ? Math.min(...b) : 0; });
+  const negN = neg.filter(x => x < 0).length;
+  if (negN) {
+    const fees = AN.list.filter(t => t.cat === 'Comisiones del banco').reduce((a, t) => a - t.amt, 0);
+    const worst = Math.min(...neg);
+    out.push({ tone: 'warm', t: `🏦 La cuenta de BBVA se queda en negativo antes de cobrar`, d: `Ha pasado en ${negN} de los últimos ${full.length} meses, y la última vez llegó a <b>${eur0(worst)}</b>. Es un descubierto: el banco te adelanta dinero y te cobra por ello (llevas ${eur(fees)} en intereses y comisiones). El objetivo número 1 es llegar al día de cobro <b>sin bajar de 0</b>. El número de “Hoy” está pensado para eso.` });
+  }
+  const net = AN.avg.net;
+  const fam = full.reduce((a, c) => a + (c.byCat['Ayuda familiar'] || 0), 0) / n;
+  out.push({ tone: net < 0 ? 'warm' : '', t: net < 0 ? `📉 De media gastas ${eur0(-net)} más de lo que entra cada mes` : `📈 De media te sobran ${eur0(net)} al mes`, d: `Entran unos ${eur0(AN.avg.income)} al mes${fam > 1 ? ` (incluye ${eur0(fam)} de ayuda familiar)` : ''} y salen ${eur0(AN.avg.fixed)} en fijos + ${eur0(AN.avg.variable)} en el día a día. Con recortar solo la mitad de lo hormiga (${eur0(AN.avg.hormiga / 2)}) ${net < 0 && AN.avg.hormiga / 2 > -net ? 'ya cuadrarías el mes.' : 'ya se nota mucho.'}` });
+  const subs = AN.subs.filter(s => s.active);
+  if (subs.length) out.push({ tone: 'blue', t: `🔁 Pagos automáticos: ${eur0(subs.reduce((a, s) => a + s.amount, 0))} al mes`, d: `${subs.map(s => `${esc(s.shop)} ${eur(s.amount)}`).join(' · ')}. Al año son ${eur0(subs.reduce((a, s) => a + s.yearly, 0))}. Mira en <b>Fijos</b> si todos te compensan.` });
+  const cats = {}; full.forEach(c => Object.entries(c.byCat).forEach(([k, v]) => { if ((Fin.CATS[k] || {}).type === 'var') cats[k] = (cats[k] || 0) - v / n; }));
+  const top = Object.entries(cats).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  out.push({ t: '🧭 Tus 3 mayores gastos del día a día', d: top.map(([k, v]) => `${Fin.CATS[k].icon} ${esc(k)}: ${eur0(v)}/mes`).join('<br>') });
+  out.push({ tone: 'blue', t: '💡 Un truco que funciona', d: `Deja en Revolut solo el dinero de la semana (${eur0(Math.max(0, Fin.dailyAllowance(AN, S.balances, opts()).perWeek))}) y paga con esa tarjeta. Cuando se acaba, se acaba, y no tienes que ir sumando nada. Los fijos siguen saliendo de BBVA.` });
+  return out;
+}
+
+// ---- MESES ----
+function vMes() {
+  const cyc = AN.cycles, c = cyc[cycleIdx];
+  const maxV = Math.max(...cyc.map(x => x.spent), 1);
+  let h = `<div class="card"><h2>Gasto por mes</h2><div class="chart">${cyc.map((x, i) => {
+    const hp = x.hormiga / maxV * 100, fp = x.fixed / maxV * 100, vp = (x.variable - x.hormiga) / maxV * 100;
+    return `<div class="c" data-cyc="${i}" style="cursor:pointer;${i === cycleIdx ? '' : 'opacity:.75'}"><small class="num">${eur0(x.spent)}</small><div class="stk"><i style="height:${fp * 1.1}px;background:var(--bar)"></i><i style="height:${vp * 1.1}px;background:var(--blue)"></i><i style="height:${hp * 1.1}px;background:var(--warm)"></i></div><small style="${i === cycleIdx ? 'color:var(--ink);font-weight:700' : ''}">${esc(x.label.slice(0, 3))}</small></div>`;
+  }).join('')}</div>
+  <div class="legend"><span><i style="background:var(--bar)"></i>Fijos</span><span><i style="background:var(--blue)"></i>Día a día</span><span><i style="background:var(--warm)"></i>Hormiga</span></div>
+  <div class="small muted" style="margin-top:6px">Cada “mes” va de una nómina a la siguiente. Toca una barra para ver el detalle.</div></div>`;
+  const prev = AN.full.filter(x => x !== c);
+  const avgCat = k => prev.length ? prev.reduce((a, x) => a + (x.byCat[k] || 0), 0) / prev.length : 0;
+  const rowsIn = Object.entries(c.byCat).filter(([k]) => Fin.CATS[k] && Fin.CATS[k].type === 'in').sort((a, b) => b[1] - a[1]);
+  const rowsOut = Object.entries(c.byCat).filter(([k]) => Fin.CATS[k] && Fin.CATS[k].type !== 'in').sort((a, b) => a[1] - b[1]);
+  const maxOut = Math.max(1, ...rowsOut.map(([, v]) => -v));
+  h += `<div class="card"><h2>${esc(c.label)} <span class="muted small">${fdate(c.start)} → ${fdate(c.end)}${c.open ? ' · en curso' : ''}</span></h2>
+    <div class="grid2"><div class="kpi"><span class="small muted">Entró</span><b>${eur0(c.income)}</b></div><div class="kpi"><span class="small muted">Salió</span><b>${eur0(c.spent)}</b></div></div>
+    <div class="note ${c.net < 0 ? 'warm' : ''}" style="margin-top:10px">${c.open ? 'Mes en curso.' : c.net < 0 ? `Faltaron <b>${eur0(-c.net)}</b>: salió más de lo que entró.` : `Sobraron <b>${eur0(c.net)}</b>. 👏`}</div>
+    <h3>Entradas</h3>${rowsIn.map(([k, v]) => `<div class="row"><span class="l">${Fin.CATS[k].icon} ${esc(k)}</span><span class="num pos">${eur(v)}</span></div>`).join('')}
+    <h3>Salidas</h3>${rowsOut.map(([k, v]) => { const a = -avgCat(k), diff = -v - a; return `<div style="padding:6px 0;border-bottom:1px solid var(--line);cursor:pointer" data-cat="${esc(k)}"><div style="display:flex;justify-content:space-between;gap:10px"><span>${Fin.CATS[k].icon} ${esc(k)}</span><span class="num">${eur(-v)}</span></div><div style="display:flex;gap:10px;align-items:center;margin-top:4px"><div class="bar" style="flex:1;height:6px"><i style="width:${-v / maxOut * 100}%;background:${Fin.CATS[k].type === 'fixed' ? 'var(--muted)' : 'var(--blue)'}"></i></div><span class="small muted num" style="min-width:92px;text-align:right">${prev.length && Math.abs(diff) > 5 && !c.open ? (diff > 0 ? '▲ ' : '▼ ') + eur0(Math.abs(diff)) + ' vs media' : ''}</span></div></div>`; }).join('')}
+  </div>`;
+  return h;
+}
+
+// ---- HORMIGA ----
+function vHormiga() {
+  const cut = +S.settings.goalCut;
+  const n = AN.full.length || 1;
+  const list = AN.hormiga;
+  const byCat = {}; list.forEach(x => byCat[x.cat] = (byCat[x.cat] || 0) + x.total);
+  const wd = [0, 0, 0, 0, 0, 0, 0], wdN = [0, 0, 0, 0, 0, 0, 0];
+  AN.full.flatMap(c => c.txs).filter(t => t.hormiga).forEach(t => { const d = (new Date(t.date + 'T12:00:00').getDay() + 6) % 7; wd[d] -= t.amt; wdN[d]++; });
+  const maxWd = Math.max(...wd, 1);
+  let h = `<div class="card"><h2>🐜 Gastos hormiga</h2>
+    <p class="small muted" style="margin-top:0">Compras de menos de ${S.settings.hormigaMax} € en súper, cafés, comida y ocio. Una a una no son nada, pero todas juntas suman mucho.</p>
+    <div class="grid2"><div class="kpi"><span class="small muted">Al mes (media)</span><b>${eur0(AN.avg.hormiga)}</b><span class="small muted">${Math.round(AN.avg.hormigaN)} compras</span></div>
+    <div class="kpi"><span class="small muted">Al año</span><b>${eur0(AN.avg.hormiga * 12)}</b><span class="small muted">a este ritmo</span></div></div>
+    <label class="f" style="margin-top:14px"><span>Si las reduces un <b id="cutv">${cut}%</b>…</span><input type="range" id="cut" min="10" max="80" step="5" value="${cut}" style="width:100%"></label>
+    <div class="note">Ahorras <b id="cutm">${eur0(AN.avg.hormiga * cut / 100)}</b> al mes, <b id="cuty">${eur0(AN.avg.hormiga * 12 * cut / 100)}</b> al año. Sin dejar de ir: solo yendo menos veces.</div>
+  </div>`;
+  h += `<div class="card"><h2>Dónde se va</h2><div class="small muted" style="margin-bottom:6px">Media por mes (${n} meses completos)</div>
+    ${list.slice(0, 20).map(x => `<div class="row"><span class="l">${esc(x.shop)} <span class="small muted">· ${(x.n / n).toFixed(0)} veces/mes · ${eur(x.total / x.n)} cada vez</span></span><span class="num">${eur0(x.total / n)}</span></div>`).join('')}
+  </div>`;
+  h += `<div class="card"><h2>Por tipo</h2>${Object.entries(byCat).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<div class="row"><span>${Fin.CATS[k].icon} ${esc(k)}</span><span class="num">${eur0(v / n)}/mes</span></div>`).join('')}</div>`;
+  h += `<div class="card"><h2>Qué días</h2><div class="chart" style="height:110px">${['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((d, i) => `<div class="c"><small class="num">${eur0(wd[i] / n / 4.3)}</small><div class="stk"><i style="height:${wd[i] / maxWd * 70}px;background:var(--warm)"></i></div><small>${d}</small></div>`).join('')}</div><div class="small muted" style="margin-top:6px">Gasto hormiga medio en cada día de la semana.</div></div>`;
+  h += `<div class="card"><h2>Ideas que no son “prohíbete cosas”</h2>
+    <div class="note blue"><b>Una sola compra al día en el súper del barrio</b>Si vas a por una cosa, piensa si te falta algo más y aprovecha. Pasar de 3 visitas a 1 recorta sin darte cuenta.</div>
+    <div class="note blue"><b>El café o el bollo, en casa unos días</b>No hace falta dejarlo: si 2 de cada 5 días lo tomas en casa, ya es un 40 % menos.</div>
+    <div class="note blue"><b>La compra grande hecha</b>Casi todo lo hormiga es comida. Si tienes la nevera resuelta (el plan de comidas te ayuda), baja solo.</div>
+    <div class="note blue"><b>Tarjeta con el dinero de la semana</b>Pasa a Revolut solo lo de la semana y paga con ella las cosas pequeñas. Ves lo que te queda de un vistazo.</div>
+  </div>`;
+  return h;
+}
+
+// ---- FIJOS ----
+function subsTips(act) {
+  const tips = [];
+  const top = act.slice().sort((a, b) => b.amount - a.amount)[0];
+  if (top && top.cat === 'Seguros') tips.push(`¿Qué cubre <b>${esc(top.shop)}</b> (${eur(top.amount)}/mes, ${eur0(top.yearly)}/año)? A veces sale más barato en otra aseguradora.`);
+  const apple = act.filter(s => /apple/i.test(s.shop));
+  if (apple.length) tips.push(`¿Qué incluye cada cobro de <b>Apple</b> (${apple.map(s => eur(s.amount)).join(' + ')})? Lo ves en Ajustes del iPhone › tu nombre › Suscripciones.`);
+  if (act.some(s => /spotify/i.test(s.shop) && s.amount > 15)) tips.push('¿Pagas un <b>Spotify</b> compartido? Comprueba que los demás te pasan su parte.');
+  return tips.length ? `<div class="note blue" style="margin-top:10px"><b>Preguntas que vale la pena hacerse</b>${tips.join(' ')}</div>` : '';
+}
+function vFijos() {
+  const rec = AN.recurring, subs = AN.subs;
+  const totalRec = rec.reduce((a, r) => a + r.amount, 0);
+  const fees = AN.list.filter(t => t.cat === 'Comisiones del banco');
+  const servicios = AN.list.filter(t => /servicios del piso/i.test(t.shop));
+  const lastServ = servicios[servicios.length - 1];
+  let h = `<div class="card"><h2>Fijos de cada mes: ${eur0(totalRec)}</h2>
+    ${rec.map(r => `<div class="row"><span class="l">${Fin.CATS[r.cat].icon} ${esc(r.shop)} <span class="small muted">· día ${r.day}</span></span><span class="num">${eur(r.amount)}</span></div>`).join('')}
+    ${lastServ ? `<div class="note blue" style="margin-top:10px"><b>Servicios del piso: van aparte</b>El último pago fue el ${fdate(lastServ.date)} (${eur(-lastServ.amt)}: “${esc(lastServ.kind || lastServ.desc)}”). Si se pagan cada varios meses, ve apartando algo cada mes para que no te pille. Ahora apartas ${eur0(+S.settings.reserve)}/mes (en Ajustes).</div>` : ''}
+  </div>`;
+  h += `<div class="card"><h2>Suscripciones y pagos automáticos</h2>
+    ${subs.map(s => `<div class="row"><span class="l">${esc(s.shop)} <span class="pill ${s.active ? '' : 'blue'}">${s.active ? 'activa' : 'ya no se cobra'}</span><br><span class="small muted">${s.count} cobros · último ${fdate(s.last)}</span></span><span class="num">${eur(s.amount)}<br><span class="small muted">${eur0(s.yearly)}/año</span></span></div>`).join('')}
+    ${subsTips(subs.filter(s => s.active))}
+  </div>`;
+  if (fees.length) h += `<div class="card"><h2>Intereses y comisiones del banco</h2>${fees.map(t => `<div class="row"><span>${fdate(t.date)} · ${esc(t.desc)}</span><span class="num">${eur(-t.amt)}</span></div>`).join('')}<div class="small muted" style="margin-top:6px">Los intereses salen sobre todo de quedarte en negativo: si llegas al día de cobro sin bajar de 0, esa parte desaparece.</div></div>`;
+  return h;
+}
+
+// ---- MOVIMIENTOS ----
+function vMovs() {
+  const cats = Object.keys(Fin.CATS);
+  let list = AN.list.slice().reverse();
+  if (filterCat) list = list.filter(t => filterCat === '__h' ? t.hormiga : t.cat === filterCat);
+  if (search) { const q = Fin.strip(search); list = list.filter(t => Fin.strip(t.desc + ' ' + t.shop + ' ' + t.kind).includes(q)); }
+  const total = list.reduce((a, t) => a + t.amt, 0);
+  const shown = list.slice(0, 300);
+  return `<div class="card"><div class="toolbar"><input id="q" placeholder="Buscar (ej. glovo)" value="${esc(search)}" style="flex:1;min-width:140px">
+    <select id="fc"><option value="">Todas</option><option value="__h" ${filterCat === '__h' ? 'selected' : ''}>🐜 Solo hormiga</option>${cats.map(c => `<option ${c === filterCat ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
+    <div class="small muted">${list.length} movimientos · total ${eur(total)}${list.length > 300 ? ' · mostrando los 300 últimos' : ''}</div>
+    ${shown.map(t => `<div class="tx"><div class="l">${esc(t.shop)}${t.hormiga ? ' 🐜' : ''}<div class="d">${fdate(t.date)} · ${t.bank}${t.kind && !/pago con tarjeta|transferir|recargas/i.test(t.kind) ? ' · ' + esc(t.kind) : ''}</div></div>
+      <div style="text-align:right"><div class="num ${t.amt > 0 ? 'pos' : ''}">${eur(t.amt)}</div>
+      <select data-mk="${esc(Fin.merchantKey(t))}" title="Cambiar categoría (se aplica a todo lo de este sitio)">${cats.map(c => `<option ${c === t.cat ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div></div>`).join('')}
+  </div>`;
+}
+
+// ---- AJUSTES ----
+function vAjustes() {
+  const s = S.settings;
+  const first = AN.list[0].date, last = lastDataDate();
+  return `<div class="card"><h2>Datos</h2>
+    <p class="small">Tienes <b>${AN.list.length}</b> movimientos, del ${fdate(first)}/${first.slice(0, 4)} al ${fdate(last)}/${last.slice(0, 4)}.</p>
+    ${Object.entries(S.balances).map(([b, v]) => `<label class="f"><span>Saldo actual ${esc(b)} (del extracto del ${fdate(v.date)}; corrígelo si ha cambiado)</span><input type="number" step="0.01" data-bal="${esc(b)}" value="${v.amount}"></label>`).join('')}
+    <p class="small muted">🔒 Todo está guardado solo en este navegador. La página tiene bloqueadas las conexiones a internet.</p>
+    <div class="toolbar"><button id="exp">Descargar copia</button><button id="impb">Restaurar copia</button><input id="bfile" type="file" accept=".json" class="hidden"><button id="wipe">Borrar todo</button></div>
+  </div>
+  <div class="card"><h2>Ajustes</h2>
+    <label class="f"><span>Apartar cada mes para imprevistos y servicios del piso (€)</span><input type="number" data-set="reserve" value="${esc(s.reserve)}"></label>
+    <label class="f"><span>Objetivo de recorte en hormiga (%)</span><input type="number" data-set="goalCut" min="0" max="90" value="${esc(s.goalCut)}"></label>
+    <label class="f"><span>Qué cuenta como “hormiga”: compras de menos de (€)</span><input type="number" data-set="hormigaMax" value="${esc(s.hormigaMax)}"></label>
+    <label class="f"><span>Día de cobro (vacío = lo detecto yo: ahora ${AN.payDay})</span><input type="number" min="1" max="31" data-set="payDay" value="${esc(s.payDay)}"></label>
+    <label class="f"><span>Tu nombre como sale en los bancos (para detectar pasos entre tus cuentas)</span><input data-set="myName" value="${esc(s.myName)}"></label>
+    <label class="f"><span>Familia que te ayuda (nombres separados por coma)</span><input data-set="family" value="${esc(s.family)}"></label>
+  </div>
+  <div class="card"><h2>Cómo actualizar</h2>
+    <p class="small"><b>BBVA</b>: web bbva.es › tu cuenta › Movimientos › elige fechas › descargar Excel.<br><b>Revolut</b>: app › cuenta en euros › ··· › Extractos › Excel o CSV.<br>Súbelos aquí cuando quieras. Lo que ya estaba no se duplica.</p>
+  </div>`;
+}
+
+function bind() {
+  const $ = id => document.getElementById(id);
+  document.querySelectorAll('[data-cyc]').forEach(el => el.onclick = () => { cycleIdx = +el.dataset.cyc; render(); });
+  document.querySelectorAll('[data-cat]').forEach(el => el.onclick = () => { filterCat = el.dataset.cat; search = ''; tab = 'movs'; render(); scrollTo(0, 0); });
+  if ($('cut')) $('cut').oninput = e => { const v = +e.target.value; $('cutv').textContent = v + '%'; $('cutm').textContent = eur0(AN.avg.hormiga * v / 100); $('cuty').textContent = eur0(AN.avg.hormiga * 12 * v / 100); S.settings.goalCut = v; save(); };
+  if ($('q')) { $('q').oninput = e => { search = e.target.value; const pos = e.target.selectionStart; render(); const q = $('q'); q.focus(); q.setSelectionRange(pos, pos); }; $('fc').onchange = e => { filterCat = e.target.value; render(); }; }
+  document.querySelectorAll('select[data-mk]').forEach(el => el.onchange = () => { S.overrides[el.dataset.mk] = el.value; save(); render(); });
+  document.querySelectorAll('[data-set]').forEach(el => el.onchange = () => { S.settings[el.dataset.set] = el.value; save(); render(); });
+  document.querySelectorAll('[data-bal]').forEach(el => el.onchange = () => { S.balances[el.dataset.bal] = { amount: +el.value, date: new Date().toISOString().slice(0, 10) }; save(); render(); });
+  if ($('exp')) $('exp').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = 'midinero-copia-' + new Date().toISOString().slice(0, 10) + '.json'; a.click(); };
+  if ($('impb')) { $('impb').onclick = () => $('bfile').click(); $('bfile').onchange = async e => { try { const d = JSON.parse(await e.target.files[0].text()); if (!d.txs) throw 0; S = d; S.settings = Object.assign({}, DEFAULTS, S.settings); save(); render(); toast('Copia restaurada.'); } catch (_) { toast('Ese archivo no es una copia válida.'); } }; }
+  if ($('wipe')) $('wipe').onclick = () => { if (confirm('¿Borrar todos los movimientos y ajustes de este navegador?')) { S = { txs: {}, balances: {}, settings: Object.assign({}, DEFAULTS), overrides: {} }; save(); render(); } };
+}
+
+render();
+if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
+</script>
+</body>
+</html>

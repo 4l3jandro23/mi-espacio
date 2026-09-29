@@ -1,0 +1,9 @@
+# Tus extractos y copias NUNCA se suben
+extractos/
+*.xlsx
+*.xls
+*.csv
+*.pdf
+*.json
+!manifest.json
+.claude/
