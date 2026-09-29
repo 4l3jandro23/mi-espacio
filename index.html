@@ -76,6 +76,72 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 .kpi{background:var(--bg);border-radius:12px;padding:10px 12px}
 .kpi b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
 .hidden{display:none!important}
+.nb-entry{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;padding:14px 16px}
+body.nbmode .wrap{max-width:1180px;padding:0 0 60px}
+body.nbmode header,body.nbmode nav{display:none!important}
+.nb-top{position:sticky;top:0;z-index:6;display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--line)}
+.nb-top button{padding:6px 10px}
+.nb-burger{display:none}
+.nb-body{display:flex;min-height:calc(100vh - 56px)}
+.nb-side{width:260px;flex:none;border-right:1px solid var(--line);padding:10px 8px;position:sticky;top:56px;align-self:flex-start;max-height:calc(100vh - 56px);overflow:auto}
+.nb-side-top input{width:100%;margin-bottom:8px}
+.nb-link{display:block;padding:6px 10px;border-radius:8px;color:inherit;text-decoration:none;font-size:14px}
+.nb-link.on,.nb-link:hover{background:var(--line)}
+.nb-sec{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:14px 10px 4px}
+.nb-row{display:flex;align-items:center;gap:2px;border-radius:8px;font-size:14px}
+.nb-row:hover,.nb-row.on{background:var(--line)}
+.nb-row a{flex:1;min-width:0;padding:5px 4px;color:inherit;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nb-tw,.nb-plus{border:0;background:none;padding:2px 6px;color:var(--muted);font-size:13px;min-width:22px}
+.nb-row .nb-plus{opacity:0}.nb-row:hover .nb-plus,.nb-row.on .nb-plus{opacity:1}
+.nb-main{flex:1;min-width:0;padding:10px 16px 80px}
+.nb-page{max-width:760px;margin:0 auto;padding-top:14px}
+.nb-crumbs a{color:inherit;text-decoration:none}
+.nb-headrow{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+.nb-icon{font-size:44px;line-height:1;border:0;background:none;padding:4px}
+.nb-title{font-size:34px;line-height:1.15;margin:6px 0 14px;outline:none;letter-spacing:-.01em}
+[data-ph]:empty:before{content:attr(data-ph);color:var(--muted);opacity:.6;pointer-events:none}
+.nb-txt[data-ph]:empty:before{opacity:0}
+.nb-txt[data-ph]:focus:empty:before,.blk:only-child .nb-txt[data-ph]:empty:before{opacity:.6}
+.blk{position:relative;display:flex;align-items:flex-start;gap:6px;padding:2px 0 2px 26px}
+.nb-hdl{position:absolute;left:0;top:4px;width:22px;text-align:center;color:var(--muted);cursor:pointer;opacity:0;font-size:13px;user-select:none;border-radius:4px}
+.blk:hover .nb-hdl,.blk:focus-within .nb-hdl{opacity:.8}
+@media (hover:none){.nb-hdl{opacity:.35}}
+.nb-txt{flex:1;min-width:0;outline:none;padding:3px 2px;white-space:pre-wrap;word-break:break-word;line-height:1.55}
+.nb-txt a{color:var(--blue)}
+.nb-txt code{background:var(--line);border-radius:4px;padding:0 4px;font-size:.92em}
+.blk-h1 .nb-txt{font-size:26px;font-weight:700;margin-top:14px}
+.blk-h2 .nb-txt{font-size:21px;font-weight:700;margin-top:12px}
+.blk-h3 .nb-txt{font-size:17px;font-weight:700;margin-top:8px}
+.blk-h1 .nb-hdl{top:20px}.blk-h2 .nb-hdl{top:16px}.blk-h3 .nb-hdl{top:10px}
+.blk-todo input{margin-top:7px;width:17px;height:17px;flex:none}
+.blk-todo.done .nb-txt{text-decoration:line-through;color:var(--muted)}
+.nb-bul{min-width:18px;text-align:right;padding-top:3px;flex:none}
+.blk-quote .nb-txt{border-left:3px solid var(--ink);padding-left:12px}
+.blk-callout{background:var(--warm-soft);border-radius:10px;padding:10px 12px 10px 34px;margin:4px 0}
+.blk-callout .nb-hdl{left:4px}
+.blk-divider hr{flex:1;border:0;border-top:1px solid var(--line);margin:12px 0}
+.blk-page a{padding:4px 2px;color:inherit;text-decoration:none;font-weight:500}
+.nb-add{color:var(--muted);padding:8px 26px;cursor:text;font-size:14px}
+.nb-pop{position:absolute;z-index:70;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.18);padding:6px;max-height:320px;overflow:auto;width:260px}
+.nb-pop button{display:flex;align-items:center;gap:8px;width:100%;border:0;background:none;text-align:left;padding:7px 8px;border-radius:8px;font-size:14px}
+.nb-pop button.on,.nb-pop button:hover{background:var(--line)}
+.nb-mi{width:26px;text-align:center;font-weight:700;color:var(--muted)}
+.nb-emojis{display:grid;grid-template-columns:repeat(8,1fr);width:300px}
+.nb-emojis button{justify-content:center;font-size:20px;padding:6px 0}
+.nb-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.nb-card{display:flex;flex-direction:column;gap:4px;align-items:flex-start;text-align:left;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:inherit;text-decoration:none;cursor:pointer;font:inherit}
+.nb-card:hover{border-color:var(--accent)}
+.nb-modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:65;display:flex;align-items:center;justify-content:center;padding:16px}
+.nb-modal-in{background:var(--card);border-radius:16px;padding:18px;max-width:620px;width:100%;max-height:90vh;overflow:auto}
+.nb-veil{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:7}
+@media (max-width:820px){
+  .nb-burger{display:inline-block}
+  .nb-side{position:fixed;top:0;left:0;bottom:0;z-index:8;background:var(--card);max-height:none;height:100vh;height:100dvh;transform:translateX(-105%);transition:transform .2s ease;width:280px;padding-top:16px}
+  .nb-side.open{transform:none}
+  .nb-row .nb-plus{opacity:1}
+  .nb-title{font-size:28px}
+}
+@media (prefers-reduced-motion:reduce){.nb-side{transition:none}}
 .grid2 > *{min-width:0}
 input[type=range],input[type=checkbox]{accent-color:var(--accent)}
 .grid2 input{width:100%}
@@ -113,7 +179,7 @@ body.locked .wrap,body.locked nav{visibility:hidden}
 <div class="wrap">
   <header>
     <div><h1>Mi Dinero</h1><div id="syncst" class="small muted"></div></div>
-    <div style="display:flex;gap:8px"><button id="btnImport" class="primary">Cargar extractos</button><button id="btnCfg" aria-label="Ajustes">⚙️</button></div>
+    <div style="display:flex;gap:8px"><button id="btnNb" aria-label="Mi cuaderno" title="Mi cuaderno">📓</button><button id="btnImport" class="primary">Cargar extractos</button><button id="btnCfg" aria-label="Ajustes">⚙️</button></div>
     <input id="file" type="file" multiple accept=".xlsx,.xls,.csv" class="hidden">
   </header>
 
@@ -122,7 +188,7 @@ body.locked .wrap,body.locked nav{visibility:hidden}
     <p>Arrastra tus extractos o pulsa el botón:</p>
     <div class="drop" id="drop">📄 <b>BBVA</b>: Excel de movimientos (.xlsx)<br>📄 <b>Revolut</b>: extracto en CSV<br><span class="muted small">Puedes cargarlos todos a la vez. Si repites un archivo, no se duplica nada.</span></div>
     <p class="small muted">🔒 Todo se procesa en este dispositivo. Si activas la sincronización, lo que sube a tu GitHub va cifrado con tu contraseña.</p>
-    <p><button id="goSync">📱 ¿Ya la usas en otro dispositivo? Vincular</button></p>
+    <p><button id="goSync">📱 ¿Ya la usas en otro dispositivo? Vincular</button> <button id="goNb">📓 Ir a mi cuaderno</button></p>
     <p class="small muted">Lo que cargues se queda guardado; la próxima vez solo tienes que añadir los extractos nuevos.</p>
   </div>
 
@@ -152,6 +218,7 @@ body.locked .wrap,body.locked nav{visibility:hidden}
 <script src="vendor/xlsx.full.min.js"></script>
 <script src="engine.js"></script>
 <script src="sync.js"></script>
+<script src="cuaderno.js"></script>
 <script src="vendor/qrcode.min.js"></script>
 <script src="vendor/jsQR.min.js"></script>
 <script>
@@ -161,7 +228,7 @@ const DEFAULTS = { myName: '', family: '', savings: '', hormigaMax: 10, reserve:
 let S = load();
 let tab = 'hoy', cycleIdx = null, filterCat = '', search = '';
 
-function fresh() { return { txs: {}, balances: {}, settings: Object.assign({}, DEFAULTS), overrides: {}, fixedEnds: {}, debts: {}, _t: {} }; }
+function fresh() { return { txs: {}, balances: {}, settings: Object.assign({}, DEFAULTS), overrides: {}, fixedEnds: {}, debts: {}, pages: {}, _t: {} }; }
 function normalize(s) {
   const f = fresh();
   for (const k of Object.keys(f)) if (k !== 'settings') s[k] = s[k] || f[k];
@@ -205,7 +272,7 @@ async function doSync() {
   try {
     const r = await Sync.sync(S, c);
     c.gistId = r.gistId; c.last = Date.now(); setSyncCfg(c);
-    if (r.changedLocal) { S = normalize(r.state); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} render(); }
+    if (r.changedLocal) { S = normalize(r.state); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} if (nbBusy()) nbPendingRender = true; else render(); }
   } catch (e) { syncMsg = '⚠️ ' + e.message; }
   syncing = false; paintSync();
   if (tab === 'ajustes') { const el = document.getElementById('syncinfo'); if (el) el.innerHTML = syncInfo(); }
@@ -265,7 +332,8 @@ const debtLeft = d => Fin.round2(d.amount - (d.payments || []).reduce((a, p) => 
 function render() {
   const txs = Object.values(S.txs);
   const has = txs.length > 0;
-  const needsData = !has && !['deudas', 'ajustes'].includes(tab);
+  const needsData = !has && !['deudas', 'ajustes', 'cuaderno'].includes(tab);
+  document.body.classList.toggle('nbmode', tab === 'cuaderno');
   document.getElementById('empty').classList.toggle('hidden', !needsData);
   document.getElementById('nav').classList.toggle('hidden', !has && !debtList().length && tab === 'hoy');
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
@@ -279,12 +347,14 @@ function render() {
     AN.pendingFixed = AN.pendingFixed.filter(r => !fixedEnd(r) || fixedEnd(r) >= todayISO());
     if (cycleIdx == null || cycleIdx >= AN.cycles.length) cycleIdx = AN.cycles.length - 1;
   }
-  app.innerHTML = needsData ? '' : ({ hoy: vHoy, mes: vMes, hormiga: vHormiga, fijos: vFijos, movs: vMovs, deudas: vDeudas, ajustes: vAjustes, guia: vGuia, prev: vPrev })[tab]();
+  app.innerHTML = needsData ? '' : ({ hoy: vHoy, mes: vMes, hormiga: vHormiga, fijos: vFijos, movs: vMovs, deudas: vDeudas, ajustes: vAjustes, guia: vGuia, prev: vPrev, cuaderno: vCuaderno })[tab]();
   bind();
 }
 const goTab = t => { tab = t; render(); scrollTo(0, 0); };
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => goTab(b.dataset.tab));
 document.getElementById('btnCfg').onclick = () => goTab('ajustes');
+document.getElementById('btnNb').onclick = () => goTab('cuaderno');
+document.getElementById('goNb').onclick = () => goTab('cuaderno');
 document.getElementById('goSync').onclick = () => goTab('ajustes');
 
 function lastDataDate() { return AN.list[AN.list.length - 1].date; }
@@ -608,6 +678,8 @@ function vHoy() {
   const cycleDay = Fin.daysBetween(new Date(cur.start), new Date(lastDataDate())) + 1;
   const cycleDays = cur.days;
   let h = '';
+  const nbN = nbPages().length;
+  h += `<a class="card nb-entry" data-go="cuaderno" href="#"><span style="font-size:28px">📓</span><span style="flex:1"><b>Mi cuaderno</b><br><span class="small muted">${nbN ? nbN + ' página' + (nbN === 1 ? '' : 's') + ' · tareas, ideas, diario…' : 'Tu espacio para todo: tareas, ideas, diario, listas…'}</span></span><span class="muted">›</span></a>`;
   if (!S.settings.myName) h += `<div class="note blue"><b class="t">Un ajuste rápido</b>En <b>Ajustes</b>, escribe tu nombre como sale en el banco y, si alguien de tu familia te pasa dinero, su nombre. Así separo tus traspasos entre cuentas y la ayuda familiar del resto.</div>`;
   if (old > 6) h += `<div class="note blue"><b class="t">Tus datos son de hace ${old} días</b>Carga los extractos nuevos para que las cuentas sean de hoy.</div>`;
   h += `<div class="card">
@@ -914,7 +986,7 @@ function vAjustes() {
 
 function bind() {
   const $ = id => document.getElementById(id);
-  document.querySelectorAll('[data-go]').forEach(el => el.onclick = () => goTab(el.dataset.go));
+  document.querySelectorAll('[data-go]').forEach(el => el.onclick = e => { e.preventDefault(); goTab(el.dataset.go); });
   document.querySelectorAll('[data-cyc]').forEach(el => el.onclick = () => { cycleIdx = +el.dataset.cyc; render(); });
   document.querySelectorAll('[data-cat]').forEach(el => el.onclick = () => { filterCat = el.dataset.cat; search = ''; tab = 'movs'; render(); scrollTo(0, 0); });
   if ($('cut')) $('cut').oninput = e => { const v = +e.target.value; $('cutv').textContent = v + '%'; $('cutm').textContent = eur0(AN.avg.hormiga * v / 100); $('cuty').textContent = eur0(AN.avg.hormiga * 12 * v / 100); set('settings', 'goalCut', v); save(); };
@@ -923,7 +995,7 @@ function bind() {
   document.querySelectorAll('[data-set]').forEach(el => el.onchange = () => { set('settings', el.dataset.set, el.value); save(); render(); });
   document.querySelectorAll('[data-bal]').forEach(el => el.onchange = () => { set('balances', el.dataset.bal, { amount: +el.value, date: todayISO() }); save(); render(); });
   document.querySelectorAll('[data-end]').forEach(el => el.onchange = () => { set('fixedEnds', el.dataset.end, el.value || null); save(); render(); });
-  bindDeudas(); bindSync(); bindPrev();
+  bindDeudas(); bindSync(); bindPrev(); bindCuaderno();
   if ($('exp')) $('exp').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = 'midinero-copia-' + new Date().toISOString().slice(0, 10) + '.json'; a.click(); };
   if ($('impb')) { $('impb').onclick = () => $('bfile').click(); $('bfile').onchange = async e => { try { const d = JSON.parse(await e.target.files[0].text()); if (!d.txs) throw 0; const now = Date.now(); d._t = d._t || {}; for (const M of Sync.MAPS) for (const k of Object.keys(d[M] || {})) d._t[M + '/' + k] = now; S = normalize(d); save(); render(); toast('Copia restaurada.'); } catch (_) { toast('Ese archivo no es una copia válida.'); } }; }
   if ($('wipe')) $('wipe').onclick = () => { if (confirm('¿Borrar todos los datos de ESTE dispositivo? Si tienes la sincronización activa, se desconecta; tus otros dispositivos no se tocan.')) { setSyncCfg({}); S = fresh(); save(); render(); } };
@@ -1019,6 +1091,7 @@ document.getElementById('scanclose').onclick = closeScanner;
 
 render();
 if (S.settings.pinHash) lock('enter'); else lock('create');
+if (location.hash === '#cuaderno') { history.replaceState(null, '', location.pathname); goTab('cuaderno'); }
 if (/^#vincular=/.test(location.hash)) { const code = location.hash; history.replaceState(null, '', location.pathname); linkWith(code); }
 else doSync();
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {

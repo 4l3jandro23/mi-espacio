@@ -1,0 +1,380 @@
+// Cuaderno: páginas tipo Notion (bloques, subpáginas, plantillas, diario). Usa el estado S de la app
+// (S.pages), así que va con el mismo PIN y la misma sincronización cifrada.
+'use strict';
+let nbCur = null, nbSearch = '', nbSide = false, nbOpen = new Set(), nbPendingRender = false;
+let nbMenu = null; // { kind: 'slash'|'handle', blockId, items, idx }
+let nbSaveT = null;
+
+const NB_TYPES = [
+  { t: 'text', n: 'Texto', i: '¶', k: 'texto parrafo' },
+  { t: 'h1', n: 'Título grande', i: 'H1', k: 'titulo encabezado heading' },
+  { t: 'h2', n: 'Título mediano', i: 'H2', k: 'titulo encabezado heading' },
+  { t: 'h3', n: 'Título pequeño', i: 'H3', k: 'titulo encabezado heading' },
+  { t: 'todo', n: 'Tarea (casilla)', i: '☑', k: 'tarea todo checkbox check lista' },
+  { t: 'bullet', n: 'Lista con puntos', i: '•', k: 'lista puntos viñetas' },
+  { t: 'number', n: 'Lista numerada', i: '1.', k: 'lista numerada numeros' },
+  { t: 'quote', n: 'Cita', i: '❝', k: 'cita quote' },
+  { t: 'callout', n: 'Destacado', i: '💡', k: 'destacado aviso nota callout' },
+  { t: 'divider', n: 'Separador', i: '—', k: 'separador linea divider' },
+  { t: 'page', n: 'Subpágina', i: '📄', k: 'pagina subpagina page' },
+];
+const NB_PH = { text: 'Escribe, o pulsa “/” para elegir un tipo de bloque', h1: 'Título', h2: 'Título', h3: 'Título', todo: 'Tarea', bullet: 'Lista', number: 'Lista', quote: 'Cita', callout: 'Escribe algo destacado' };
+const NB_EMOJIS = '📄📝📅✅🎯💡📚🎬✈️🩺🛒🏠💰💪🍳🧠❤️🎵🎮🌱⭐📌🔒🗂️📖🧳🎁🐾☀️🌙🧘🏃‍♂️🎨💼🔧📷🍿🥗🧾😊'.match(/\p{Extended_Pictographic}(‍\p{Extended_Pictographic}|️)*/gu);
+
+const nbId = () => 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const bId = () => 'b' + Math.random().toString(36).slice(2, 10);
+const nbPages = () => Object.values(S.pages).filter(Boolean);
+const nbP = id => S.pages[id] || null;
+const nbKids = pid => nbPages().filter(p => (p.parent || null) === (pid || null)).sort((a, b) => a.order - b.order);
+const nbTitle = p => (p && p.title) || 'Sin título';
+const nbText = p => (p.blocks || []).map(b => (b.html || '').replace(/<[^>]+>/g, ' ')).join(' ');
+function nbAncestors(p) { const out = []; let x = p && nbP(p.parent); while (x && out.length < 20) { out.unshift(x); x = nbP(x.parent); } return out; }
+const B = (t, html, extra) => Object.assign({ id: bId(), t, html: html || '' }, extra || {});
+
+// ---------- guardar ----------
+function nbTouch(p) { p.updated = Date.now(); set('pages', p.id, p); clearTimeout(nbSaveT); nbSaveT = setTimeout(save, 500); }
+function nbSaveNow() { clearTimeout(nbSaveT); save(); }
+function nbCreate(opt) {
+  const p = { id: nbId(), title: opt.title || '', icon: opt.icon || '📄', parent: opt.parent || null, blocks: opt.blocks || [B('text')], created: Date.now(), updated: Date.now(), order: Date.now(), fav: false, kind: opt.kind || '' };
+  set('pages', p.id, p);
+  return p;
+}
+function nbDelete(id) {
+  const kill = x => { nbKids(x).forEach(k => kill(k.id)); set('pages', x, null); };
+  const p = nbP(id); if (!p) return;
+  const par = nbP(p.parent);
+  if (par) { par.blocks = par.blocks.filter(b => !(b.t === 'page' && b.ref === id)); nbTouch(par); }
+  kill(id); nbSaveNow();
+}
+
+// ---------- limpieza de HTML (lo que se guarda y se sincroniza) ----------
+function nbClean(html) {
+  const t = document.createElement('template'); t.innerHTML = html || '';
+  const walk = node => {
+    for (const c of [...node.childNodes]) {
+      if (c.nodeType === 3) continue;
+      if (c.nodeType !== 1) { c.remove(); continue; }
+      const tag = c.tagName.toLowerCase();
+      if (['script', 'style', 'iframe', 'object', 'embed', 'img', 'svg', 'math', 'template', 'video', 'audio', 'link', 'meta', 'form', 'input', 'button'].includes(tag)) { c.remove(); continue; }
+      walk(c);
+      if (tag === 'span' && c.id === 'nbcaret') continue;
+      if (['b', 'strong', 'i', 'em', 'u', 's', 'strike', 'code', 'br', 'a'].includes(tag)) {
+        const href = tag === 'a' ? c.getAttribute('href') : null;
+        for (const a of [...c.attributes]) c.removeAttribute(a.name);
+        if (tag === 'a') { if (href && /^https?:\/\//i.test(href)) { c.setAttribute('href', href); c.setAttribute('target', '_blank'); c.setAttribute('rel', 'noopener noreferrer'); } else { c.replaceWith(...c.childNodes); } }
+      } else {
+        if (['div', 'p'].includes(tag) && c.previousSibling) c.before(document.createElement('br'));
+        c.replaceWith(...c.childNodes);
+      }
+    }
+  };
+  walk(t.content);
+  return t.innerHTML.replace(/(<br>)+$/, '');
+}
+
+// ---------- plantillas ----------
+function nbDateTitle(iso) { return new Date(iso + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).replace(/^./, c => c.toUpperCase()); }
+const NB_TEMPLATES = {
+  blank: { n: 'Página en blanco', i: '📄', b: () => [B('text')] },
+  tareas: { n: 'Lista de tareas', i: '✅', b: () => [B('h2', 'Hoy'), B('todo'), B('h2', 'Esta semana'), B('todo'), B('h2', 'Algún día'), B('todo')] },
+  objetivos: { n: 'Objetivos', i: '🎯', b: () => [B('callout', 'Mejor pocos y concretos que muchos y vagos. Uno cumplido vale más que diez apuntados.'), B('h2', 'Este mes'), B('todo'), B('h2', 'Este año'), B('todo'), B('h2', 'Por qué me importa'), B('text')] },
+  diario: { n: 'Entrada de diario', i: '📅', b: () => [B('h3', '¿Cómo estoy hoy? (del 1 al 10)'), B('text'), B('h3', '3 cosas buenas de hoy'), B('number'), B('number'), B('number'), B('h3', 'Qué ha pasado'), B('text'), B('h3', 'Mañana quiero…'), B('todo')] },
+  lista: { n: 'Libros, pelis y series', i: '🎬', b: () => [B('h2', 'Quiero ver o leer'), B('todo'), B('h2', 'Ya visto o leído'), B('bullet', '<i>Título</i> — qué me pareció')] },
+  viaje: { n: 'Viaje', i: '✈️', b: () => [B('h2', 'Cuándo y dónde'), B('text'), B('h2', 'Presupuesto'), B('bullet', 'Transporte: '), B('bullet', 'Alojamiento: '), B('bullet', 'Comida: '), B('bullet', 'Planes: '), B('h2', 'Qué llevar'), B('todo'), B('h2', 'Planes'), B('bullet')] },
+  cita: { n: 'Preparar una cita', i: '🩺', b: () => [B('callout', 'Apúntalo antes de ir: en la consulta se olvidan las cosas.'), B('h2', 'Qué quiero contar'), B('bullet'), B('h2', 'Preguntas'), B('todo'), B('h2', 'Lo que me han dicho'), B('text'), B('h2', 'Próximos pasos'), B('todo')] },
+  compra: { n: 'Lista de la compra', i: '🛒', b: () => [B('todo'), B('todo'), B('todo')] },
+  ideas: { n: 'Ideas', i: '💡', b: () => [B('callout', 'Aquí va todo lo que se te ocurra, sin filtro. Ya lo ordenarás.'), B('bullet')] },
+};
+function nbSeed() {
+  const mk = (title, icon, tpl, kind) => nbCreate({ title, icon, blocks: NB_TEMPLATES[tpl].b(), kind });
+  const d = mk('Diario', '📅', 'blank', 'diario-root'); d.blocks = [B('text', 'Una entrada por día. Pulsa “📅 Diario de hoy” en el inicio del cuaderno.')];
+  mk('Tareas', '✅', 'tareas'); mk('Objetivos', '🎯', 'objetivos'); mk('Ideas', '💡', 'ideas');
+  mk('Libros, pelis y series', '🎬', 'lista'); mk('Lista de la compra', '🛒', 'compra');
+  const v = mk('Viajes', '✈️', 'blank'); v.blocks = [B('text', 'Crea una subpágina por viaje con la plantilla “Viaje”.')];
+  const c = mk('Citas', '🩺', 'blank'); c.blocks = [B('text', 'Crea una subpágina antes de cada cita con la plantilla “Preparar una cita”.')];
+  nbSaveNow();
+}
+function nbToday() {
+  let root = nbPages().find(p => p.kind === 'diario-root');
+  if (!root) root = nbCreate({ title: 'Diario', icon: '📅', kind: 'diario-root', blocks: [B('text')] });
+  const iso = todayISO();
+  let e = nbPages().find(p => p.kind === 'diario:' + iso);
+  if (!e) { e = nbCreate({ title: nbDateTitle(iso), icon: '📅', parent: root.id, kind: 'diario:' + iso, blocks: NB_TEMPLATES.diario.b() }); e.order = -Date.now(); nbSaveNow(); }
+  nbGo(e.id);
+}
+
+// ---------- vistas ----------
+function nbGo(id) { nbCur = id; nbSide = false; nbSearch = ''; const p = nbP(id); if (p) nbAncestors(p).forEach(a => nbOpen.add(a.id)); render(); scrollTo(0, 0); }
+function nbTree(pid, depth) {
+  return nbKids(pid).map(p => {
+    const kids = nbKids(p.id).length, open = nbOpen.has(p.id);
+    return `<div class="nb-row ${p.id === nbCur ? 'on' : ''}" style="padding-left:${4 + depth * 14}px">
+      <button class="nb-tw" data-tw="${p.id}" aria-label="Desplegar">${kids ? (open ? '▾' : '▸') : ''}</button>
+      <a data-open="${p.id}" href="#">${esc(p.icon || '📄')} ${esc(nbTitle(p))}</a>
+      <button class="nb-plus" data-new="${p.id}" title="Añadir subpágina" aria-label="Añadir subpágina">+</button></div>
+      ${kids && open ? nbTree(p.id, depth + 1) : ''}`;
+  }).join('');
+}
+function nbSideHTML() {
+  const q = Fin.strip(nbSearch);
+  const found = q ? nbPages().filter(p => Fin.strip(p.title + ' ' + nbText(p)).includes(q)).sort((a, b) => b.updated - a.updated) : null;
+  return `<aside class="nb-side ${nbSide ? 'open' : ''}">
+    <div class="nb-side-top"><input id="nbq" placeholder="🔍 Buscar" value="${esc(nbSearch)}" autocomplete="off"></div>
+    <a class="nb-link ${!nbCur ? 'on' : ''}" data-home href="#">🏠 Inicio del cuaderno</a>
+    <a class="nb-link" data-today href="#">📅 Diario de hoy</a>
+    <div class="nb-sec">Páginas <button class="nb-plus" data-new="" title="Nueva página" aria-label="Nueva página">+</button></div>
+    <div id="nbTree">${found ? (found.length ? found.map(p => `<div class="nb-row"><a data-open="${p.id}" href="#">${esc(p.icon)} ${esc(nbTitle(p))}</a></div>`).join('') : '<div class="small muted" style="padding:6px 10px">Nada con eso.</div>') : nbTree(null, 0) || '<div class="small muted" style="padding:6px 10px">Aún no hay páginas.</div>'}</div>
+  </aside>`;
+}
+function nbHome() {
+  const all = nbPages();
+  const favs = all.filter(p => p.fav), recent = all.slice().sort((a, b) => b.updated - a.updated).slice(0, 8);
+  const hour = new Date().getHours();
+  const hi = hour < 6 ? 'Buenas noches' : hour < 13 ? 'Buenos días' : hour < 21 ? 'Buenas tardes' : 'Buenas noches';
+  const card = p => `<a class="nb-card" data-open="${p.id}" href="#"><span style="font-size:22px">${esc(p.icon)}</span><b>${esc(nbTitle(p))}</b><span class="small muted">${new Date(p.updated).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span></a>`;
+  return `<div class="nb-page"><h1 style="font-size:28px;margin:6px 0 2px">${hi} 👋</h1><div class="muted">${nbDateTitle(todayISO())}</div>
+    <div class="toolbar" style="margin:16px 0"><button class="primary" data-today>📅 Diario de hoy</button><button data-new="">+ Nueva página</button></div>
+    ${!all.length ? `<div class="card"><h2>Tu cuaderno para todo</h2><p class="small">Para lo que quieras: tareas, ideas, diario, listas, viajes, preparar citas… Cada página puede tener subpáginas dentro, como carpetas.</p>
+      <div class="toolbar"><button class="primary" id="nbseed">Empezar con una estructura básica</button><button data-new="">Empezar en blanco</button></div></div>` : ''}
+    ${favs.length ? `<h3>⭐ Favoritos</h3><div class="nb-cards">${favs.map(card).join('')}</div>` : ''}
+    ${recent.length ? `<h3>🕒 Recientes</h3><div class="nb-cards">${recent.map(card).join('')}</div>` : ''}
+    <details class="why" style="margin-top:18px"><summary>Trucos para escribir</summary><div class="small">
+      <b>/</b> al empezar una línea: menú de bloques (tarea, título, lista…).<br>
+      <b>#</b> + espacio: título · <b>-</b> + espacio: lista · <b>[]</b> + espacio: tarea · <b>1.</b> + espacio: lista numerada · <b>&gt;</b> + espacio: cita · <b>---</b>: separador.<br>
+      <b>Ctrl+B / Ctrl+I</b>: negrita / cursiva · <b>⋮⋮</b> a la izquierda de cada bloque: mover, convertir o borrar.</div></details>
+  </div>`;
+}
+function nbNumber(blocks, i) { let n = 1; for (let j = i - 1; j >= 0 && blocks[j].t === 'number'; j--) n++; return n; }
+function nbBlockHTML(b, i, blocks) {
+  const h = `<span class="nb-hdl" data-hdl="${b.id}" title="Mover, convertir o borrar" role="button" tabindex="-1">⋮⋮</span>`;
+  if (b.t === 'divider') return `<div class="blk blk-divider" data-id="${b.id}">${h}<hr></div>`;
+  if (b.t === 'page') { const p = nbP(b.ref); if (!p) return ''; return `<div class="blk blk-page" data-id="${b.id}">${h}<a data-open="${p.id}" href="#">${esc(p.icon)} <u>${esc(nbTitle(p))}</u></a></div>`; }
+  const pre = b.t === 'todo' ? `<input type="checkbox" data-chk="${b.id}" ${b.checked ? 'checked' : ''} aria-label="Hecha">` : b.t === 'bullet' ? '<span class="nb-bul">•</span>' : b.t === 'number' ? `<span class="nb-bul">${nbNumber(blocks, i)}.</span>` : b.t === 'callout' ? `<span class="nb-bul">${esc(b.emoji || '💡')}</span>` : '';
+  return `<div class="blk blk-${b.t} ${b.checked ? 'done' : ''}" data-id="${b.id}">${h}${pre}<div class="nb-txt" contenteditable="true" spellcheck="true" data-ph="${esc(NB_PH[b.t] || '')}">${nbClean(b.html)}</div></div>`;
+}
+function nbPageHTML(p) {
+  const anc = nbAncestors(p);
+  return `<div class="nb-page">
+    <div class="nb-crumbs small muted">${anc.map(a => `<a data-open="${a.id}" href="#">${esc(a.icon)} ${esc(nbTitle(a))}</a> / `).join('')}<span>${esc(nbTitle(p))}</span></div>
+    <div class="nb-headrow"><button class="nb-icon" id="nbicon" title="Cambiar icono">${esc(p.icon || '📄')}</button>
+      <div class="toolbar" style="margin:0"><button id="nbfav" title="Favorito">${p.fav ? '⭐' : '☆'}</button><button id="nbmore" title="Más opciones">⋯</button></div></div>
+    <h1 class="nb-title" id="nbtitle" contenteditable="true" spellcheck="true" data-ph="Sin título">${esc(p.title || '')}</h1>
+    <div id="nbBlocks">${p.blocks.map((b, i) => nbBlockHTML(b, i, p.blocks)).join('')}</div>
+    <div class="nb-add" id="nbadd">+ Añadir un bloque</div>
+    <div class="small muted" style="margin-top:24px">Editado ${new Date(p.updated).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+  </div>`;
+}
+function vCuaderno() {
+  const p = nbCur && nbP(nbCur);
+  if (nbCur && !p) nbCur = null;
+  return `<div class="nb">
+    <div class="nb-top"><button id="nbmenu" class="nb-burger" aria-label="Páginas">☰</button><b style="flex:1">📓 Mi cuaderno</b><button id="nbback">💰 Mi Dinero</button><button onclick="goTab('ajustes')" aria-label="Ajustes">⚙️</button></div>
+    <div class="nb-body">${nbSideHTML()}<main class="nb-main">${p ? nbPageHTML(p) : nbHome()}</main></div>
+    ${nbSide ? '<div class="nb-veil" id="nbveil"></div>' : ''}
+  </div>`;
+}
+
+// ---------- editor ----------
+const nbCurPage = () => nbP(nbCur);
+const nbFind = id => { const p = nbCurPage(); const i = p ? p.blocks.findIndex(b => b.id === id) : -1; return { p, i, b: i >= 0 ? p.blocks[i] : null }; };
+const nbEl = id => document.querySelector(`.blk[data-id="${id}"] .nb-txt`);
+function nbRenderBlocks(focusId, where) {
+  const p = nbCurPage(); if (!p) return;
+  document.getElementById('nbBlocks').innerHTML = p.blocks.map((b, i) => nbBlockHTML(b, i, p.blocks)).join('');
+  if (focusId) nbFocus(focusId, where);
+}
+function nbFocus(id, where) {
+  const el = nbEl(id); if (!el) return;
+  el.focus();
+  const sel = getSelection(), r = document.createRange();
+  const mk = el.querySelector('#nbcaret');
+  if (mk) { r.setStartBefore(mk); r.collapse(true); mk.remove(); const { p, b } = nbFind(id); if (b) { b.html = el.innerHTML; nbTouch(p); } }
+  else { r.selectNodeContents(el); r.collapse(where === 'start'); }
+  sel.removeAllRanges(); sel.addRange(r);
+}
+function nbCaret(el) {
+  const s = getSelection(); if (!s.rangeCount) return null;
+  const r = s.getRangeAt(0); if (!el.contains(r.startContainer)) return null;
+  const pre = r.cloneRange(); pre.selectNodeContents(el); pre.setEnd(r.startContainer, r.startOffset);
+  return { pos: pre.toString().length, len: el.textContent.length, collapsed: r.collapsed, range: r };
+}
+function nbSetType(id, t) {
+  const { p, b } = nbFind(id); if (!b) return;
+  if (t === 'page') {
+    const child = nbCreate({ title: b.html ? b.html.replace(/<[^>]+>/g, '') : '', parent: p.id, blocks: [B('text')] });
+    b.t = 'page'; b.ref = child.id; b.html = '';
+    nbTouch(p); nbSaveNow(); nbGo(child.id); const tt = document.getElementById('nbtitle'); if (tt) tt.focus(); return;
+  }
+  b.t = t; if (t !== 'todo') delete b.checked;
+  if (t === 'divider') { b.html = ''; const nb = B('text'); p.blocks.splice(p.blocks.indexOf(b) + 1, 0, nb); nbTouch(p); nbRenderBlocks(nb.id, 'start'); return; }
+  nbTouch(p); nbRenderBlocks(id, 'end');
+}
+function nbCloseMenu() { const m = document.getElementById('nbpop'); if (m) m.remove(); nbMenu = null; }
+function nbOpenMenu(kind, blockId, anchor, filter) {
+  let items;
+  if (kind === 'slash') {
+    const q = Fin.strip(filter || '');
+    items = NB_TYPES.filter(x => !q || Fin.strip(x.n + ' ' + x.k).includes(q)).map(x => ({ label: `<span class="nb-mi">${x.i}</span>${x.n}`, run: () => { const { b } = nbFind(blockId); if (b) b.html = ''; nbSetType(blockId, x.t); } }));
+    if (!items.length) { nbCloseMenu(); return; }
+  } else {
+    const { p, i } = nbFind(blockId);
+    items = [
+      ...NB_TYPES.filter(x => !['page'].includes(x.t)).map(x => ({ label: `<span class="nb-mi">${x.i}</span>Convertir en ${x.n.toLowerCase()}`, run: () => nbSetType(blockId, x.t) })),
+      { label: '<span class="nb-mi">↑</span>Subir', run: () => { if (i > 0) { [p.blocks[i - 1], p.blocks[i]] = [p.blocks[i], p.blocks[i - 1]]; nbTouch(p); nbRenderBlocks(); } } },
+      { label: '<span class="nb-mi">↓</span>Bajar', run: () => { if (i < p.blocks.length - 1) { [p.blocks[i + 1], p.blocks[i]] = [p.blocks[i], p.blocks[i + 1]]; nbTouch(p); nbRenderBlocks(); } } },
+      { label: '<span class="nb-mi">⧉</span>Duplicar', run: () => { const c = Object.assign({}, p.blocks[i], { id: bId() }); if (c.t === 'page') return; p.blocks.splice(i + 1, 0, c); nbTouch(p); nbRenderBlocks(); } },
+      { label: '<span class="nb-mi">🗑</span>Borrar bloque', run: () => { const b = p.blocks[i]; if (b.t === 'page') { if (!confirm('Este bloque es una subpágina. ¿Borrar también la subpágina y todo lo que tiene dentro?')) return; nbDelete(b.ref); } p.blocks.splice(i, 1); if (!p.blocks.length) p.blocks.push(B('text')); nbTouch(p); nbRenderBlocks(); } },
+    ];
+  }
+  nbCloseMenu();
+  nbMenu = { kind, blockId, items, idx: 0 };
+  const m = document.createElement('div'); m.id = 'nbpop'; m.className = 'nb-pop'; m.setAttribute('role', 'menu');
+  m.innerHTML = items.map((x, k) => `<button data-mi="${k}" class="${k === 0 ? 'on' : ''}" role="menuitem">${x.label}</button>`).join('');
+  document.body.appendChild(m);
+  const r = anchor.getBoundingClientRect();
+  const top = r.bottom + 4 + m.offsetHeight > innerHeight ? Math.max(8, r.top - m.offsetHeight - 4) : r.bottom + 4;
+  m.style.top = (top + scrollY) + 'px'; m.style.left = Math.min(r.left + scrollX, scrollX + innerWidth - m.offsetWidth - 8) + 'px';
+  m.onmousedown = e => e.preventDefault();
+  m.onclick = e => { const b = e.target.closest('[data-mi]'); if (!b) return; const it = nbMenu.items[+b.dataset.mi]; nbCloseMenu(); it.run(); };
+}
+function nbMenuMove(d) { if (!nbMenu) return; nbMenu.idx = (nbMenu.idx + d + nbMenu.items.length) % nbMenu.items.length; document.querySelectorAll('#nbpop [data-mi]').forEach((b, k) => { b.classList.toggle('on', k === nbMenu.idx); if (k === nbMenu.idx) b.scrollIntoView({ block: 'nearest' }); }); }
+
+const NB_MD = [[/^###\s/, 'h3'], [/^##\s/, 'h2'], [/^#\s/, 'h1'], [/^[-*]\s/, 'bullet'], [/^1[.)]\s/, 'number'], [/^\[\s?\]\s/, 'todo'], [/^>\s/, 'quote'], [/^!\s/, 'callout']];
+function nbOnInput(el) {
+  const blk = el.closest('.blk'), { p, b } = nbFind(blk.dataset.id); if (!b) return;
+  const txt = el.textContent.replace(/ /g, ' ');
+  if (b.t !== 'text' || !/^(#{1,3}|[-*]|1[.)]|\[\s?\]|>|!|---)/.test(txt)) { /* nada */ }
+  else if (txt === '---') { b.html = ''; nbSetType(b.id, 'divider'); return; }
+  else for (const [re, t] of NB_MD) { const m = txt.match(re); if (m) { b.html = esc(txt.slice(m[0].length)); b.t = t; nbTouch(p); nbRenderBlocks(b.id, 'end'); return; } }
+  b.html = el.innerHTML;
+  nbTouch(p);
+  if (txt.startsWith('/')) nbOpenMenu('slash', b.id, el, txt.slice(1));
+  else if (nbMenu && nbMenu.kind === 'slash') nbCloseMenu();
+}
+function nbOnKey(e, el) {
+  const blk = el.closest('.blk'), { p, i, b } = nbFind(blk.dataset.id); if (!b) return;
+  if (nbMenu) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); return nbMenuMove(1); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); return nbMenuMove(-1); }
+    if (e.key === 'Enter') { e.preventDefault(); const it = nbMenu.items[nbMenu.idx]; nbCloseMenu(); return it.run(); }
+    if (e.key === 'Escape') { e.preventDefault(); return nbCloseMenu(); }
+  }
+  const c = nbCaret(el);
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    if (['todo', 'bullet', 'number', 'quote', 'callout'].includes(b.t) && !el.textContent.trim()) { b.t = 'text'; delete b.checked; nbTouch(p); return nbRenderBlocks(b.id, 'start'); }
+    let after = '';
+    if (c) { const r = c.range; r.deleteContents(); const tail = document.createRange(); tail.setStart(r.startContainer, r.startOffset); tail.setEnd(el, el.childNodes.length); const d = document.createElement('div'); d.appendChild(tail.extractContents()); after = d.innerHTML; }
+    b.html = el.innerHTML;
+    const nt = ['todo', 'bullet', 'number'].includes(b.t) ? b.t : 'text';
+    const nb = B(nt, nbClean(after));
+    p.blocks.splice(i + 1, 0, nb); nbTouch(p); return nbRenderBlocks(nb.id, 'start');
+  }
+  if (e.key === 'Backspace' && c && c.pos === 0 && c.collapsed) {
+    if (b.t !== 'text') { e.preventDefault(); b.t = 'text'; delete b.checked; nbTouch(p); return nbRenderBlocks(b.id, 'start'); }
+    if (i === 0) { if (!el.textContent && p.blocks.length > 1) { e.preventDefault(); p.blocks.splice(0, 1); nbTouch(p); nbRenderBlocks(p.blocks[0].id, 'start'); } return; }
+    e.preventDefault();
+    const prev = p.blocks[i - 1];
+    if (prev.t === 'divider' || prev.t === 'page') { if (prev.t === 'page') return nbFocus(b.id, 'start'); p.blocks.splice(i - 1, 1); nbTouch(p); return nbRenderBlocks(b.id, 'start'); }
+    prev.html = (prev.html || '') + '<span id="nbcaret"></span>' + el.innerHTML;
+    p.blocks.splice(i, 1); nbTouch(p); return nbRenderBlocks(prev.id);
+  }
+  if (e.key === 'ArrowUp' && c && c.pos === 0) { for (let j = i - 1; j >= 0; j--) if (nbEl(p.blocks[j].id)) { e.preventDefault(); return nbFocus(p.blocks[j].id, 'end'); } }
+  if (e.key === 'ArrowDown' && c && c.pos === c.len) { for (let j = i + 1; j < p.blocks.length; j++) if (nbEl(p.blocks[j].id)) { e.preventDefault(); return nbFocus(p.blocks[j].id, 'start'); } }
+}
+function nbOnPaste(e, el) {
+  const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+  e.preventDefault();
+  if (!text) return;
+  const lines = text.replace(/\r/g, '').split('\n');
+  document.execCommand('insertText', false, lines[0]);
+  if (lines.length === 1) return;
+  const { p, i, b } = nbFind(el.closest('.blk').dataset.id);
+  b.html = el.innerHTML;
+  const add = lines.slice(1).map(l => { for (const [re, t] of NB_MD) { const m = l.match(re); if (m) return B(t, esc(l.slice(m[0].length))); } return B(['todo', 'bullet', 'number'].includes(b.t) ? b.t : 'text', esc(l)); });
+  p.blocks.splice(i + 1, 0, ...add); nbTouch(p); nbRenderBlocks(add[add.length - 1].id, 'end');
+}
+
+function nbNewPage(parent) {
+  const box = document.createElement('div'); box.className = 'nb-modal'; box.id = 'nbmodal';
+  box.innerHTML = `<div class="nb-modal-in" role="dialog" aria-label="Nueva página"><h2>Nueva página</h2><div class="nb-cards">${Object.entries(NB_TEMPLATES).map(([k, t]) => `<button class="nb-card" data-tpl="${k}"><span style="font-size:22px">${t.i}</span><b>${t.n}</b></button>`).join('')}</div><button id="nbmx" style="margin-top:12px">Cancelar</button></div>`;
+  document.body.appendChild(box);
+  box.onclick = e => {
+    if (e.target === box || e.target.id === 'nbmx') return box.remove();
+    const b = e.target.closest('[data-tpl]'); if (!b) return;
+    const t = NB_TEMPLATES[b.dataset.tpl];
+    const p = nbCreate({ title: b.dataset.tpl === 'blank' ? '' : t.n, icon: t.i, parent: parent || null, blocks: t.b() });
+    const par = nbP(parent); if (par) { par.blocks.push(B('page', '', { ref: p.id })); nbTouch(par); }
+    nbSaveNow(); box.remove(); if (parent) nbOpen.add(parent); nbGo(p.id);
+    const el = document.getElementById('nbtitle'); if (el) { el.focus(); const r = document.createRange(); r.selectNodeContents(el); r.collapse(false); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r); }
+  };
+}
+function nbIconPicker(anchor) {
+  const p = nbCurPage();
+  nbCloseMenu();
+  nbMenu = { kind: 'icon', items: [] };
+  const m = document.createElement('div'); m.id = 'nbpop'; m.className = 'nb-pop nb-emojis';
+  m.innerHTML = NB_EMOJIS.map(x => `<button data-emo="${x}">${x}</button>`).join('');
+  document.body.appendChild(m);
+  const r = anchor.getBoundingClientRect(); m.style.top = (r.bottom + 4 + scrollY) + 'px'; m.style.left = (r.left + scrollX) + 'px';
+  m.onclick = e => { const b = e.target.closest('[data-emo]'); if (!b) return; p.icon = b.dataset.emo; nbTouch(p); nbCloseMenu(); render(); };
+}
+function nbMoreMenu(anchor) {
+  const p = nbCurPage();
+  const opts = nbPages().filter(x => x.id !== p.id && !nbAncestors(x).some(a => a.id === p.id));
+  nbCloseMenu();
+  nbMenu = { kind: 'more', items: [] };
+  const m = document.createElement('div'); m.id = 'nbpop'; m.className = 'nb-pop';
+  m.innerHTML = `<div class="small muted" style="padding:6px 10px">Mover dentro de…</div><select id="nbmove" style="margin:0 8px 8px;width:calc(100% - 16px)"><option value="">(Arriba del todo)</option>${opts.map(x => `<option value="${x.id}" ${x.id === p.parent ? 'selected' : ''}>${esc(x.icon)} ${esc(nbTitle(x))}</option>`).join('')}</select><button id="nbdel">🗑 Borrar página</button>`;
+  document.body.appendChild(m);
+  const r = anchor.getBoundingClientRect(); m.style.top = (r.bottom + 4 + scrollY) + 'px'; m.style.left = Math.max(8, r.right - 240 + scrollX) + 'px';
+  document.getElementById('nbmove').onchange = e => {
+    const old = nbP(p.parent); if (old) { old.blocks = old.blocks.filter(b => !(b.t === 'page' && b.ref === p.id)); if (!old.blocks.length) old.blocks.push(B('text')); nbTouch(old); }
+    p.parent = e.target.value || null; const np = nbP(p.parent); if (np) { np.blocks.push(B('page', '', { ref: p.id })); nbTouch(np); }
+    nbTouch(p); nbSaveNow(); nbCloseMenu(); nbGo(p.id);
+  };
+  document.getElementById('nbdel').onclick = () => {
+    const n = (function count(id) { return nbKids(id).reduce((a, k) => a + 1 + count(k.id), 0); })(p.id);
+    if (!confirm(`¿Borrar “${nbTitle(p)}”${n ? ` y sus ${n} subpáginas` : ''}? No se puede deshacer.`)) return;
+    const par = p.parent; nbCloseMenu(); nbDelete(p.id); nbCur = par || null; render();
+  };
+}
+
+function bindCuaderno() {
+  const root = document.querySelector('.nb'); if (!root) return;
+  const $ = id => document.getElementById(id);
+  root.onclick = e => {
+    const t = e.target;
+    const open = t.closest('[data-open]'); if (open) { e.preventDefault(); return nbGo(open.dataset.open); }
+    if (t.closest('[data-home]')) { e.preventDefault(); nbCur = null; nbSide = false; return render(); }
+    if (t.closest('[data-today]')) { e.preventDefault(); return nbToday(); }
+    const nw = t.closest('[data-new]'); if (nw) { e.preventDefault(); return nbNewPage(nw.dataset.new || null); }
+    const tw = t.closest('[data-tw]'); if (tw) { const id = tw.dataset.tw; nbOpen.has(id) ? nbOpen.delete(id) : nbOpen.add(id); $('nbTree').innerHTML = nbTree(null, 0); return; }
+    const chk = t.closest('[data-chk]'); if (chk) { const { p, b } = nbFind(chk.dataset.chk); b.checked = chk.checked; nbTouch(p); chk.closest('.blk').classList.toggle('done', chk.checked); return; }
+    const hdl = t.closest('[data-hdl]'); if (hdl) return nbOpenMenu('handle', hdl.dataset.hdl, hdl);
+    if (t.id === 'nbadd') { const p = nbCurPage(); const last = p.blocks[p.blocks.length - 1]; if (last && last.t === 'text' && !last.html) return nbFocus(last.id, 'start'); const nb = B('text'); p.blocks.push(nb); nbTouch(p); return nbRenderBlocks(nb.id, 'start'); }
+  };
+  $('nbmenu').onclick = () => { nbSide = !nbSide; render(); };
+  if ($('nbveil')) $('nbveil').onclick = () => { nbSide = false; render(); };
+  $('nbback').onclick = () => goTab('hoy');
+  $('nbq').oninput = e => { nbSearch = e.target.value; const pos = e.target.selectionStart; const side = document.querySelector('.nb-side'); side.outerHTML = nbSideHTML(); const q = $('nbq'); q.focus(); q.setSelectionRange(pos, pos); };
+  if ($('nbseed')) $('nbseed').onclick = () => { nbSeed(); render(); };
+  const blocks = $('nbBlocks');
+  if (blocks) {
+    blocks.addEventListener('input', e => { const el = e.target.closest('.nb-txt'); if (el) nbOnInput(el); });
+    blocks.addEventListener('keydown', e => { const el = e.target.closest('.nb-txt'); if (el) nbOnKey(e, el); });
+    blocks.addEventListener('paste', e => { const el = e.target.closest('.nb-txt'); if (el) nbOnPaste(e, el); });
+    blocks.addEventListener('focusout', () => setTimeout(() => { if (!nbBusy() && nbPendingRender) { nbPendingRender = false; render(); } if (!document.activeElement || !document.activeElement.closest('.nb-txt')) { if (nbMenu && nbMenu.kind === 'slash') nbCloseMenu(); } }, 150));
+    const title = $('nbtitle');
+    title.oninput = () => { const p = nbCurPage(); p.title = title.textContent.trim(); nbTouch(p); $('nbTree').innerHTML = nbSearch ? $('nbTree').innerHTML : nbTree(null, 0); };
+    title.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); const p = nbCurPage(); if (!p.blocks.length || !nbEl(p.blocks[0].id)) { const nb = B('text'); p.blocks.unshift(nb); nbTouch(p); nbRenderBlocks(); } nbFocus(p.blocks.find(b => nbEl(b.id)).id, 'start'); } };
+    title.onpaste = e => { e.preventDefault(); document.execCommand('insertText', false, (e.clipboardData.getData('text/plain') || '').replace(/\s+/g, ' ')); };
+    $('nbfav').onclick = () => { const p = nbCurPage(); p.fav = !p.fav; nbTouch(p); nbSaveNow(); $('nbfav').textContent = p.fav ? '⭐' : '☆'; };
+    $('nbicon').onclick = e => nbIconPicker(e.currentTarget);
+    $('nbmore').onclick = e => nbMoreMenu(e.currentTarget);
+    const p = nbCurPage();
+    if (p && !p.title && document.activeElement === document.body) setTimeout(() => title.focus(), 30);
+  }
+}
+document.addEventListener('mousedown', e => { if (nbMenu && !e.target.closest('#nbpop') && !e.target.closest('[data-hdl]') && !e.target.closest('#nbicon') && !e.target.closest('#nbmore')) nbCloseMenu(); });
+function nbBusy() { const a = document.activeElement; return tab === 'cuaderno' && !!a && (a.classList.contains('nb-txt') || a.id === 'nbtitle'); }
