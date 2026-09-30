@@ -142,6 +142,7 @@ function toast(t, o) {
 
 // ---------- buscador y acciones (Ctrl+K) ----------
 const SECTIONS = [
+  ['Tareas y listas', 'tareas', '☑'],
   ['Inicio', 'inicio', '☀︎'], ['Calendario', 'cal', '◷'], ['Cuaderno: listas, notas y diario', 'cuaderno', '▤'], ['Mi Dinero', 'hoy', '💰'], ['Previsión del mes', 'prev', '↗'],
   ['Meses', 'mes', '📅'], ['Gastos hormiga', 'hormiga', '🐜'], ['Gastos fijos', 'fijos', '🔁'], ['Movimientos', 'movs', '🧾'], ['Deudas', 'deudas', '🤝'],
   ['Barcelona: planes, gratis y agenda', 'ciudad', '🏙️'], ['Ajustes de Mi Espacio', 'espacio', '⚙️'], ['Mi Dinero: PIN, copias y sincronización', 'ajustes', '🔒'], ['Calendario de Apple', 'apple', '🍎'],
@@ -151,12 +152,23 @@ function nextOcc(ev, from) { for (let i = 0; i < 400; i++) { const d = hAdd(from
 function openPalette(q0) {
   if (document.getElementById('palette')) return;
   const box = document.createElement('div'); box.className = 'sheet-veil pal-veil'; box.id = 'palette';
-  box.innerHTML = `<div class="pal" role="dialog" aria-label="Buscar"><div class="pal-in"><span>⌕</span><input id="palq" placeholder="Busca o escribe algo para apuntar…" autocomplete="off" spellcheck="false"></div><div class="pal-list" id="pall" role="listbox"></div><div class="pal-foot"><span><kbd>↑</kbd><kbd>↓</kbd> moverte</span><span><kbd>↵</kbd> abrir</span><span><kbd>Esc</kbd> cerrar</span></div></div>`;
+  box.innerHTML = `<div class="pal" role="dialog" aria-label="Buscar"><div class="pal-in"><span>⌕</span><input id="palq" placeholder="Buscar o apuntar…" autocomplete="off" spellcheck="false" enterkeyhint="go"><button class="pal-x" id="palx">Cancelar</button></div><div class="pal-list" id="pall" role="listbox"></div><div class="pal-foot"><span><kbd>↑</kbd><kbd>↓</kbd> moverte</span><span><kbd>↵</kbd> abrir</span><span><kbd>Esc</kbd> cerrar</span></div></div>`;
   document.body.appendChild(box);
   const q = box.querySelector('#palq'), list = box.querySelector('#pall');
   let res = [], idx = 0;
   const close = () => box.remove();
   const go = r => { close(); r.fn(); };
+  box.querySelector('#palx').onclick = close;
+  // Sin escribir nada: accesos, acciones y lo próximo, en vez de una lista larga.
+  const QUICK = [['tareas', 'square-check', 'Tareas', '#5B8DEF'], ['cal', 'calendar', 'Calendario', '#EF7F72'], ['cuaderno', 'notebook', 'Cuaderno', '#9B7BEA'], ['ciudad', 'map-pin', 'Barcelona', '#D9822B'], ['hoy', 'wallet', 'Mi Dinero', '#2FA98C'], ['espacio', 'settings', 'Ajustes', '#6B7090']];
+  const homeHTML = acts => {
+    const t = todayISO(), nx = [];
+    for (let i = 0; i < 14 && nx.length < 4; i++) { const d = hAdd(t, i); for (const it of itemsOn(d)) if (['ev', 'task', 'apple', 'rem'].includes(it.kind) && nx.length < 4) nx.push({ d, it }); }
+    return `<div class="pal-sec">Ir a</div><div class="pal-grid">${QUICK.map(([k, ic, n, c]) => `<button data-pgo="${k}" style="--c:${c}"><span>${ico(ic)}</span>${n}</button>`).join('')}</div>
+      <div class="pal-sec">Hacer</div><div class="pal-acts">${acts.map((a, i) => `<button data-pact="${i}">${esc(a.i)} ${esc(a.t)}</button>`).join('')}</div>
+      ${nx.length ? `<div class="pal-sec">Lo próximo</div>${nx.map(x => `<button class="pal-it" data-pday="${x.d}"><span class="pal-ic" style="color:${x.it.color}">●</span><span class="pal-t">${esc(x.it.title)}</span><span class="pal-s">${x.d === t ? 'Hoy' : dShort(x.d)}${x.it.time ? ' · ' + x.it.time : ''}</span></button>`).join('')}` : ''}
+      <p class="pal-tip">Escribe para buscar en todo, o una frase como «cena el viernes a las 21» para apuntarla.</p>`;
+  };
   const build = () => {
     const v = q.value.trim(), n = normTxt(v), today = todayISO();
     res = [];
@@ -171,14 +183,17 @@ function openPalette(q0) {
     const secs = SECTIONS.filter(x => !n || normTxt(x[0]).includes(n)).map(x => ({ i: x[2], t: x[0], s: 'Ir a', fn: () => goTab(x[1]) }));
     const acts = [
       { i: '🙂', t: 'Diario: ¿qué tal hoy?', s: 'Acción', fn: () => { tab = 'cuaderno'; nbToday(); } },
+      { i: '📝', t: 'Nota rápida', s: 'En tu cuaderno', fn: () => { tab = 'cuaderno'; nbCur = null; render(); scrollTo(0, 0); const i = document.getElementById('nbcap'); if (i) i.focus(); } },
+      { i: '📅', t: 'Nuevo evento', s: 'En el calendario', fn: () => openEvSheet(null, todayISO()) },
+      { i: '☑', t: 'Nuevo recordatorio', s: 'En Tareas', fn: () => { tkView = 'list:tareas'; goTab('tareas'); setTimeout(() => { const i = document.getElementById('tknew'); if (i) i.focus(); }, 80); } },
       { i: '😮‍💨', t: 'Respirar un minuto', s: 'Para bajar revoluciones', fn: () => openBreath() },
       { i: '◷', t: 'Ver hoy en el calendario', s: 'Acción', fn: () => { calSel = todayISO(); calMonth = calSel.slice(0, 8) + '01'; calView = calView === 'agenda' ? 'semana' : calView; goTab('cal'); } },
       { i: '🏠', t: 'Hoy teletrabajo', s: 'Acción', fn: () => setDayMode(todayISO(), 'tele') },
       { i: '⌨️', t: 'Atajos de teclado', s: 'Ayuda', fn: () => showShortcuts() },
     ].filter(x => !n || normTxt(x.t).includes(n));
-    const listHits = !n ? [] : nbPages().filter(p => /^lista:/.test(p.kind || '')).flatMap(p => nbItems(p).filter(b => !b.checked && normTxt(nbPlain(b.html)).includes(n)).map(b => ({ i: p.icon || '📋', t: nbPlain(b.html), s: nbTitle(p), fn: () => { tab = 'cuaderno'; nbGo(p.id); } }))).slice(0, 5);
-    const noteHits = !n ? [] : nbPages().filter(p => p.kind === 'nota' && !normTxt(nbTitle(p)).includes(n) && normTxt(nbText(p)).includes(n)).slice(0, 4).map(p => ({ i: '📝', t: nbTitle(p), s: 'Nota', fn: () => { tab = 'cuaderno'; nbGo(p.id); } }));
-    const pages = !n ? [] : nbPages().filter(p => normTxt(nbTitle(p)).includes(n)).slice(0, 6).map(p => ({ i: p.icon || '📄', t: nbTitle(p), s: 'Página', fn: () => { tab = 'cuaderno'; nbGo(p.id); } }));
+    const listHits = !n ? [] : nbPages().filter(p => /^lista:/.test(p.kind || '')).flatMap(p => nbItems(p).filter(b => !b.checked && normTxt(nbPlain(b.html)).includes(n)).map(b => ({ i: p.icon || '📋', t: nbPlain(b.html), s: nbTitle(p), g: 'Tareas y listas', fn: () => { tkView = 'list:' + p.kind.slice(6); goTab('tareas'); } }))).slice(0, 5);
+    const noteHits = !n ? [] : nbPages().filter(p => p.kind === 'nota' && !normTxt(nbTitle(p)).includes(n) && normTxt(nbText(p)).includes(n)).slice(0, 4).map(p => ({ i: '📝', t: nbTitle(p), s: 'Nota', g: 'Notas y páginas', fn: () => { tab = 'cuaderno'; nbGo(p.id); } }));
+    const pages = !n ? [] : nbPages().filter(p => normTxt(nbTitle(p)).includes(n)).slice(0, 6).map(p => ({ i: p.icon || '📄', t: nbTitle(p), s: 'Página', g: 'Notas y páginas', fn: () => { tab = 'cuaderno'; nbGo(p.id); } }));
     const evs = !n ? [] : evAll().filter(e => normTxt(e.title).includes(n)).map(e => ({ e, d: nextOcc(e, today) })).sort((a, b) => a.d < b.d ? -1 : 1).slice(0, 6)
       .map(({ e, d }) => ({ i: '●', c: (CAL_CATS[e.cat] || CAL_CATS.otro).c, t: e.title, s: dShort(d) + (d.slice(0, 4) !== today.slice(0, 4) ? ' ' + d.slice(0, 4) : '') + (e.allDay ? '' : ' · ' + e.start), fn: () => { calSel = d; calMonth = d.slice(0, 8) + '01'; goTab('cal'); openEvSheet(e.id, d); } }));
     const hols = [];
@@ -188,16 +203,24 @@ function openPalette(q0) {
     }
     if (n.length > 2 && typeof PLANES_BCN !== 'undefined') for (const pl of PLANES_BCN) if (planEnd(pl) >= today && normTxt(pl.n).includes(n)) hols.unshift({ i: (PLAN_TIPOS[pl.tipo] || PLAN_TIPOS.ciudad)[1], t: pl.n, s: 'Plan · ' + planWhen(pl), fn: () => goTab('ciudad') });
     // Si la frase trae día u hora, lo primero es apuntarla; si no, lo que ya tienes con ese nombre.
-    const found = evs.concat(listHits, noteHits, pages, secs, acts, hols.sort((a, b) => a.s < b.s ? -1 : 1).slice(0, 4));
-    res = (p && p.found ? make.concat(found) : found.concat(make)).slice(0, 14);
+    if (!v) { res = []; idx = 0; homeActs = acts; list.innerHTML = homeHTML(acts); return; }
+    evs.forEach(x => x.g = 'Eventos'); secs.forEach(x => x.g = 'Ir a'); acts.forEach(x => x.g = 'Hacer'); hols.forEach(x => x.g = 'Planes y fechas'); make.forEach(x => x.g = 'Crear');
+    const found = evs.concat(listHits, noteHits, pages, hols.sort((a, b) => a.s < b.s ? -1 : 1).slice(0, 4), secs.slice(0, 4), acts);
+    res = (p && p.found ? make.concat(found) : found.concat(make)).slice(0, 18);
     idx = 0; paint();
   };
   const paint = () => {
-    list.innerHTML = res.length ? res.map((r, i) => `<button class="pal-it ${i === idx ? 'on' : ''}" data-i="${i}" role="option" aria-selected="${i === idx}"><span class="pal-ic" ${r.c ? `style="color:${r.c}"` : ''}>${esc(r.i)}</span><span class="pal-t">${esc(r.t)}</span><span class="pal-s">${esc(r.s)}</span></button>`).join('') : '<div class="pal-empty">Nada con ese nombre.</div>';
+    list.innerHTML = res.length ? res.map((r, i) => `${!i || res[i - 1].g !== r.g ? `<div class="pal-sec">${r.g || ''}</div>` : ''}<button class="pal-it ${i === idx ? 'on' : ''}" data-i="${i}" role="option" aria-selected="${i === idx}"><span class="pal-ic" ${r.c ? `style="color:${r.c}"` : ''}>${esc(r.i)}</span><span class="pal-t">${esc(r.t)}</span><span class="pal-s">${esc(r.s)}</span></button>`).join('') : '<div class="pal-empty">Nada con ese nombre.</div>';
     const on = list.querySelector('.on'); if (on) on.scrollIntoView({ block: 'nearest' });
   };
   q.oninput = build;
-  list.onclick = e => { const b = e.target.closest('[data-i]'); if (b) go(res[+b.dataset.i]); };
+  let homeActs = [];
+  list.onclick = e => {
+    const b = e.target.closest('[data-i]'); if (b) return go(res[+b.dataset.i]);
+    const g = e.target.closest('[data-pgo]'); if (g) { close(); if (g.dataset.pgo === 'tareas') tkView = 'home'; return goTab(g.dataset.pgo); }
+    const a = e.target.closest('[data-pact]'); if (a) return go(homeActs[+a.dataset.pact]);
+    const d = e.target.closest('[data-pday]'); if (d) { close(); return goDay(d.dataset.pday, 'dia'); }
+  };
   box.onclick = e => { if (e.target === box) close(); };
   q.onkeydown = e => {
     if (e.key === 'ArrowDown') { e.preventDefault(); idx = Math.min(res.length - 1, idx + 1); paint(); }

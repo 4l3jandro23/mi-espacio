@@ -211,6 +211,7 @@ function appsLauncherHTML(iso) {
     const R = window.Rotacion, ts = R && APX.piso && pisoWho() ? pisoWeek(R.mondayOf(iso)) : null, pend = ts ? ts.filter(t => !t.done).length : -1;
     out.push(a(pisoUrl(), '#6E9BF0', '🧹', 'Piso', pend > 0 ? `Te ${pend === 1 ? 'queda 1 tarea' : `quedan ${pend} tareas`} esta semana` : pend === 0 ? 'Esta semana, todo hecho' : 'Tareas de casa'));
   }
+  else out.push(`<button class="al" data-pisoconnect style="--c:#6E9BF0"><span class="al-ic">🧹</span><span class="al-t"><b>Piso</b><small>Toca para conectar sus tareas</small></span><span class="al-go" aria-hidden="true">＋</span></button>`);
   return `<section class="hub-sec"><h2 class="hub-h">Tus otras apps</h2><div class="al-row">${out.join('')}</div></section>`;
 }
 function openAppItem(app, iso) {

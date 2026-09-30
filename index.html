@@ -210,6 +210,7 @@ body.locked .wrap,body.locked nav{visibility:hidden}
 <nav id="hubnav" class="hubnav hidden" aria-label="Apartados">
   <button data-hub="inicio"><b>☀︎</b>Inicio</button>
   <button data-hub="cal"><b>◷</b>Calendario</button>
+  <button data-hub="tareas"><b>☑</b>Tareas</button>
   <button data-hub="cuaderno"><b>▤</b>Cuaderno</button>
   <button data-hub="hoy"><b>💰</b>Dinero</button>
   <button data-palette class="hubnav-s" aria-label="Buscar o apuntar (Ctrl+K)"><b>⌕</b>Buscar</button>
@@ -242,6 +243,7 @@ body.locked .wrap,body.locked nav{visibility:hidden}
 <script src="planes.js"></script>
 <script src="barcelona.js"></script>
 <script src="extras.js"></script>
+<script src="tareas.js"></script>
 <script src="apple.js"></script>
 <script>
 'use strict';
@@ -360,7 +362,7 @@ function render() {
   if (FIN_TABS.includes(tab) && !financeUnlocked) { pendingTab = tab; tab = 'inicio'; if (!lockMode) lock(S.settings.pinHash ? 'enter' : 'create'); }
   const txs = Object.values(S.txs);
   const has = txs.length > 0;
-  const HUB = ['inicio', 'cal', 'cuaderno', 'apple', 'espacio', 'ciudad'];
+  const HUB = ['inicio', 'cal', 'tareas', 'cuaderno', 'apple', 'espacio', 'ciudad'];
   const needsData = !has && !['deudas', 'ajustes', ...HUB].includes(tab);
   const hubMode = HUB.includes(tab);
   document.body.classList.toggle('nbmode', tab === 'cuaderno');
@@ -380,7 +382,7 @@ function render() {
     AN.pendingFixed = AN.pendingFixed.filter(r => !fixedEnd(r) || fixedEnd(r) >= todayISO());
     if (cycleIdx == null || cycleIdx >= AN.cycles.length) cycleIdx = AN.cycles.length - 1;
   }
-  app.innerHTML = needsData ? '' : ({ hoy: vHoy, mes: vMes, hormiga: vHormiga, fijos: vFijos, movs: vMovs, deudas: vDeudas, ajustes: vAjustes, guia: vGuia, prev: vPrev, cuaderno: vCuaderno, inicio: vInicio, cal: vCal, apple: vApple, espacio: vEspacio, ciudad: vCiudad })[tab]();
+  app.innerHTML = needsData ? '' : ({ hoy: vHoy, mes: vMes, hormiga: vHormiga, fijos: vFijos, movs: vMovs, deudas: vDeudas, ajustes: vAjustes, guia: vGuia, prev: vPrev, cuaderno: vCuaderno, inicio: vInicio, cal: vCal, apple: vApple, espacio: vEspacio, ciudad: vCiudad, tareas: vTareas })[tab]();
   bind();
 }
 const goTab = t => { tab = t; render(); scrollTo(0, 0); };
@@ -1028,9 +1030,10 @@ function bind() {
   if ($('q')) { $('q').oninput = e => { search = e.target.value; const pos = e.target.selectionStart; render(); const q = $('q'); q.focus(); q.setSelectionRange(pos, pos); }; $('fc').onchange = e => { filterCat = e.target.value; render(); }; }
   document.querySelectorAll('select[data-mk]').forEach(el => el.onchange = () => { set('overrides', el.dataset.mk, el.value); save(); render(); });
   document.querySelectorAll('[data-set]').forEach(el => el.onchange = () => { set('settings', el.dataset.set, el.value); save(); render(); });
+  document.querySelectorAll('[data-vacleft]').forEach(el => el.onchange = () => { const n = parseInt(el.value, 10); if (isNaN(n)) return; const t = todayISO(); set('settings', 'vacLeft', { y: +t.slice(0, 4), n, at: t }); save(); render(); });
   document.querySelectorAll('[data-bal]').forEach(el => el.onchange = () => { set('balances', el.dataset.bal, { amount: +el.value, date: todayISO() }); save(); render(); });
   document.querySelectorAll('[data-end]').forEach(el => el.onchange = () => { set('fixedEnds', el.dataset.end, el.value || null); save(); render(); });
-  bindDeudas(); bindSync(); bindPrev(); bindCuaderno(); bindHub(); bindWork(); bindCiudad(); if (tab === 'apple' || tab === 'cal' || tab === 'inicio') bindApple();
+  bindDeudas(); bindSync(); bindPrev(); bindCuaderno(); bindHub(); bindWork(); bindCiudad(); bindTareas(); if (tab === 'apple' || tab === 'cal' || tab === 'inicio') bindApple();
   if ($('exp')) $('exp').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = 'midinero-copia-' + new Date().toISOString().slice(0, 10) + '.json'; a.click(); };
   if ($('impb')) { $('impb').onclick = () => $('bfile').click(); $('bfile').onchange = async e => { try { const d = JSON.parse(await e.target.files[0].text()); if (!d.txs) throw 0; const now = Date.now(); d._t = d._t || {}; for (const M of Sync.MAPS) for (const k of Object.keys(d[M] || {})) d._t[M + '/' + k] = now; S = normalize(d); save(); render(); toast('Copia restaurada.'); } catch (_) { toast('Ese archivo no es una copia válida.'); } }; }
   if ($('wipe')) $('wipe').onclick = () => { if (confirm('¿Borrar todos los datos de ESTE dispositivo? Si tienes la sincronización activa, se desconecta; tus otros dispositivos no se tocan.')) { setSyncCfg({}); S = fresh(); save(); render(); } };

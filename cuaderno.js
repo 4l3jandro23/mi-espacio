@@ -121,7 +121,6 @@ function nbSideHTML() {
 const NB_LISTS = [
   { k: 'tareas', n: 'Tareas', i: '✅', c: 'var(--accent)', ph: 'Llamar al seguro…', hint: 'Lo pendiente que no tiene día. Lo que sí tiene día, mejor al calendario.', re: /^tareas?$/i },
   { k: 'pelis', n: 'Pelis y series', i: '🎬', c: 'var(--lilac)', ph: 'Una peli o una serie…', hint: 'Lo que te recomienden, para no quedarte en blanco el domingo.', re: /^(libros, )?pelis y series$/i },
-  { k: 'musica', n: 'Música por escuchar', i: '🎵', c: 'var(--blue)', ph: 'Un disco, un grupo…', hint: 'Discos y grupos que te han recomendado o que te llaman.' },
   { k: 'planes', n: 'Sitios y planes', i: '📍', c: 'var(--warm)', ph: 'Un bar, un sitio, un plan…', hint: 'Bares, restaurantes y planes para cuando te apetezca salir.' },
   { k: 'regalos', n: 'Ideas de regalo', i: '🎁', c: '#E0709A', ph: 'Para quién y qué…', hint: 'Apúntalas cuando se te ocurran, no la víspera del cumple.' },
 ];
@@ -243,7 +242,6 @@ function nbRoute(txt) {
   const s = txt.trim();
   const rules = [
     ['pelis', /^(?:ver|peli(?:cula)?|película|serie|docu(?:mental)?)\s*:?\s+/i, true],
-    ['musica', /^(?:escuchar|disco|[aá]lbum|canci[oó]n|grupo)\s*:?\s+/i, true],
     ['regalos', /^(?:regalo|regalar)\s*:?\s+/i, true],
     ['planes', /^(?:probar|sitio|restaurante|plan)\s*:?\s+/i, true],
     ['tareas', /^(?:tarea|pendiente)\s*:?\s+/i, true],
@@ -298,9 +296,8 @@ function nbHome() {
     </section>
 
     <section class="nb-sec2">
-      <div class="nb-h"><h2>Listas</h2></div>
-      <div class="nb-lists">${lists.map(nbListCard).join('')}
-        <label class="nb-list nb-lnew"><span>＋ Nueva lista</span><input data-lnew placeholder="Nombre: «Libros», «Para el piso»…" enterkeyhint="done" autocomplete="off"></label></div>
+      <div class="nb-h"><h2>Listas</h2><button class="link small" data-hubtk="home">Ver todas en Tareas ›</button></div>
+      <div class="nb-lchips">${lists.map(L => { const p = nbListPage(L.k), n = p ? nbItems(p).filter(b => !b.checked).length : 0; return `<button class="nb-lchip" data-hubtk="list:${L.k}" style="--lc:${L.c}"><span class="nb-li">${esc(L.i)}</span>${esc(L.n)}${n ? `<b>${n}</b>` : ''}</button>`; }).join('')}</div>
     </section>
 
     <section class="nb-sec2">
@@ -316,7 +313,7 @@ function nbHome() {
     </section>
 
     <details class="why" style="margin-top:18px"><summary>Trucos</summary><div class="small">
-      <b>Apuntar:</b> empieza por «ver», «escuchar», «regalo», «sitio» o «tarea» y va directo a esa lista. Si pones un día o una hora («el jueves a las 10»), va al calendario. Lo demás, a notas. Antes de guardar puedes elegir otro sitio.<br>
+      <b>Apuntar:</b> empieza por «ver», «regalo», «sitio» o «tarea» y va directo a esa lista. Si pones un día o una hora («el jueves a las 10»), va al calendario. Lo demás, a notas. Antes de guardar puedes elegir otro sitio.<br>
       <b>Dentro de una página:</b> <b>/</b> para elegir tipo de bloque · <b>-</b> + espacio: lista · <b>[]</b> + espacio: casilla · <b>#</b> + espacio: título · <b>⋮⋮</b> a la izquierda: mover o borrar.</div></details>
   </div>`;
 }
@@ -555,6 +552,7 @@ function bindCuaderno() {
     if (t.id === 'nbcapgo') { const i = $('nbcap'); if (i.value.trim()) nbCapSave(i.value); else i.focus(); return; }
     if (t.closest('[data-allnotes]')) { nbAllNotes = !nbAllNotes; return nbRe(); }
     if (t.closest('[data-year]')) return openYear();
+    const tk = t.closest('[data-hubtk]'); if (tk) { tkView = tk.dataset.hubtk; return goTab('tareas'); }
     if (t.closest('[data-breath]')) return openBreath();
     const tn = t.closest('[data-tplnew]'); if (tn) {
       const k = tn.dataset.tplnew, T = NB_TEMPLATES[k], p = nbCreate({ title: k === 'blank' ? '' : T.n, icon: T.i, blocks: T.b() });

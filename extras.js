@@ -53,19 +53,14 @@ function weekSummaryHTML(today) {
 }
 
 // ---------- novedades ----------
-const NOVEDADES_V = 'v24';
+const NOVEDADES_V = 'v25';
 const NOVEDADES = [
-  ['sparkles', 'Iconos nuevos', 'Toda la app con iconos de línea, más limpia.'],
-  ['notebook-pen', 'Cuaderno con sentido', '«Apunta lo que sea» y va solo a su sitio: pelis, música, tareas, sitios, regalos, notas o el calendario.'],
-  ['smile', 'Diario de un minuto', '¿Qué tal hoy? Una carita y, si quieres, una cosa buena. Y «Tu año» en caritas.'],
-  ['refresh-cw', 'Todo conectado al momento', 'Lo que marques en Ejercicio o Alimentación sale aquí enseguida.'],
-  ['bookmark', 'Guarda planes de Barcelona', 'Guárdalos en «Sitios y planes» o compártelos con quien quieras.'],
-  ['music', 'Tus artistas en la agenda', 'Si alguno toca en Barcelona, sale arriba del todo.'],
-  ['calendar-heart', 'Tu semana', 'Domingo por la tarde y lunes: un resumen amable de la semana.'],
-  ['sun', 'Tu finde', 'De jueves a sábado: el tiempo del finde, planes, museos gratis y una idea de tu lista.'],
-  ['wind', 'Un minuto para respirar', 'Cinco respiraciones lentas cuando lo necesites (en el buscador, o en el diario si el día va regular).'],
-  ['tree-palm', 'Cuenta atrás de vacaciones', 'Marca tus días de vacaciones y el inicio te dice cuánto falta.'],
-  ['search', 'Del apunte a la acción', 'En tus listas, un toque para buscar el disco en Spotify, dónde ver la peli o el sitio en el mapa. Y puedes compartir cualquier lista.'],
+  ['square-check', 'Tareas, como Recordatorios del iPhone', 'Hoy, Programados, Todos y Marcados, y tus listas. Con fecha, hora, notas y bandera; lo que tiene fecha sale en el calendario.'],
+  ['calendar-range', 'Calendario más claro', 'Lo que dura varios días va en una barra que cruza la semana, y en el móvil el mes enseña los títulos.'],
+  ['search', 'Buscador nuevo', 'Accesos rápidos, acciones y lo próximo; y al escribir, resultados agrupados.'],
+  ['tree-palm', 'Vacaciones con saldo', 'Cuántas te quedan, cuántas tienes marcadas y cuántas pasan al año que viene.'],
+  ['image', 'Descubre', 'En el inicio: la foto del día, un artista de tu lista y un recuerdo bonito de tu diario.'],
+  ['calendar', 'Planes de varios días', 'Al apuntar Oktoberfest o parecidos, se apuntan todos sus días.'],
 ];
 function novedadesCheck() {
   let seen = ''; try { seen = localStorage.getItem('miespacio.novedades') || ''; } catch (e) {}
@@ -175,4 +170,37 @@ function findeHTML(today) {
       ${free ? `<div class="fd-it">🎟️ <b>${free} planes gratis</b> en la agenda del Ayuntamiento</div>` : ''}
       ${pick ? `<div class="fd-it fd-idea">📍 De tu lista: <b>${nbClean(pick.html)}</b></div>` : ''}
     </div></section>`;
+}
+
+// ---------- descubre (inicio) ----------
+// La foto del día de Wikipedia, un artista de tu lista para escuchar hoy y un recuerdo bonito de tu diario.
+const DSC_KEY = 'miespacio.descubre';
+let DSC = (() => { try { return JSON.parse(localStorage.getItem(DSC_KEY)) || {}; } catch (e) { return {}; } })();
+let dscBusy = false;
+function dscFetch(iso) {
+  if (dscBusy || DSC.d === iso || !navigator.onLine) return;
+  dscBusy = true;
+  fetch(`https://api.wikimedia.org/feed/v1/wikipedia/es/featured/${iso.replace(/-/g, '/')}`, { headers: { 'Api-User-Agent': 'MiEspacio (app personal)' }, referrerPolicy: 'no-referrer', credentials: 'omit' })
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(j => { const i = j.image || {}; DSC = { d: iso, img: i.thumbnail ? { src: i.thumbnail.source, desc: ((i.description || {}).text || '').replace(/\s+/g, ' ').trim(), by: ((i.artist || {}).text || '').trim(), link: i.file_page || '' } : null }; try { localStorage.setItem(DSC_KEY, JSON.stringify(DSC)); } catch (e) {} if (tab === 'inicio' && !document.querySelector('.sheet-veil')) softRender(); })
+    .catch(() => {}).finally(() => { dscBusy = false; });
+}
+function artistNames() {
+  try { const l = JSON.parse(localStorage.getItem('mando_mis_artistas_v1')); const a = Array.isArray(l) ? l : l && (l.artistas || Object.values(l)); if (Array.isArray(a)) { const n = a.filter(x => x && x.name && !x.deleted).map(x => x.name); if (n.length) return n; } } catch (e) {}
+  try { const c = JSON.parse(localStorage.getItem(EF_ART)); if (c && Array.isArray(c.names)) return c.names; } catch (e) {}
+  return [];
+}
+const dayNum = iso => Math.round(Date.parse(iso + 'T12:00:00Z') / 864e5);
+function descubreHTML(today) {
+  dscFetch(today);
+  const img = DSC.d === today && DSC.img, names = artistNames(), art = names.length ? names[dayNum(today) % names.length] : '';
+  const goods = nbPages().filter(p => /^diario:/.test(p.kind || '') && p.good && p.kind.slice(7) <= hAdd(today, -7));
+  const mem = goods.length ? goods[dayNum(today) % goods.length] : null;
+  if (!img && !art && !mem) return '';
+  return `<section class="hub-sec"><h2 class="hub-h">Descubre</h2><div class="dsc">
+    ${img ? `<a class="dsc-img" href="${esc(img.link || '#')}" target="_blank" rel="noopener noreferrer"><img src="${esc(img.src)}" alt="${esc(img.desc)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.dsc-img').remove()"><span><small>Foto del día</small>${esc(img.desc.slice(0, 140))}${img.desc.length > 140 ? '…' : ''}</span></a>` : ''}
+    <div class="dsc-side">
+      ${art ? `<a class="dsc-it" href="https://open.spotify.com/search/${encodeURIComponent(art)}" target="_blank" rel="noopener noreferrer"><span class="dsc-ic" style="--c:#1DB954">${ico('headphones')}</span><span><small>Tu artista de hoy</small><b>${esc(art)}</b></span><span class="al-go">↗</span></a>` : ''}
+      ${mem ? `<button class="dsc-it" data-nbopen="${mem.id}"><span class="dsc-ic" style="--c:#9B7BEA">${ico('book-heart')}</span><span><small>Un recuerdo · ${dShort(mem.kind.slice(7))}</small><b>«${esc(mem.good)}»</b></span></button>` : ''}
+    </div></div></section>`;
 }

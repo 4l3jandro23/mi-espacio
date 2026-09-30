@@ -17,7 +17,7 @@ function avCheck() {
   const c = avCfg(); if (!c.on || lockMode) return;
   const now = new Date(), m = now.getHours() * 60 + now.getMinutes(), t = todayISO(), done = avDone();
   for (const i of itemsOn(t, false)) {
-    if (!i.time || !['ev', 'apple', 'app'].includes(i.kind) || (i.kind === 'app' && i.app !== 'ej')) continue;
+    if (!i.time || !['ev', 'apple', 'app', 'task'].includes(i.kind) || (i.kind === 'app' && i.app !== 'ej')) continue;
     const s = toMin(i.time), left = s - m, k = t + '|' + (i.id || i.title) + '|' + i.time;
     if (left < 0 || left > c.min || done[k]) continue;
     avMark(k);

@@ -172,8 +172,38 @@ function bridgeDays() {
 }
 
 // ---------- vacaciones ----------
+// Saldo de vacaciones: tantos al año (settings.vacDays, 22 si no dices otra cosa) y lo que te quedaba en una fecha
+// (settings.vacLeft = {y, n, at}: «el día at me quedaban n días del año y, contando los que ya tenía marcados»).
+// Lo que no gastas un año pasa al siguiente.
+const vacPer = () => +S.settings.vacDays || 22;
+const vacBase = () => S.settings.vacLeft && S.settings.vacLeft.y ? S.settings.vacLeft : { y: 2026, n: 18, at: '2026-09-30' };
+function vacMarked(from, to) { let n = 0; for (const [d, v] of Object.entries(S.days || {})) if (v && v.mode === 'vacas' && d >= from && d <= to && isWorkday(d) && !holidayOn(d)) n++; return n; }
+// Días que te quedan por pedir en el año y (sin contar los ya marcados). null si es un año anterior al que conozco.
+function vacFree(y) {
+  const b = vacBase(); if (y < b.y) return null;
+  let left = b.n - vacMarked(b.at, b.y + '-12-31');
+  for (let yy = b.y + 1; yy <= y; yy++) left = vacPer() + left - vacMarked(yy + '-01-01', yy + '-12-31');
+  return left;
+}
+// Resumen para enseñar: te quedan (libres + marcados que aún no han llegado), cuántos marcados y cuántos por pedir.
+function vacSummary(y) {
+  const t = todayISO(), free = vacFree(y); if (free == null) return null;
+  const planned = vacMarked(t > y + '-01-01' ? t : y + '-01-01', y + '-12-31');
+  return { left: free + planned, planned, free, carry: y === +t.slice(0, 4) ? Math.max(0, free) : 0 };
+}
 function vacUsed(y) {
   let n = 0;
   for (const [d, v] of Object.entries(S.days || {})) if (v && v.mode === 'vacas' && d.startsWith(String(y)) && isWorkday(d) && !holidayOn(d)) n++;
   return n;
+}
+
+// Tarjeta de vacaciones (ajustes y lateral del calendario).
+function vacHTML(small) {
+  const y = +todayISO().slice(0, 4), v = vacSummary(y); if (!v) return '';
+  const up = Object.keys(S.days || {}).filter(d => d >= todayISO() && S.days[d] && S.days[d].mode === 'vacas').sort();
+  const runs = []; for (const d of up) { const l = runs[runs.length - 1]; if (l && hDays(l[1], d) <= 3) l[1] = d; else runs.push([d, d]); }
+  return `<div class="vac2 ${small ? 'sm' : ''}"><div class="vac2-big"><b>${v.left}</b><span>días te quedan en ${y}</span></div>
+    <div class="vac2-bits"><span><i style="background:#2FA98C"></i>${v.planned} ya marcados</span><span><i style="background:var(--line)"></i>${v.free} por pedir</span></div>
+    ${runs.length ? `<div class="small muted">Próximas: ${runs.slice(0, 3).map(r => rangeTxt(r[0], r[1])).join(' · ')}</div>` : ''}
+    ${v.free > 0 ? `<div class="small muted">Si no los gastas, en ${y + 1} tendrás ${vacPer()} + ${v.free} = <b>${vacPer() + v.free}</b>.</div>` : ''}</div>`;
 }

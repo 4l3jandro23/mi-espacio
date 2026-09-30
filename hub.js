@@ -73,6 +73,7 @@ function itemsOn(iso, withPay) {
   if (layerOn('apple') && typeof appleItemsOn === 'function') out.push(...appleItemsOn(iso));
   if (typeof appItemsOn === 'function') out.push(...appItemsOn(iso));
   if (typeof planItemsOn === 'function') out.push(...planItemsOn(iso));
+  if (typeof taskItemsOn === 'function') out.push(...taskItemsOn(iso));
   const di = nbPages().find(p => p.kind === 'diario:' + iso);
   if (di && (di.mood || di.good || nbText(di).trim())) { const md = di.mood && NB_MOODS[di.mood - 1]; out.push({ kind: 'diary', id: di.id, title: md ? `Diario: ${md[1].toLowerCase()}${di.good ? ' · ' + di.good : ''}` : di.good || 'Entrada del diario', icon: md ? md[0] : '📔', color: '#9B7BEA', sort: 2000 }); }
   return out.sort((a, b) => a.sort - b.sort);
@@ -165,7 +166,7 @@ function vInicio() {
       <div class="tiles">
         ${tile('data-hubgo="hoy"', 'tile-money', '💰', 'Mi Dinero', m ? `<b class="tile-big">${eur(Math.max(0, m.A.perDay))}</b><span>al día hasta el cobro</span>` : AN ? '<span>🔒 Con PIN · toca para entrar</span>' : '<span>Carga tus extractos para empezar</span>')}
         ${tile('data-hubgo="cal"', 'tile-cal', '◷', 'Calendario', next ? `<span>${esc(next.title)} · ${hm(next.time)}</span>` : week[0] ? `<span>${fmtDay(week[0].d, { weekday: 'short', day: 'numeric' })}: ${esc(week[0].items[0].title)}</span>` : '<span>Nada en los próximos días</span>')}
-        ${tile(tasksPage ? `data-nbopen="${tasksPage.id}"` : 'data-hubgo="cuaderno"', 'tile-tasks', '✓', 'Tareas', `<b class="tile-big">${pendingTasks}</b><span>${pendingTasks === 1 ? 'pendiente' : 'pendientes'}</span>`)}
+        ${tile('data-hubgo="tareas"', 'tile-tasks', '☑', 'Tareas', typeof tkCount === 'function' && tkCount('hoy') ? `<b class="tile-big">${tkCount('hoy')}</b><span>para hoy · ${pendingTasks} en total</span>` : `<b class="tile-big">${pendingTasks}</b><span>${pendingTasks === 1 ? 'pendiente' : 'pendientes'}</span>`)}
         ${tile('data-hubtoday', 'tile-diary', moodToday ? moodToday[0] : '✎', 'Diario', moodToday ? `<span>Hoy: ${moodToday[1].toLowerCase()}${diaryToday.good ? ' · ' + esc(diaryToday.good) : ''}</span>` : '<span>¿Qué tal hoy? Un toque y listo</span>')}
         ${tile('data-hubgo="cuaderno"', 'tile-pages', '▤', 'Cuaderno', listN ? `<b class="tile-big">${listN}</b><span>en tus listas</span>` : '<span>Listas, notas e ideas</span>')}
         ${tile('data-hubgo="ciudad"', 'tile-city', '◎', 'Barcelona', '<span>Planes, gratis y agenda de la ciudad</span>')}
@@ -173,16 +174,17 @@ function vInicio() {
     </section>
 
     ${typeof appsLauncherHTML === 'function' ? appsLauncherHTML(today) : ''}
+    ${typeof descubreHTML === 'function' ? descubreHTML(today) : ''}
     ${efHTML(today, true)}
     ${remsHTML()}
-    ${week.length ? `<section class="hub-sec"><h2 class="hub-h">Próximos días</h2><div class="agenda">${week.map(w => `<button class="ag-row" data-goday="${w.d}" data-goview="dia"><span class="ag-date"><b>${+w.d.slice(8)}</b><small>${new Date(w.d + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short' })}</small></span><span class="ag-items">${w.items.slice(0, 3).map(i => `<span class="ag-it"><i style="background:${i.color}"></i>${i.time ? hm(i.time) + ' · ' : ''}${esc(i.title)}</span>`).join('')}${w.items.length > 3 ? `<span class="muted small">y ${w.items.length - 3} más</span>` : ''}</span></button>`).join('')}</div></section>` : ''}
+    ${week.length ? `<section class="hub-sec"><h2 class="hub-h">Próximos días</h2><div class="agenda">${week.map(w => `<button class="ag-row" data-goday="${w.d}" data-goview="dia"><span class="ag-date"><b>${+w.d.slice(8)}</b><small>${new Date(w.d + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short' })}</small></span><span class="ag-items">${w.items.slice().sort((a, b) => (a.kind === 'plan') - (b.kind === 'plan')).slice(0, 3).map(i => `<span class="ag-it"><i style="background:${i.color}"></i>${i.time ? hm(i.time) + ' · ' : ''}${esc(i.title)}</span>`).join('')}${w.items.length > 3 ? `<span class="muted small">y ${w.items.length - 3} más</span>` : ''}</span></button>`).join('')}</div></section>` : ''}
 
     ${recent.length ? `<section class="hub-sec"><h2 class="hub-h">Del cuaderno</h2><div class="pages-strip">${recent.map(p => `<button class="pg-chip" data-nbopen="${p.id}"><span>${esc(p.icon || '📄')}</span>${esc(nbTitle(p))}</button>`).join('')}</div></section>` : ''}
   </div>`;
 }
 function dayItemHTML(i) {
   const attr = itemAttr(i);
-  const time = i.kind === 'rem' ? (i.time ? '☐ ' + hm(i.time) : '☐') : i.time ? hm(i.time) : i.icon || 'Todo el día';
+  const time = i.kind === 'rem' || i.kind === 'task' ? (i.time ? '☐ ' + hm(i.time) : '☐') : i.time ? hm(i.time) : i.icon || 'Todo el día';
   const src = i.kind === 'apple' || i.kind === 'rem' ? `<small class="di-src"> · ${esc(i.cal || 'Apple')}</small>` : '';
   return `<button class="di di-${i.kind}" ${attr} style="--c:${i.color}"><span class="di-time">${time}</span><span class="di-bar"></span><span class="di-t">${esc(i.title)}${i.end ? `<small> hasta las ${hm(i.end)}</small>` : ''}${i.loc ? `<small> · 📍 ${esc(i.loc)}</small>` : ''}${src}</span></button>`;
 }
@@ -208,9 +210,11 @@ function vEspacio() {
       <label class="f"><span>Ciudad para el tiempo y el sol</span><select data-city>${Object.entries(CITIES).map(([k, c]) => `<option value="${k}" ${place().n === c.n ? 'selected' : ''}>${c.n}</option>`).join('')}${place().geo ? '<option selected value="geo">Tu ubicación</option>' : ''}</select></label></div>
       <div class="toolbar" style="margin-top:8px"><button data-geo>📍 Usar mi ubicación</button></div></div>
     <div class="card"><h2>🏖️ Vacaciones</h2>
-      <p class="small muted" style="margin-top:0">Marca tus días de vacaciones con 🏖️ en el calendario (o desde un festivo, con «Pedir esos días») y aquí llevas la cuenta.</p>
-      <div class="grid2"><label class="f"><span>Días laborables de vacaciones al año</span><input type="text" inputmode="numeric" data-set="vacDays" value="${esc(S.settings.vacDays || '')}" placeholder="p. ej. 23"></label>
-      <div class="kpi"><span class="small muted">Usados en ${todayISO().slice(0, 4)}</span><b>${vacUsed(+todayISO().slice(0, 4))}${+S.settings.vacDays ? ' de ' + S.settings.vacDays : ''}</b></div></div></div>
+      ${vacHTML()}
+      <div class="grid2" style="margin-top:12px"><label class="f"><span>Días de vacaciones al año</span><input type="text" inputmode="numeric" data-set="vacDays" value="${esc(S.settings.vacDays || '')}" placeholder="22"></label>
+      <label class="f"><span>¿Cuántos te quedan hoy este año? <small class="muted">(contando los ya marcados)</small></span><input type="text" inputmode="numeric" data-vacleft value="${vacSummary(+todayISO().slice(0, 4)) ? vacSummary(+todayISO().slice(0, 4)).left : ''}"></label></div>
+      <div class="vac-mark"><span class="small muted">Marcar vacaciones</span><label>Del<input type="date" id="vacfrom"></label><label>al<input type="date" id="vacto"></label><button data-vacmark>Marcar</button></div>
+      <p class="small muted" style="margin-bottom:0">Solo cuentan los días laborables (sin fines de semana ni festivos). Lo que no gastes pasa al año siguiente. También puedes marcarlos en el calendario, en cada día.</p></div>
     <div class="card"><h2>🗓️ Qué ves en el calendario</h2><div class="lay-grid">${Object.entries(CAL_CATS).map(([k, c]) => layerRow(k, c.n, c.c)).join('')}${Object.entries(LAYERS).map(([k, v]) => layerRow(k, v[0], v[1])).join('')}</div>
       <div class="toolbar" style="margin-top:10px"><button data-icsin>📥 Importar un calendario (.ics)</button><button data-icsout>📤 Descargar mis eventos (.ics)</button><button data-kbhelp>⌨️ Atajos de teclado</button></div>
       <p class="small muted" style="margin-bottom:0">Importar sirve para traerte de una vez el calendario del trabajo, de Google o de Outlook (en todos se puede exportar a .ics). Si lo vuelves a importar, se actualiza sin duplicar.</p></div>
@@ -230,6 +234,12 @@ function bindHub() {
     if (t.closest('[data-hubnote]')) { tab = 'cuaderno'; nbCur = null; render(); scrollTo(0, 0); const i = document.getElementById('nbcap'); if (i) i.focus(); return; }
     if (t.closest('[data-palette]')) return openPalette();
     if (t.closest('[data-year]')) return openYear();
+    if (t.closest('[data-pisoconnect]')) {
+      const v = (prompt('Pega el enlace de la app de tareas del piso (el que abres en el navegador):') || '').trim(); if (!v) return;
+      try { const u = new URL(v, location.href); if (u.origin !== location.origin) return toast('Ese enlace no es de tus apps. Cópialo desde la barra de direcciones de la app del piso.'); set('settings', 'pisoUrl', u.href); save(); toast('Conectado. En un momento salen tus tareas del piso.'); appsFetch(true); return render(); } catch (e) { return toast('Ese enlace no parece válido.'); }
+    }
+    if (t.closest('[data-spanall]')) { calSpanAll = !calSpanAll; return softRender(); }
+    const tko = t.closest('[data-tkopen]'); if (tko) return tkOpen(tko.dataset.tkopen);
     if (t.closest('[data-breath]')) return openBreath();
     if (t.closest('[data-findego]')) { agRango = 'finde'; return goTab('ciudad'); }
     const hm = t.closest('[data-hmood]'); if (hm) { nbSetMood(todayISO(), hm.dataset.hmood); softRender(); return toast('Apuntado en tu diario', { actions: [{ n: 'Añadir algo bueno', fn: () => { tab = 'cuaderno'; nbToday(); setTimeout(() => { const g = document.querySelector('[data-good]'); if (g) g.focus(); }, 400); } }] }); }
@@ -244,6 +254,7 @@ function bindHub() {
     const ao = t.closest('[data-appopen]'); if (ao) return openAppItem(ao.dataset.appopen, ao.dataset.occ);
     const di = t.closest('[data-dayinfo]'); if (di) return openDayInfo(di.dataset.dayinfo);
     const va = t.closest('[data-vacas]'); if (va) return markVacation(va.dataset.vacas.split(','));
+    if (t.closest('[data-vacmark]')) { const a = document.getElementById('vacfrom').value, b = document.getElementById('vacto').value || a; if (!a || b < a) return toast('Pon el primer y el último día'); const ds = []; for (let d = a; d <= b; d = hAdd(d, 1)) if (isWorkday(d) && !holidayOn(d)) ds.push(d); return ds.length ? markVacation(ds) : toast('En esas fechas no hay días laborables'); }
     const mn = t.closest('[data-mininav]'); if (mn) { const d = new Date((miniMonth || calSel.slice(0, 8) + '01') + 'T12:00:00'); d.setMonth(d.getMonth() + +mn.dataset.mininav); miniMonth = isoOf(d).slice(0, 8) + '01'; return render(); }
     const gd = t.closest('[data-goday]'); if (gd) return goDay(gd.dataset.goday, gd.dataset.goview || null);
     const md = t.closest('[data-mday]'); if (md && !t.closest('[data-appleitem]')) { calSel = md.dataset.mday; return render(); }

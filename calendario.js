@@ -36,6 +36,7 @@ function goDay(iso, view) { calSel = iso; calMonth = iso.slice(0, 8) + '01'; min
 function itemAttr(i) {
   if (i.kind === 'ev') return `data-editev="${i.id}" data-occ="${i.occ || ''}"`;
   if (i.kind === 'diary') return `data-nbopen="${i.id}"`;
+  if (i.kind === 'task') return `data-tkopen="${i.id}"`;
   if (i.kind === 'apple' || i.kind === 'rem') return `data-appleitem="${i.kind}:${i.id}"`;
   if (i.kind === 'hol' || i.kind === 'sen') return `data-dayinfo="${i.occ}"`;
   if (i.kind === 'plan') return 'data-hubgo="ciudad"';
@@ -71,10 +72,26 @@ function chipHTML(i, cls) {
 }
 
 // ---------- semana / 3 días / día ----------
+let calSpanAll = false;
 function timeGrid(days) {
   const today = todayISO(), now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes();
   const head = days.map(d => { const h = layerOn('festivos') && holidayOn(d); return `<button class="tg-dh ${d === today ? 'is-today' : ''} ${h ? 'is-hol' : ''} ${d === calSel && days.length > 1 ? 'is-sel' : ''}" data-goday="${d}" data-goview="dia" aria-label="${fmtDay(d)}"><span class="tg-wd">${WD_S[hDow(d)]}</span><span class="tg-dn">${+d.slice(8)}</span>${wxChip(d, 'tg-wx')}</button>`; }).join('');
-  const all = days.map(d => { const its = allDayOf(d), max = days.length === 1 ? 6 : 3; return `<div class="tg-ac" data-alld="${d}">${its.slice(0, max).map(i => chipHTML(i)).join('')}${its.length > max ? `<button class="tg-more" data-goday="${d}" data-goview="dia">+${its.length - max} más</button>` : ''}</div>`; }).join('');
+  // Lo que dura varios días (eventos con «último día» y planes de Barcelona) va en una barra que cruza los días, como en Notion Calendar.
+  const d0 = days[0], d1 = days[days.length - 1], spans = [], covered = new Set();
+  if (days.length > 1) {
+    const put = (a, b, o) => { a = a < d0 ? d0 : a; b = b > d1 ? d1 : b; spans.push(Object.assign({ c0: days.indexOf(a), len: hDays(a, b) + 1 }, o)); for (let d = a; d <= b; d = hAdd(d, 1)) covered.add(o.key + ':' + d); };
+    for (const ev of evAll()) if (!ev.repeat && ev.allDay && ev.end && ev.end > ev.date && ev.date <= d1 && ev.end >= d0 && layerOn(CAL_CATS[ev.cat] ? ev.cat : 'otro'))
+      put(ev.date, ev.end, { key: 'ev:' + ev.id, title: ev.title, color: (CAL_CATS[ev.cat] || CAL_CATS.otro).c, attr: `data-editev="${ev.id}" data-occ="${ev.date < d0 ? d0 : ev.date}"`, l: ev.date < d0, r: ev.end > d1 });
+    if (layerOn('planes') && typeof PLANES_BCN !== 'undefined') for (const p of PLANES_BCN) for (const [a, b] of planRuns(p)) if (b > a && a <= d1 && b >= d0) {
+      const T = PLAN_TIPOS[p.tipo] || PLAN_TIPOS.ciudad;
+      put(a, b, { key: 'plan:' + p.id, title: `${T[1]} ${p.n}`, color: T[2], attr: 'data-hubgo="ciudad"', l: a < d0, r: b > d1 });
+    }
+  }
+  // Primero lo tuyo; de los planes de la ciudad, solo unos pocos si no pides verlos todos.
+  const mine = spans.filter(x => x.key.startsWith('ev:')), plans = spans.filter(x => !x.key.startsWith('ev:')), maxP = calSpanAll ? 99 : Math.max(1, 4 - mine.length);
+  const shownSp = mine.concat(plans.slice(0, maxP)).sort((x, y) => (x.key.startsWith('ev:') ? 0 : 1) - (y.key.startsWith('ev:') ? 0 : 1) || x.c0 - y.c0 || y.len - x.len);
+  const spanRow = spans.length ? `<div class="tg-row tg-spanrow"><div class="tg-gut">${plans.length > maxP || calSpanAll ? `<button class="tg-more" data-spanall>${calSpanAll ? 'menos' : '+' + (plans.length - maxP)}</button>` : ''}</div><div class="tg-spans">${shownSp.map(x => `<button class="chip k-span ${x.key.startsWith('ev:') ? 'k-spev' : ''} ${x.l ? 'cl' : ''} ${x.r ? 'cr' : ''}" ${x.attr} style="--c:${x.color};grid-column:${x.c0 + 1} / span ${x.len}" title="${esc(x.title)}">${esc(x.title)}</button>`).join('')}</div></div>` : '';
+  const all = days.map(d => { const its = allDayOf(d).filter(i => !covered.has(i.kind + ':' + i.id + ':' + d)), max = days.length === 1 ? 6 : 4; return `<div class="tg-ac" data-alld="${d}">${its.slice(0, max).map(i => chipHTML(i)).join('')}${its.length > max ? `<button class="tg-more" data-goday="${d}" data-goview="dia">+${its.length - max} más</button>` : ''}</div>`; }).join('');
   const hours = [...Array(24)].map((_, h) => h ? `<span style="top:${h * HH}px">${String(h).padStart(2, '0')}:00</span>` : '').join('');
   const cols = days.map(d => {
     const w = layerOn('trabajo') ? workOn(d) : null;
@@ -86,7 +103,7 @@ function timeGrid(days) {
   return `<div class="tg" id="tgbody" style="--n:${days.length};--hh:${HH}px">
     <div class="tg-top">
       <div class="tg-row tg-headrow"><div class="tg-gut tg-wk" title="Semana del año">S${isoWeek(days[0])}</div>${head}</div>
-      <div class="tg-row tg-allrow"><div class="tg-gut">todo el día</div>${all}</div>
+      ${spanRow}<div class="tg-row tg-allrow"><div class="tg-gut">todo el día</div>${all}</div>
     </div>
     <div class="tg-row tg-inner" style="height:${24 * HH}px"><div class="tg-hours">${hours}${days.includes(today) ? `<b class="tg-nowlbl" style="top:${nowMin / 60 * HH}px">${hhmmOf(nowMin)}</b>` : ''}</div>${cols}</div>
   </div>`;
@@ -105,7 +122,7 @@ function monthGrid() {
     return `<div class="${cls}" data-mday="${iso}" role="gridcell" aria-label="${fmtDay(iso)}${its.length ? ', ' + its.length + ' cosas' : ''}">
       <div class="mc-top"><button class="mc-n" data-goday="${iso}" data-goview="dia" tabindex="-1">${n === 1 ? n + ' ' + MO_S[+iso.slice(5, 7) - 1] : n}</button>${md}${wxChip(iso, 'mc-wx')}</div>
       <div class="mc-evs">${its.slice(0, 4).map(i => i.time && i.kind !== 'pay' ? `<button class="mc-it t" ${itemAttr(i)} style="--c:${i.color}"><i></i><span class="mc-tm">${hm(i.time)}</span>${esc(i.title)}</button>` : chipHTML(i, 'mc-it')).join('')}${its.length > 4 ? `<span class="mc-more">+${its.length - 4} más</span>` : ''}</div>
-      <div class="mc-dots">${its.slice(0, 4).map(i => `<i style="--c:${i.color}" class="${i.kind}"></i>`).join('')}</div>
+      <div class="mc-dots">${its.filter(i => i.kind !== 'pay').slice(0, 3).map(i => `<span class="mc-bar k-${i.kind}" style="--c:${i.color}">${esc(String(i.title).replace(/^\p{Extended_Pictographic}\S*\s*/u, ''))}</span>`).join('')}${its.filter(i => i.kind !== 'pay').length > 3 ? `<span class="mc-bmore">+${its.filter(i => i.kind !== 'pay').length - 3}</span>` : ''}</div>
     </div>`;
   }).join('');
   return `<div class="mg-wrap"><div class="mg-wd">${WD_S.map(d => `<span>${d}</span>`).join('')}</div><div class="mg" style="--rows:${rows}" role="grid">${cells}</div></div>`;
@@ -161,7 +178,7 @@ function sideHTML() {
     <div class="side-sec"><h3>Mis calendarios</h3>${Object.entries(CAL_CATS).map(([k, c]) => layerRow(k, c.n, c.c)).join('')}</div>
     <div class="side-sec"><h3>También</h3>${Object.entries(LAYERS).filter(([k]) => k !== 'apple' || appleOn()).filter(([k]) => k !== 'dinero' || AN).map(([k, v]) => layerRow(k, v[0], v[1])).join('')}</div>
     ${layerOn('festivos') && hols.length ? `<div class="side-sec"><h3>Próximos festivos</h3>${hols.map(h => `<button class="side-hol" data-dayinfo="${h.iso}"><span class="sh-d"><b>${+h.iso.slice(8)}</b><small>${MO_S[+h.iso.slice(5, 7) - 1]}</small></span><span class="sh-t"><b>${esc(h.names.join(' y '))}</b><small>${bridgeTxt(h).replace(/<[^>]+>/g, '')}</small></span></button>`).join('')}</div>` : ''}
-    <div class="side-sec"><h3>Vacaciones ${y}</h3><div class="vac"><b>${vacUsed(y)}</b>${vac ? ` de ${vac} días usados · te quedan <b>${Math.max(0, vac - vacUsed(y))}</b>` : ' días marcados'}</div>${vac ? '' : '<button class="link small" data-hubgo="espacio">Dime cuántos tienes al año</button>'}</div>
+    <div class="side-sec"><h3>Vacaciones ${y}</h3>${vacHTML(true)}</div>
   </div>`;
 }
 function openSideSheet() {
@@ -359,7 +376,7 @@ function openEvSheet(id, dateISO, pre) {
     <input id="evt" class="sheet-title" placeholder="${ev ? 'Título' : '¿Qué es?'}" value="${esc(e.title)}" autocomplete="off" enterkeyhint="done">
     <div class="ev-hint ${ev ? '' : 'idle'}" id="evhint">${ev ? '' : 'Escribe una frase, como «cena con Marta el viernes a las 21», y relleno yo el día y la hora.'}</div>
     <div class="ev-cats">${Object.entries(CAL_CATS).map(([k, c]) => `<button type="button" data-evcat="${k}" class="${e.cat === k ? 'on' : ''}" style="--c:${c.c}"><i></i>${c.n}</button>`).join('')}</div>
-    <div class="ev-row"><label>Día<input type="date" id="evd" value="${esc(ev ? occ : e.date)}"></label><label class="ev-sw"><input type="checkbox" id="evall" ${e.allDay ? 'checked' : ''}> Todo el día</label></div>
+    <div class="ev-row"><label>${e.end ? 'Primer día' : 'Día'}<input type="date" id="evd" value="${esc(ev ? (ev.repeat ? occ : ev.date) : e.date)}"></label><label class="${e.allDay && !e.repeat ? '' : 'hidden'}" id="evel">Último día <small class="muted">(si dura varios)</small><input type="date" id="evend" value="${esc(e.end || '')}"></label><label class="ev-sw"><input type="checkbox" id="evall" ${e.allDay ? 'checked' : ''}> Todo el día</label></div>
     <div id="evtimes" class="${e.allDay ? 'hidden' : ''}">
       <div class="ev-row"><label>Empieza<input type="time" id="evs" value="${esc(e.start || '')}"></label><label>Acaba<input type="time" id="eve" value="${esc(e.end2 || '')}"></label></div>
       <div class="dur-chips">${[30, 60, 90, 120, 180].map(m => `<button type="button" data-dur="${m}">${m < 60 ? m + ' min' : (m / 60 + '').replace('.', ',') + ' h'}</button>`).join('')}</div>
@@ -391,10 +408,10 @@ function openEvSheet(id, dateISO, pre) {
   $('evs').addEventListener('change', () => { touched.add('time'); if ($('evs').value) $('eve').value = hhmmOf(Math.min(toMin($('evs').value) + dur, 1439)); clash(); });
   $('eve').addEventListener('change', () => { touched.add('time'); const d = toMin($('eve').value) - toMin($('evs').value); if (d > 0) dur = d; mark(); clash(); });
   $('evd').addEventListener('change', () => { touched.add('date'); clash(); });
-  const upUntil = () => $('evul').classList.toggle('hidden', !$('evr').value || cat === 'cumple');
+  const upUntil = () => { $('evul').classList.toggle('hidden', !$('evr').value || cat === 'cumple'); $('evel').classList.toggle('hidden', !!$('evr').value || !$('evall').checked); };
   $('evr').addEventListener('change', () => { touched.add('repeat'); upUntil(); });
   box.querySelectorAll('[data-dur]').forEach(b => b.onclick = () => { touched.add('time'); dur = +b.dataset.dur; if (!$('evs').value) $('evs').value = defStart; $('eve').value = hhmmOf(Math.min(toMin($('evs').value) + dur, 1439)); mark(); clash(); });
-  $('evall').onchange = () => { touched.add('time'); $('evtimes').classList.toggle('hidden', $('evall').checked); if (!$('evall').checked && !$('evs').value) { $('evs').value = defStart; $('eve').value = hhmmOf(toMin(defStart) + dur); } clash(); };
+  $('evall').onchange = () => { touched.add('time'); upUntil(); $('evtimes').classList.toggle('hidden', $('evall').checked); if (!$('evall').checked && !$('evs').value) { $('evs').value = defStart; $('eve').value = hhmmOf(toMin(defStart) + dur); } clash(); };
   const mapUrl = q => (IS_APPLE ? 'https://maps.apple.com/?q=' : 'https://www.google.com/maps/search/?api=1&query=') + encodeURIComponent(q);
   const upMap = () => { const v = $('evl').value.trim(); $('evmap').classList.toggle('hidden', !v); $('evmap').href = v ? mapUrl(v) : '#'; };
   $('evl').oninput = () => { touched.add('loc'); upMap(); }; upMap();
@@ -420,7 +437,8 @@ function openEvSheet(id, dateISO, pre) {
     let title = $('evt').value.trim(); if (parsed && parsed.title) title = parsed.title;
     if (!title) { $('evt').focus(); $('evt').classList.remove('shake'); void $('evt').offsetWidth; $('evt').classList.add('shake'); return null; }
     const all = $('evall').checked;
-    const out = Object.assign({}, ev || {}, { id: id || 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title, date: $('evd').value || todayISO(), allDay: all, start: all ? '' : $('evs').value, end2: all ? '' : $('eve').value, cat, repeat: $('evr').value, notes: $('evn').value.trim(), until: $('evr').value && $('evu').value ? $('evu').value : undefined, loc: $('evl').value.trim(), star: $('evstar').checked || undefined, year: cat === 'cumple' && +$('evy').value ? +$('evy').value : undefined });
+    const out = Object.assign({}, ev || {}, { id: id || 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title, date: $('evd').value || todayISO(), allDay: all, start: all ? '' : $('evs').value, end2: all ? '' : $('eve').value, cat, repeat: $('evr').value, notes: $('evn').value.trim(), until: $('evr').value && $('evu').value ? $('evu').value : undefined, loc: $('evl').value.trim(), star: $('evstar').checked || undefined, year: cat === 'cumple' && +$('evy').value ? +$('evy').value : undefined, end: undefined });
+    if (all && !out.repeat && $('evend').value > out.date) out.end = $('evend').value;
     // Si abres una repetición y no cambias el día, la serie sigue empezando en su fecha original.
     if (ev && ev.repeat && out.repeat && $('evd').value === occ) out.date = ev.date;
     if (!out.allDay && !out.start) out.allDay = true;

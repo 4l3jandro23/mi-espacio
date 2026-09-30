@@ -143,17 +143,22 @@ function vCiudad() {
     </div></section>
   </div>`;
 }
-function planToCal(p, iso) {
-  const id = 'p' + p.id + (iso ? iso.replace(/-/g, '') : '');
-  const d0 = iso || (p.days ? p.days.find(d => d >= todayISO()) || p.days[0] : p.from < todayISO() && p.to >= todayISO() ? todayISO() : p.from);
-  const ev = { id, title: p.n, date: d0, allDay: true, start: '', end2: '', cat: 'amigos', repeat: '', notes: [p.precio, p.nota, p.url].filter(Boolean).join('\n'), loc: p.lugar };
-  if (!p.days && p.to > d0) ev.end = p.to;
-  set('events', id, ev); save(); render();
-  toast(`Apuntado: ${p.n} · ${dShort(d0)}`, { actions: [{ n: 'Deshacer', fn: () => { set('events', id, null); save(); render(); } }] });
+// Se apunta entero: si abre en varios tramos (p. ej. dos fines de semana), un evento por tramo, cada uno con todos sus días.
+function planToCal(p) {
+  const t = todayISO(), runs = planRuns(p).filter(r => r[1] >= t);
+  const ids = (runs.length ? runs : planRuns(p)).map(([a, b]) => {
+    const d0 = a < t ? t : a, id = 'p' + p.id + d0.replace(/-/g, '');
+    const ev = { id, title: p.n, date: d0, allDay: true, start: '', end2: '', cat: 'amigos', repeat: '', notes: [p.precio, p.nota, p.url].filter(Boolean).join('\n'), loc: p.lugar };
+    if (b > d0) ev.end = b;
+    set('events', id, ev); return id;
+  });
+  if (S.events['p' + p.id]) set('events', 'p' + p.id, null); // el apunte antiguo de un solo día
+  save(); render();
+  toast(`Apuntado: ${p.n} · ${planWhen(p)}`, { actions: [{ n: 'Deshacer', fn: () => { ids.forEach(id => set('events', id, null)); save(); render(); } }] });
 }
 function agToCal(x) {
   const [a] = agRangeDates(), d = x.s > a ? x.s : a, id = 'b' + x.id + d.replace(/-/g, '');
-  const ev = { id, title: x.n, date: d, allDay: !x.time, start: x.time, end2: x.time ? hhmmOf(Math.min(toMin(x.time) + 90, 1439)) : '', cat: 'amigos', repeat: '', notes: (x.gratis ? 'Gratis. ' : x.price ? x.price + '. ' : '') + 'https://guia.barcelona.cat/es/detall/x_' + x.id + '.html', loc: [x.lugar, x.barrio].filter(Boolean).join(', ') };
+  const ev = { id, title: x.n, date: d, end: !x.time && x.e > d && hDays(d, x.e) <= 14 ? x.e : undefined, allDay: !x.time, start: x.time, end2: x.time ? hhmmOf(Math.min(toMin(x.time) + 90, 1439)) : '', cat: 'amigos', repeat: '', notes: (x.gratis ? 'Gratis. ' : x.price ? x.price + '. ' : '') + 'https://guia.barcelona.cat/es/detall/x_' + x.id + '.html', loc: [x.lugar, x.barrio].filter(Boolean).join(', ') };
   set('events', id, ev); save(); render();
   toast(`Apuntado: ${x.n.slice(0, 50)} · ${dShort(d)}${x.time ? ' ' + x.time : ''}`, { actions: [{ n: 'Deshacer', fn: () => { set('events', id, null); save(); render(); } }] });
 }
@@ -184,3 +189,16 @@ function ciudadHoyHTML(today) {
     ${free ? `<button class="sv" data-hubgo="ciudad" style="--c:#2FA98C"><span class="sv-n"><b>${free}</b> gratis</span><span class="sv-t">🎟️ Planes gratis hoy</span><span class="sv-s">De la agenda del Ayuntamiento</span></button>` : ''}
     ${ps.map(p => { const T = PLAN_TIPOS[p.tipo] || PLAN_TIPOS.ciudad, d = planDays(p).find(x => x >= today), n = hDays(today, d); return `<button class="sv" data-hubgo="ciudad" style="--c:${T[2]}"><span class="sv-n">${n === 0 ? 'Hoy' : n === 1 ? 'Mañana' : `<b>${n}</b> días`}</span><span class="sv-t">${T[1]} ${esc(p.n)}</span><span class="sv-d">${planWhen(p)}</span><span class="sv-s">${p.gratis ? 'Gratis · ' : ''}${esc(p.lugar)}</span></button>`; }).join('')}</div></section>`;
 }
+
+// Los planes que apuntaste antes con un solo día (p. ej. Oktoberfest) se completan con todos sus días.
+document.addEventListener('DOMContentLoaded', () => setTimeout(() => {
+  if (typeof S === 'undefined' || !S.events) return;
+  let ch = false;
+  for (const p of PLANES_BCN) {
+    const old = S.events['p' + p.id]; if (!old) continue;
+    const runs = planRuns(p).filter(r => r[1] >= old.date);
+    runs.forEach(([a, b]) => { const d0 = a < old.date ? old.date : a, id = 'p' + p.id + d0.replace(/-/g, ''); if (!S.events[id]) { const ev = Object.assign({}, old, { id, date: d0, end: b > d0 ? b : undefined }); set('events', id, ev); } });
+    set('events', 'p' + p.id, null); ch = true;
+  }
+  if (ch) { save(); if (typeof softRender === 'function') softRender(); }
+}, 800));
