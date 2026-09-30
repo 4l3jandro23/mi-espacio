@@ -142,7 +142,7 @@ function toast(t, o) {
 
 // ---------- buscador y acciones (Ctrl+K) ----------
 const SECTIONS = [
-  ['Inicio', 'inicio', '☀︎'], ['Calendario', 'cal', '◷'], ['Páginas', 'cuaderno', '▤'], ['Mi Dinero', 'hoy', '€'], ['Previsión del mes', 'prev', '↗'],
+  ['Inicio', 'inicio', '☀︎'], ['Calendario', 'cal', '◷'], ['Cuaderno: listas, notas y diario', 'cuaderno', '▤'], ['Mi Dinero', 'hoy', '€'], ['Previsión del mes', 'prev', '↗'],
   ['Meses', 'mes', '📅'], ['Gastos hormiga', 'hormiga', '🐜'], ['Gastos fijos', 'fijos', '🔁'], ['Movimientos', 'movs', '🧾'], ['Deudas', 'deudas', '🤝'],
   ['Barcelona: planes, gratis y agenda', 'ciudad', '🏙️'], ['Ajustes de Mi Espacio', 'espacio', '⚙️'], ['Mi Dinero: PIN, copias y sincronización', 'ajustes', '🔒'], ['Calendario de Apple', 'apple', '🍎'],
 ];
@@ -165,11 +165,12 @@ function openPalette(q0) {
     if (v) {
       p = parseQuick(v);
       if (p.title) make.push({ i: '＋', t: `Apuntar «${p.title}»`, s: p.found ? quickHint(p).replace('✨ ', '') : 'sin fecha: lo pongo hoy, todo el día', fn: () => quickAdd(v) });
+      { const r = nbRoute(v), d = r.k !== 'cal' && nbDests().find(x => x.k === r.k); if (d) make.push({ i: d.i, t: `Guardar «${r.text}»`, s: 'En tu cuaderno: ' + d.n, fn: () => { tab = 'cuaderno'; nbCur = null; render(); nbCapSave(v); } }); }
       make.push({ i: '▤', t: `Nueva página «${v}»`, s: 'En tu cuaderno', fn: () => { tab = 'cuaderno'; const pg = nbCreate({ title: v, icon: '📄', parent: null, blocks: [B('text')] }); nbSaveNow(); nbGo(pg.id); } });
     }
     const secs = SECTIONS.filter(x => !n || normTxt(x[0]).includes(n)).map(x => ({ i: x[2], t: x[0], s: 'Ir a', fn: () => goTab(x[1]) }));
     const acts = [
-      { i: '📔', t: 'Diario de hoy', s: 'Acción', fn: () => { tab = 'cuaderno'; nbToday(); } },
+      { i: '🙂', t: 'Diario: ¿qué tal hoy?', s: 'Acción', fn: () => { tab = 'cuaderno'; nbToday(); } },
       { i: '◷', t: 'Ver hoy en el calendario', s: 'Acción', fn: () => { calSel = todayISO(); calMonth = calSel.slice(0, 8) + '01'; calView = calView === 'agenda' ? 'semana' : calView; goTab('cal'); } },
       { i: '🏠', t: 'Hoy teletrabajo', s: 'Acción', fn: () => setDayMode(todayISO(), 'tele') },
       { i: '⌨️', t: 'Atajos de teclado', s: 'Ayuda', fn: () => showShortcuts() },

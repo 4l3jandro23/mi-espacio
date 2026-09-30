@@ -74,7 +74,7 @@ function itemsOn(iso, withPay) {
   if (typeof appItemsOn === 'function') out.push(...appItemsOn(iso));
   if (typeof planItemsOn === 'function') out.push(...planItemsOn(iso));
   const di = nbPages().find(p => p.kind === 'diario:' + iso);
-  if (di) out.push({ kind: 'diary', id: di.id, title: 'Entrada del diario', icon: '📔', color: '#9B7BEA', sort: 2000 });
+  if (di && (di.mood || di.good || nbText(di).trim())) { const md = di.mood && NB_MOODS[di.mood - 1]; out.push({ kind: 'diary', id: di.id, title: md ? `Diario: ${md[1].toLowerCase()}${di.good ? ' · ' + di.good : ''}` : di.good || 'Entrada del diario', icon: md ? md[0] : '📔', color: '#9B7BEA', sort: 2000 }); }
   return out.sort((a, b) => a.sort - b.sort);
 }
 
@@ -117,14 +117,15 @@ function vInicio() {
   const next = items.find(i => i.kind === 'ev' && i.time && toMin(i.time) >= nowMin);
   const hi = h < 6 ? 'Buenas noches' : h < 13 ? 'Buenos días' : h < 21 ? 'Buenas tardes' : 'Buenas noches';
   const m = moneyCtx();
-  const tasksPage = nbPages().find(p => /^tareas$/i.test((p.title || '').trim()));
+  const tasksPage = nbPages().find(p => p.kind === 'lista:tareas') || nbPages().find(p => /^tareas$/i.test((p.title || '').trim()));
   const pisoPend = typeof pisoWeek === 'function' && window.Rotacion && APX.piso && layerOn('piso') ? pisoWeek(window.Rotacion.mondayOf(today)).filter(t => !t.done).length : 0;
   const pendingTasks = pisoPend + appleData().reminders.filter(r => !r.date || r.date <= hAdd(today, 7)).length + nbPages().reduce((a, p) => a + (p.blocks || []).filter(b => b.t === 'todo' && !b.checked && (b.html || '').replace(/<[^>]+>/g, '').trim()).length, 0);
-  const diaryToday = nbPages().find(p => p.kind === 'diario:' + today);
+  const diaryToday = nbPages().find(p => p.kind === 'diario:' + today), moodToday = diaryToday && diaryToday.mood && NB_MOODS[diaryToday.mood - 1];
+  const listN = nbPages().filter(p => /^lista:/.test(p.kind || '')).reduce((a, p) => a + nbItems(p).filter(b => !b.checked).length, 0);
   const week = [...Array(7)].map((_, i) => hAdd(today, i + 1)).map(d => ({ d, items: itemsOn(d).filter(i => !['diary', 'hol', 'sen'].includes(i.kind)) })).filter(x => x.items.length);
   const hol = layerOn('festivos') && holidayOn(today), sun = sunToday(today), cur = wxNow(), wd = wxDay(today), tip = wxTip();
   const wic = cur && wxIcon(cur.code, cur.night);
-  const recent = nbPages().filter(p => !/^diario:/.test(p.kind || '')).sort((a, b) => b.updated - a.updated).slice(0, 6);
+  const recent = nbPages().filter(p => !/^(diario|notas-root|lista:)/.test(p.kind || '')).sort((a, b) => b.updated - a.updated).slice(0, 6);
   const nextTxt = next ? `Siguiente: <b>${esc(next.title)}</b> a las ${hm(next.time)}${toMin(next.time) - nowMin < 90 ? ` · en ${toMin(next.time) - nowMin} min` : ''}` : items.some(i => i.kind === 'ev') ? 'Ya no te queda nada más hoy.' : 'Hoy no tienes nada apuntado.';
   const tile = (go, cls, icon, label, body, extra) => `<button class="tile ${cls}" ${go} style="--i:${tile.n = (tile.n || 0) + 1}"><span class="tile-ic">${icon}</span><span class="tile-lb">${label}</span><span class="tile-bd">${body}</span>${extra || ''}</button>`;
   tile.n = 0;
@@ -140,7 +141,7 @@ function vInicio() {
         </div>
         <div class="sky-arc">${dayArc(items, workSpans(today), sun)}${workNow(today) ? `<div class="sky-work">${workNow(today)}</div>` : ''}<div class="sky-next">${nextTxt}</div>${modeChips(today)}</div>
       </div>
-      <div class="sky-acts"><label class="sky-qa"><span aria-hidden="true">＋</span><input id="hubqa" placeholder="Apunta algo: «dentista el jueves a las 10»" autocomplete="off" enterkeyhint="done" aria-label="Apuntar un evento escribiendo"></label><button data-hubtoday>📔 Diario</button><button data-hubnewpage>▤ Página</button></div>
+      <div class="sky-acts"><label class="sky-qa"><span aria-hidden="true">＋</span><input id="hubqa" placeholder="Apunta algo: «dentista el jueves a las 10»" autocomplete="off" enterkeyhint="done" aria-label="Apuntar un evento escribiendo"></label><button data-hubtoday>${moodToday ? moodToday[0] : '📔'} Diario</button><button data-hubnote>✎ Nota</button></div>
       <div class="sky-qah" id="hubqah"></div>
     </section>
 
@@ -162,17 +163,18 @@ function vInicio() {
         ${tile('data-hubgo="hoy"', 'tile-money', '€', 'Mi Dinero', m ? `<b class="tile-big">${eur(Math.max(0, m.A.perDay))}</b><span>al día hasta el cobro</span>` : AN ? '<span>🔒 Con PIN · toca para entrar</span>' : '<span>Carga tus extractos para empezar</span>')}
         ${tile('data-hubgo="cal"', 'tile-cal', '◷', 'Calendario', next ? `<span>${esc(next.title)} · ${hm(next.time)}</span>` : week[0] ? `<span>${fmtDay(week[0].d, { weekday: 'short', day: 'numeric' })}: ${esc(week[0].items[0].title)}</span>` : '<span>Nada en los próximos días</span>')}
         ${tile(tasksPage ? `data-nbopen="${tasksPage.id}"` : 'data-hubgo="cuaderno"', 'tile-tasks', '✓', 'Tareas', `<b class="tile-big">${pendingTasks}</b><span>${pendingTasks === 1 ? 'pendiente' : 'pendientes'}</span>`)}
-        ${tile('data-hubtoday', 'tile-diary', '✎', 'Diario', diaryToday ? '<span>Hoy ya has escrito ✓</span>' : '<span>Hoy aún no has escrito</span>')}
-        ${tile('data-hubgo="cuaderno"', 'tile-pages', '▤', 'Páginas', `<span>${nbPages().length ? nbPages().length + ' páginas' : 'Tu cuaderno para todo'}</span>`)}
+        ${tile('data-hubtoday', 'tile-diary', moodToday ? moodToday[0] : '✎', 'Diario', moodToday ? `<span>Hoy: ${moodToday[1].toLowerCase()}${diaryToday.good ? ' · ' + esc(diaryToday.good) : ''}</span>` : '<span>¿Qué tal hoy? Un toque y listo</span>')}
+        ${tile('data-hubgo="cuaderno"', 'tile-pages', '▤', 'Cuaderno', listN ? `<b class="tile-big">${listN}</b><span>en tus listas</span>` : '<span>Listas, notas e ideas</span>')}
         ${tile('data-hubgo="ciudad"', 'tile-city', '◎', 'Barcelona', '<span>Planes, gratis y agenda de la ciudad</span>')}
       </div>
     </section>
 
+    ${typeof appsLauncherHTML === 'function' ? appsLauncherHTML(today) : ''}
     ${efHTML(today, true)}
     ${remsHTML()}
     ${week.length ? `<section class="hub-sec"><h2 class="hub-h">Próximos días</h2><div class="agenda">${week.map(w => `<button class="ag-row" data-goday="${w.d}" data-goview="dia"><span class="ag-date"><b>${+w.d.slice(8)}</b><small>${new Date(w.d + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short' })}</small></span><span class="ag-items">${w.items.slice(0, 3).map(i => `<span class="ag-it"><i style="background:${i.color}"></i>${i.time ? hm(i.time) + ' · ' : ''}${esc(i.title)}</span>`).join('')}${w.items.length > 3 ? `<span class="muted small">y ${w.items.length - 3} más</span>` : ''}</span></button>`).join('')}</div></section>` : ''}
 
-    ${recent.length ? `<section class="hub-sec"><h2 class="hub-h">Páginas recientes</h2><div class="pages-strip">${recent.map(p => `<button class="pg-chip" data-nbopen="${p.id}"><span>${esc(p.icon || '📄')}</span>${esc(nbTitle(p))}</button>`).join('')}</div></section>` : ''}
+    ${recent.length ? `<section class="hub-sec"><h2 class="hub-h">Del cuaderno</h2><div class="pages-strip">${recent.map(p => `<button class="pg-chip" data-nbopen="${p.id}"><span>${esc(p.icon || '📄')}</span>${esc(nbTitle(p))}</button>`).join('')}</div></section>` : ''}
   </div>`;
 }
 function dayItemHTML(i) {
@@ -222,6 +224,7 @@ function bindHub() {
     const nb = t.closest('[data-nbopen]'); if (nb) { tab = 'cuaderno'; return nbGo(nb.dataset.nbopen); }
     if (t.closest('[data-hubtoday]')) { tab = 'cuaderno'; return nbToday(); }
     if (t.closest('[data-hubnewpage]')) { tab = 'cuaderno'; render(); return nbNewPage(null); }
+    if (t.closest('[data-hubnote]')) { tab = 'cuaderno'; nbCur = null; render(); scrollTo(0, 0); const i = document.getElementById('nbcap'); if (i) i.focus(); return; }
     if (t.closest('[data-palette]')) return openPalette();
     if (t.closest('[data-kbhelp]')) return showShortcuts();
     const efm = t.closest('[data-efmore]'); if (efm) return openEfemerides(efm.dataset.efmore);

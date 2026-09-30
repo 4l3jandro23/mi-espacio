@@ -3,7 +3,8 @@
 'use strict';
 let nbCur = null, nbSearch = '', nbSide = false, nbOpen = new Set(), nbPendingRender = false;
 let nbMenu = null; // { kind: 'slash'|'handle', blockId, items, idx }
-let nbSaveT = null;
+let nbSaveT = null, nbChkT = null;
+const nbRe = () => { const y = scrollY; render(); scrollTo(0, y); };
 
 const NB_TYPES = [
   { t: 'text', n: 'Texto', i: '¶', k: 'texto parrafo' },
@@ -87,22 +88,9 @@ const NB_TEMPLATES = {
   compra: { n: 'Lista de la compra', i: '🛒', b: () => [B('todo'), B('todo'), B('todo')] },
   ideas: { n: 'Ideas', i: '💡', b: () => [B('callout', 'Aquí va todo lo que se te ocurra, sin filtro. Ya lo ordenarás.'), B('bullet')] },
 };
-function nbSeed() {
-  const mk = (title, icon, tpl, kind) => nbCreate({ title, icon, blocks: NB_TEMPLATES[tpl].b(), kind });
-  const d = mk('Diario', '📅', 'blank', 'diario-root'); d.blocks = [B('text', 'Una entrada por día. Pulsa “📅 Diario de hoy” en el inicio del cuaderno.')];
-  mk('Tareas', '✅', 'tareas'); mk('Objetivos', '🎯', 'objetivos'); mk('Ideas', '💡', 'ideas');
-  mk('Libros, pelis y series', '🎬', 'lista'); mk('Lista de la compra', '🛒', 'compra');
-  const v = mk('Viajes', '✈️', 'blank'); v.blocks = [B('text', 'Crea una subpágina por viaje con la plantilla “Viaje”.')];
-  const c = mk('Citas', '🩺', 'blank'); c.blocks = [B('text', 'Crea una subpágina antes de cada cita con la plantilla “Preparar una cita”.')];
-  nbSaveNow();
-}
 function nbToday() {
-  let root = nbPages().find(p => p.kind === 'diario-root');
-  if (!root) root = nbCreate({ title: 'Diario', icon: '📅', kind: 'diario-root', blocks: [B('text')] });
-  const iso = todayISO();
-  let e = nbPages().find(p => p.kind === 'diario:' + iso);
-  if (!e) { e = nbCreate({ title: nbDateTitle(iso), icon: '📅', parent: root.id, kind: 'diario:' + iso, blocks: NB_TEMPLATES.diario.b() }); e.order = -Date.now(); nbSaveNow(); }
-  nbGo(e.id);
+  nbCur = null; nbSide = false; nbSearch = ''; render();
+  setTimeout(() => { const el = document.querySelector('.nb-diary'); if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 60);
 }
 
 // ---------- vistas ----------
@@ -123,27 +111,200 @@ function nbSideHTML() {
   return `<aside class="nb-side ${nbSide ? 'open' : ''}">
     <div class="nb-side-top"><input id="nbq" placeholder="🔍 Buscar" value="${esc(nbSearch)}" autocomplete="off"></div>
     <a class="nb-link ${!nbCur ? 'on' : ''}" data-home href="#">🏠 Inicio del cuaderno</a>
-    <a class="nb-link" data-today href="#">📅 Diario de hoy</a>
+    <a class="nb-link" data-today href="#">🙂 ¿Qué tal hoy?</a>
     <div class="nb-sec">Páginas <button class="nb-plus" data-new="" title="Nueva página" aria-label="Nueva página">+</button></div>
     <div id="nbTree">${found ? (found.length ? found.map(p => `<div class="nb-row"><a data-open="${p.id}" href="#">${esc(p.icon)} ${esc(nbTitle(p))}</a></div>`).join('') : '<div class="small muted" style="padding:6px 10px">Nada con eso.</div>') : nbTree(null, 0) || '<div class="small muted" style="padding:6px 10px">Aún no hay páginas.</div>'}</div>
   </aside>`;
 }
+// ---------- inicio del cuaderno: apuntar, diario de un minuto, listas, notas y páginas ----------
+// Listas que ya vienen hechas: se crean de verdad (como páginas con casillas) al añadir lo primero.
+const NB_LISTS = [
+  { k: 'tareas', n: 'Tareas', i: '✅', c: 'var(--accent)', ph: 'Llamar al seguro…', hint: 'Lo pendiente que no tiene día. Lo que sí tiene día, mejor al calendario.', re: /^tareas?$/i },
+  { k: 'pelis', n: 'Pelis y series', i: '🎬', c: 'var(--lilac)', ph: 'Una peli o una serie…', hint: 'Lo que te recomienden, para no quedarte en blanco el domingo.', re: /^(libros, )?pelis y series$/i },
+  { k: 'musica', n: 'Música por escuchar', i: '🎵', c: 'var(--blue)', ph: 'Un disco, un grupo…', hint: 'Discos y grupos que te han recomendado o que te llaman.' },
+  { k: 'planes', n: 'Sitios y planes', i: '📍', c: 'var(--warm)', ph: 'Un bar, un sitio, un plan…', hint: 'Bares, restaurantes y planes para cuando te apetezca salir.' },
+  { k: 'regalos', n: 'Ideas de regalo', i: '🎁', c: '#E0709A', ph: 'Para quién y qué…', hint: 'Apúntalas cuando se te ocurran, no la víspera del cumple.' },
+];
+const NB_MOODS = [['😞', 'Fatal'], ['😕', 'Regular'], ['😐', 'Normal'], ['🙂', 'Bien'], ['😄', 'Genial']];
+let nbAllNotes = false;
+const nbPlain = h => String(h || '').replace(/<br>/g, ' ').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+const nbSpecial = p => /^(lista:|diario|nota|notas-root)/.test(p.kind || '');
+
+// Las páginas que ya tenías con esos nombres pasan a ser esas listas (no se pierde nada).
+function nbAdopt() {
+  let ch = false;
+  for (const L of NB_LISTS) {
+    if (!L.re || nbPages().some(p => p.kind === 'lista:' + L.k)) continue;
+    const p = nbPages().find(x => !x.kind && !x.parent && L.re.test((x.title || '').trim()));
+    if (p) { p.kind = 'lista:' + L.k; set('pages', p.id, p); ch = true; }
+  }
+  const c = nbPages().find(x => !x.kind && !x.parent && /^lista de la compra$/i.test((x.title || '').trim()));
+  if (c) { c.kind = 'lista:c-compra'; set('pages', c.id, c); ch = true; }
+  if (ch) save();
+}
+
+// ---------- listas ----------
+const nbListPage = k => nbPages().find(p => p.kind === 'lista:' + k);
+const nbItems = p => (p && p.blocks || []).filter(b => b.t === 'todo' && nbPlain(b.html));
+function nbListDefs() {
+  const custom = nbPages().filter(p => /^lista:c/.test(p.kind || '')).sort((a, b) => a.created - b.created)
+    .map(p => ({ k: p.kind.slice(6), n: nbTitle(p), i: p.icon || '📋', c: 'var(--muted)', ph: 'Añadir…', hint: 'Lista vacía.' }));
+  return NB_LISTS.concat(custom);
+}
+function nbListEnsure(k) {
+  let p = nbListPage(k); if (p) return p;
+  const L = NB_LISTS.find(x => x.k === k) || { n: 'Lista', i: '📋' };
+  return nbCreate({ title: L.n, icon: L.i, kind: 'lista:' + k, blocks: [] });
+}
+function nbListAdd(k, text) {
+  const p = nbListEnsure(k), html = esc(text.charAt(0).toUpperCase() + text.slice(1));
+  const empty = p.blocks.find(b => b.t === 'todo' && !nbPlain(b.html) && !b.checked);
+  let b; if (empty) { empty.html = html; b = empty; } else { b = B('todo', html); p.blocks.push(b); }
+  nbTouch(p); nbSaveNow();
+  return { p, b };
+}
+function nbListCard(L) {
+  const p = nbListPage(L.k), items = nbItems(p), pend = items.filter(b => !b.checked), done = items.length - pend.length;
+  return `<div class="nb-list" style="--lc:${L.c}">
+    <div class="nb-lh"><button class="nb-ln" ${p ? `data-open="${p.id}"` : `data-lopen="${L.k}"`}><span class="nb-li">${esc(L.i)}</span><span>${esc(L.n)}</span></button>${pend.length ? `<span class="nb-lc">${pend.length}</span>` : ''}</div>
+    ${pend.length ? `<ul class="nb-lul">${pend.slice(0, 5).map(b => `<li><label><input type="checkbox" data-lchk="${p.id}|${b.id}"><span>${nbClean(b.html)}</span></label></li>`).join('')}</ul>
+      ${pend.length > 5 ? `<button class="link small" data-open="${p.id}">y ${pend.length - 5} más</button>` : ''}` : `<p class="nb-lhint">${esc(L.hint)}</p>`}
+    <input class="nb-ladd" data-ladd="${L.k}" placeholder="＋ ${esc(L.ph)}" enterkeyhint="done" autocomplete="off" aria-label="Añadir a ${esc(L.n)}">
+    ${done ? `<button class="link small nb-ldone" data-lclear="${p.id}">✓ ${done} ${done > 1 ? 'hechas' : 'hecha'} · quitarlas</button>` : ''}
+  </div>`;
+}
+
+// ---------- diario de un minuto ----------
+const nbDiary = iso => nbPages().find(p => p.kind === 'diario:' + iso);
+function nbDiaryEnsure(iso) {
+  let e = nbDiary(iso); if (e) return e;
+  let root = nbPages().find(p => p.kind === 'diario-root');
+  if (!root) root = nbCreate({ title: 'Diario', icon: '📅', kind: 'diario-root', blocks: [B('text', 'Una entrada por día. Se rellenan desde «¿Qué tal hoy?» en el inicio del cuaderno.')] });
+  e = nbCreate({ title: nbDateTitle(iso), icon: '📅', parent: root.id, kind: 'diario:' + iso, blocks: [B('text')] });
+  e.order = -Date.parse(iso);
+  return e;
+}
+const nbMoodOf = iso => { const e = nbDiary(iso); return e && e.mood ? NB_MOODS[e.mood - 1] : null; };
+function nbMoodHTML(iso, inPage) {
+  const e = nbDiary(iso), m = e && e.mood || 0, today = iso === todayISO();
+  return `<div class="nb-mood ${inPage ? 'in-page' : ''}">
+    ${inPage ? '' : `<div class="nb-mood-q">${today ? '¿Qué tal hoy?' : '¿Qué tal fue el día?'}<small>Sin obligación: cuando te apetezca.</small></div>`}
+    <div class="nb-faces" role="radiogroup" aria-label="Cómo ha ido el día">${NB_MOODS.map(([f, n], i) => `<button role="radio" aria-checked="${m === i + 1}" class="${m === i + 1 ? 'on' : ''}" data-mood="${iso}|${i + 1}"><span>${f}</span><small>${n}</small></button>`).join('')}</div>
+    <input class="nb-good" data-good="${iso}" value="${esc(e && e.good || '')}" placeholder="Una cosa buena${today ? ' de hoy' : ''}, aunque sea pequeña…" maxlength="200" enterkeyhint="done" autocomplete="off" aria-label="Una cosa buena del día">
+  </div>`;
+}
+function nbWeekMoods() {
+  const t = todayISO();
+  return `<div class="nb-week">${[6, 5, 4, 3, 2, 1, 0].map(n => {
+    const d = hAdd(t, -n), e = nbDiary(d), m = nbMoodOf(d);
+    return `<button class="${d === t ? 'today' : ''}" ${e ? `data-open="${e.id}"` : `data-dday="${d}"`} title="${fmtDay(d, { weekday: 'long', day: 'numeric' })}${m ? ': ' + m[1] : ''}"><small>${new Date(d + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'narrow' })}</small><span>${m ? m[0] : e && (e.good || nbText(e).trim()) ? '✎' : '·'}</span></button>`;
+  }).join('')}</div>`;
+}
+// Un recuerdo: lo bueno que apuntaste hace un mes o hace un año (si lo hay).
+function nbMemory() {
+  const t = new Date(todayISO() + 'T12:00:00');
+  for (const [lbl, d] of [['Hace un año', new Date(t.getFullYear() - 1, t.getMonth(), t.getDate(), 12)], ['Hace un mes', new Date(t.getFullYear(), t.getMonth() - 1, t.getDate(), 12)]]) {
+    const e = nbDiary(isoOf(d)), m = e && e.mood ? NB_MOODS[e.mood - 1][0] + ' ' : '';
+    if (e && e.good) return `<button class="nb-memo" data-open="${e.id}"><small>${lbl}</small>${m}«${esc(e.good)}»</button>`;
+  }
+  return '';
+}
+
+// ---------- notas rápidas ----------
+function nbNotesRoot() {
+  return nbPages().find(p => p.kind === 'notas-root') || nbCreate({ title: 'Notas', icon: '📝', kind: 'notas-root', blocks: [B('text', 'Tus notas rápidas. Se crean desde «Apunta lo que sea» en el inicio del cuaderno.')] });
+}
+function nbAddNote(text) {
+  const r = nbNotesRoot(), lines = text.split('\n'), first = lines[0].trim();
+  const title = first.length > 70 ? first.slice(0, 67).trim() + '…' : first;
+  const rest = first.length > 70 ? text : lines.slice(1).join('\n').trim();
+  const p = nbCreate({ title, icon: '📝', parent: r.id, kind: 'nota', blocks: [B('text', esc(rest).replace(/\n/g, '<br>'))] });
+  p.order = -Date.now(); nbSaveNow();
+  return p;
+}
+const nbNotes = () => nbPages().filter(p => p.kind === 'nota').sort((a, b) => b.updated - a.updated);
+const nbWhen = ts => { const d = isoOf(new Date(ts)), t = todayISO(); return d === t ? 'Hoy' : d === hAdd(t, -1) ? 'Ayer' : new Date(ts).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }); };
+
+// ---------- apuntar lo que sea: adivina dónde va, y puedes cambiarlo ----------
+function nbRoute(txt) {
+  const s = txt.trim();
+  const rules = [
+    ['pelis', /^(?:ver|peli(?:cula)?|película|serie|docu(?:mental)?)\s*:?\s+/i, true],
+    ['musica', /^(?:escuchar|disco|[aá]lbum|canci[oó]n|grupo)\s*:?\s+/i, true],
+    ['regalos', /^(?:regalo|regalar)\s*:?\s+/i, true],
+    ['planes', /^(?:probar|sitio|restaurante|plan)\s*:?\s+/i, true],
+    ['tareas', /^(?:tarea|pendiente)\s*:?\s+/i, true],
+  ];
+  for (const [k, re, strip] of rules) { const m = s.match(re); if (m && s.length > m[0].length) return { k, text: strip ? s.slice(m[0].length) : s }; }
+  const q = parseQuick(s);
+  if (q.date || q.start) return { k: 'cal', text: s, q };
+  if (/^(?:llamar|pedir|mandar|enviar|pagar|reservar|devolver|arreglar|limpiar|comprar|renovar|buscar|mirar|escribir|contestar|cancelar|cambiar)\b/i.test(s)) return { k: 'tareas', text: s };
+  return { k: 'nota', text: s };
+}
+function nbDests() { return [{ k: 'nota', i: '📝', n: 'Nota' }, { k: 'cal', i: '📅', n: 'Calendario' }].concat(nbListDefs().map(L => ({ k: L.k, i: L.i, n: L.n }))); }
+function nbCapHint(txt) {
+  const box = document.getElementById('nbcapto'); if (!box) return;
+  if (!txt.trim()) { box.innerHTML = ''; return; }
+  const r = nbRoute(txt), q = r.k === 'cal' ? r.q : null;
+  box.innerHTML = `<span class="small muted">Va a</span>${nbDests().map(d => `<button class="nb-to ${d.k === r.k ? 'on' : ''}" data-capto="${d.k}">${d.i} ${esc(d.n)}${d.k === 'cal' && q ? ` <small>${esc(q.hits.join(' · '))}</small>` : ''}</button>`).join('')}`;
+}
+function nbCapSave(txt, k) {
+  txt = txt.trim(); if (!txt) return;
+  const r = nbRoute(txt); k = k || r.k;
+  const text = k === r.k ? r.text : txt;
+  if (k === 'cal') { quickAdd(text); nbCapFocus(); return; }
+  if (k === 'nota') {
+    const p = nbAddNote(text); nbRe(); nbCapFocus();
+    toast('📝 Guardado en tus notas', { actions: [{ n: 'Abrir', fn: () => nbGo(p.id) }, { n: 'Deshacer', fn: () => { nbDelete(p.id); render(); } }] });
+    return;
+  }
+  const L = nbListDefs().find(x => x.k === k), { p, b } = nbListAdd(k, text); nbRe(); nbCapFocus();
+  toast(`${L.i} Añadido a ${L.n}`, { actions: [{ n: 'Deshacer', fn: () => { p.blocks = p.blocks.filter(x => x.id !== b.id); nbTouch(p); nbSaveNow(); render(); } }] });
+}
+
+// Tras guardar, el cursor sigue en «Apunta lo que sea», para poder apuntar varias cosas seguidas.
+function nbCapFocus() { const i = document.getElementById('nbcap'); if (i) { i.value = ''; i.focus({ preventScroll: true }); } nbCapHint(''); }
 function nbHome() {
-  const all = nbPages();
-  const favs = all.filter(p => p.fav), recent = all.slice().sort((a, b) => b.updated - a.updated).slice(0, 8);
-  const hour = new Date().getHours();
-  const hi = hour < 6 ? 'Buenas noches' : hour < 13 ? 'Buenos días' : hour < 21 ? 'Buenas tardes' : 'Buenas noches';
-  const card = p => `<a class="nb-card" data-open="${p.id}" href="#" style="--cover:${nbCover(p)}"><span style="font-size:22px">${esc(p.icon)}</span><b>${esc(nbTitle(p))}</b><span class="small muted">${new Date(p.updated).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span></a>`;
-  return `<div class="nb-page"><h1 class="nb-hello">Tu cuaderno</h1><div class="muted">${nbDateTitle(todayISO())}</div>
-    <div class="toolbar" style="margin:16px 0"><button class="primary" data-today>📅 Diario de hoy</button><button data-new="">+ Nueva página</button></div>
-    ${!all.length ? `<div class="card"><h2>Tu cuaderno para todo</h2><p class="small">Para lo que quieras: tareas, ideas, diario, listas, viajes, preparar citas… Cada página puede tener subpáginas dentro, como carpetas.</p>
-      <div class="toolbar"><button class="primary" id="nbseed">Empezar con una estructura básica</button><button data-new="">Empezar en blanco</button></div></div>` : ''}
-    ${favs.length ? `<h3>⭐ Favoritos</h3><div class="nb-cards">${favs.map(card).join('')}</div>` : ''}
-    ${recent.length ? `<h3>🕒 Recientes</h3><div class="nb-cards">${recent.map(card).join('')}</div>` : ''}
-    <details class="why" style="margin-top:18px"><summary>Trucos para escribir</summary><div class="small">
-      <b>/</b> al empezar una línea: menú de bloques (tarea, título, lista…).<br>
-      <b>#</b> + espacio: título · <b>-</b> + espacio: lista · <b>[]</b> + espacio: tarea · <b>1.</b> + espacio: lista numerada · <b>&gt;</b> + espacio: cita · <b>---</b>: separador.<br>
-      <b>Ctrl+B / Ctrl+I</b>: negrita / cursiva · <b>⋮⋮</b> a la izquierda de cada bloque: mover, convertir o borrar.</div></details>
+  nbAdopt();
+  const today = todayISO(), notes = nbNotes(), lists = nbListDefs();
+  const pages = nbPages().filter(p => !nbSpecial(p) && !p.parent).sort((a, b) => (b.fav - a.fav) || (b.updated - a.updated));
+  const note = p => `<button class="nb-note" data-open="${p.id}"><b>${esc(nbTitle(p))}</b>${nbText(p).trim() ? `<span>${esc(nbText(p).trim().slice(0, 140))}</span>` : ''}<small>${nbWhen(p.updated)}</small></button>`;
+  const card = p => `<button class="nb-card" data-open="${p.id}" style="--cover:${nbCover(p)}"><span style="font-size:22px">${esc(p.icon)}</span><b>${esc(nbTitle(p))}</b><span class="small muted">${p.fav ? '⭐ · ' : ''}${nbWhen(p.updated)}</span></button>`;
+  const tpl = (k, t) => `<button class="nb-tpl" data-tplnew="${k}">${t.i} ${esc(t.n)}</button>`;
+  return `<div class="nb-page nb-home">
+    <h1 class="nb-hello">Tu cuaderno</h1>
+    <p class="nb-sub">Para lo que no tiene día: listas, notas y cómo te va.</p>
+
+    <div class="nb-cap"><input id="nbcap" placeholder="Apunta lo que sea: «ver Dune», «llamar al banco», una idea…" autocomplete="off" enterkeyhint="done" aria-label="Apuntar algo"><button id="nbcapgo" aria-label="Guardar">↵</button></div>
+    <div class="nb-capto" id="nbcapto"></div>
+
+    <section class="nb-sec2 nb-diary">
+      ${nbMoodHTML(today)}
+      <div class="nb-diary-foot">${nbWeekMoods()}<button class="link small" data-diarymore="${today}">Escribir más ›</button></div>
+      ${nbMemory()}
+    </section>
+
+    <section class="nb-sec2">
+      <div class="nb-h"><h2>Listas</h2></div>
+      <div class="nb-lists">${lists.map(nbListCard).join('')}
+        <label class="nb-list nb-lnew"><span>＋ Nueva lista</span><input data-lnew placeholder="Nombre: «Libros», «Para el piso»…" enterkeyhint="done" autocomplete="off"></label></div>
+    </section>
+
+    <section class="nb-sec2">
+      <div class="nb-h"><h2>Notas</h2>${notes.length > 6 ? `<button class="link small" data-allnotes>${nbAllNotes ? 'Ver menos' : `Ver las ${notes.length}`}</button>` : ''}</div>
+      ${notes.length ? `<div class="nb-notes">${(nbAllNotes ? notes : notes.slice(0, 6)).map(note).join('')}</div>` : '<p class="nb-empty">Lo que apuntes arriba y no sea de ninguna lista acaba aquí, como en un bloc de notas.</p>'}
+    </section>
+
+    <section class="nb-sec2">
+      <div class="nb-h"><h2>Páginas</h2></div>
+      <p class="nb-empty" style="margin-top:0">Para cosas más largas: preparar un viaje, una cita médica, tus objetivos…</p>
+      ${pages.length ? `<div class="nb-cards">${pages.slice(0, 12).map(card).join('')}</div>` : ''}
+      <div class="nb-tpls">${['blank', 'viaje', 'cita', 'objetivos', 'ideas'].map(k => tpl(k, NB_TEMPLATES[k])).join('')}</div>
+    </section>
+
+    <details class="why" style="margin-top:18px"><summary>Trucos</summary><div class="small">
+      <b>Apuntar:</b> empieza por «ver», «escuchar», «regalo», «sitio» o «tarea» y va directo a esa lista. Si pones un día o una hora («el jueves a las 10»), va al calendario. Lo demás, a notas. Antes de guardar puedes elegir otro sitio.<br>
+      <b>Dentro de una página:</b> <b>/</b> para elegir tipo de bloque · <b>-</b> + espacio: lista · <b>[]</b> + espacio: casilla · <b>#</b> + espacio: título · <b>⋮⋮</b> a la izquierda: mover o borrar.</div></details>
   </div>`;
 }
 function nbNumber(blocks, i) { let n = 1; for (let j = i - 1; j >= 0 && blocks[j].t === 'number'; j--) n++; return n; }
@@ -162,6 +323,7 @@ function nbPageHTML(p) {
     <div class="nb-headrow"><button class="nb-icon" id="nbicon" title="Cambiar icono">${esc(p.icon || '📄')}</button>
       <div class="toolbar" style="margin:0"><button id="nbcov" title="Cambiar color de portada" aria-label="Cambiar color de portada">🎨</button><button id="nbfav" title="Favorito">${p.fav ? '⭐' : '☆'}</button><button id="nbmore" title="Más opciones">⋯</button></div></div>
     <h1 class="nb-title" id="nbtitle" contenteditable="true" spellcheck="true" data-ph="Sin título">${esc(p.title || '')}</h1>
+    ${/^diario:/.test(p.kind || '') ? nbMoodHTML(p.kind.slice(7), true) : ''}
     <div id="nbBlocks">${p.blocks.map((b, i) => nbBlockHTML(b, i, p.blocks)).join('')}</div>
     <div class="nb-add" id="nbadd">+ Añadir un bloque</div>
     <div class="small muted" style="margin-top:24px">Editado ${new Date(p.updated).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
@@ -355,13 +517,61 @@ function bindCuaderno() {
     const tw = t.closest('[data-tw]'); if (tw) { const id = tw.dataset.tw; nbOpen.has(id) ? nbOpen.delete(id) : nbOpen.add(id); $('nbTree').innerHTML = nbTree(null, 0); return; }
     const chk = t.closest('[data-chk]'); if (chk) { const { p, b } = nbFind(chk.dataset.chk); b.checked = chk.checked; nbTouch(p); chk.closest('.blk').classList.toggle('done', chk.checked); return; }
     const hdl = t.closest('[data-hdl]'); if (hdl) return nbOpenMenu('handle', hdl.dataset.hdl, hdl);
+    const lo = t.closest('[data-lopen]'); if (lo) { const p = nbListEnsure(lo.dataset.lopen); nbSaveNow(); return nbGo(p.id); }
+    const lc = t.closest('[data-lchk]'); if (lc) {
+      const [pid, bid] = lc.dataset.lchk.split('|'), p = nbP(pid), b = p && p.blocks.find(x => x.id === bid); if (!b) return;
+      b.checked = lc.checked; nbTouch(p); nbSaveNow();
+      lc.closest('li').classList.add('bye'); clearTimeout(nbChkT); nbChkT = setTimeout(nbRe, 700); return;
+    }
+    const cl = t.closest('[data-lclear]'); if (cl) {
+      const p = nbP(cl.dataset.lclear), before = p.blocks.slice();
+      p.blocks = p.blocks.filter(b => !(b.t === 'todo' && b.checked)); nbTouch(p); nbSaveNow(); nbRe();
+      return toast('Quitadas de la lista', { actions: [{ n: 'Deshacer', fn: () => { p.blocks = before; nbTouch(p); nbSaveNow(); nbRe(); } }] });
+    }
+    const md = t.closest('[data-mood]'); if (md) {
+      const [iso, v] = md.dataset.mood.split('|'), e = nbDiaryEnsure(iso);
+      e.mood = e.mood === +v ? 0 : +v; e.icon = e.mood ? NB_MOODS[e.mood - 1][0] : '📅'; nbTouch(e); nbSaveNow();
+      document.querySelectorAll(`[data-mood^="${iso}|"]`).forEach(x => { const on = +x.dataset.mood.split('|')[1] === e.mood; x.classList.toggle('on', on); x.setAttribute('aria-checked', on); });
+      if (!nbCur) { const w = document.querySelector('.nb-week'); if (w) w.outerHTML = nbWeekMoods(); }
+      return;
+    }
+    const dd = t.closest('[data-dday]'); if (dd) { const e = nbDiaryEnsure(dd.dataset.dday); nbSaveNow(); return nbGo(e.id); }
+    const dm = t.closest('[data-diarymore]'); if (dm) { const e = nbDiaryEnsure(dm.dataset.diarymore); nbSaveNow(); nbGo(e.id); const f = e.blocks.find(b => nbEl(b.id)); if (f) setTimeout(() => nbFocus(f.id, 'end'), 60); return; }
+    const ct = t.closest('[data-capto]'); if (ct) { const i = $('nbcap'); nbCapSave(i.value, ct.dataset.capto); return; }
+    if (t.id === 'nbcapgo') { const i = $('nbcap'); if (i.value.trim()) nbCapSave(i.value); else i.focus(); return; }
+    if (t.closest('[data-allnotes]')) { nbAllNotes = !nbAllNotes; return nbRe(); }
+    const tn = t.closest('[data-tplnew]'); if (tn) {
+      const k = tn.dataset.tplnew, T = NB_TEMPLATES[k], p = nbCreate({ title: k === 'blank' ? '' : T.n, icon: T.i, blocks: T.b() });
+      nbSaveNow(); nbGo(p.id); const el = $('nbtitle'); if (el) { el.focus(); const r = document.createRange(); r.selectNodeContents(el); r.collapse(false); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r); }
+      return;
+    }
     if (t.id === 'nbadd') { const p = nbCurPage(); const last = p.blocks[p.blocks.length - 1]; if (last && last.t === 'text' && !last.html) return nbFocus(last.id, 'start'); const nb = B('text'); p.blocks.push(nb); nbTouch(p); return nbRenderBlocks(nb.id, 'start'); }
   };
   $('nbmenu').onclick = () => { nbSide = !nbSide; render(); };
   if ($('nbveil')) $('nbveil').onclick = () => { nbSide = false; render(); };
   root.querySelector('[data-nbset]').onclick = () => goTab('espacio');
   $('nbq').oninput = e => { nbSearch = e.target.value; const pos = e.target.selectionStart; const side = document.querySelector('.nb-side'); side.outerHTML = nbSideHTML(); const q = $('nbq'); q.focus(); q.setSelectionRange(pos, pos); };
-  if ($('nbseed')) $('nbseed').onclick = () => { nbSeed(); render(); };
+  root.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || e.isComposing) return;
+    const t = e.target;
+    if (t.id === 'nbcap') { e.preventDefault(); if (t.value.trim()) nbCapSave(t.value); return; }
+    if (t.dataset.ladd != null) {
+      e.preventDefault(); const v = t.value.trim(); if (!v) return;
+      const k = t.dataset.ladd; nbListAdd(k, v); nbRe(); const n = document.querySelector(`[data-ladd="${k}"]`); if (n) n.focus(); return;
+    }
+    if (t.dataset.lnew != null) {
+      e.preventDefault(); const v = t.value.trim(); if (!v) return;
+      const p = nbCreate({ title: v.charAt(0).toUpperCase() + v.slice(1), icon: '📋', kind: 'lista:c' + nbId().slice(1), blocks: [] }); nbSaveNow(); nbRe();
+      const n = document.querySelector(`[data-ladd="${p.kind.slice(6)}"]`); if (n) n.focus(); return;
+    }
+    if (t.dataset.good != null) { e.preventDefault(); t.blur(); }
+  });
+  root.addEventListener('input', e => {
+    const t = e.target;
+    if (t.id === 'nbcap') return nbCapHint(t.value);
+    if (t.dataset.good != null) { const iso = t.dataset.good, v = t.value.trim(), ex = nbDiary(iso); if (!v && !ex) return; const d = ex || nbDiaryEnsure(iso); d.good = v; nbTouch(d); }
+  });
+  root.addEventListener('change', e => { if (e.target.dataset && e.target.dataset.good != null) { nbSaveNow(); toast('Guardado ✓', { ms: 1800 }); } });
   const blocks = $('nbBlocks');
   if (blocks) {
     blocks.addEventListener('input', e => { const el = e.target.closest('.nb-txt'); if (el) nbOnInput(el); });
