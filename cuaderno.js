@@ -94,9 +94,9 @@ function nbToday() {
 }
 
 // ---------- vistas ----------
-function nbGo(id) { nbCur = id; nbSide = false; nbSearch = ''; const p = nbP(id); if (p) nbAncestors(p).forEach(a => nbOpen.add(a.id)); render(); scrollTo(0, 0); }
+function nbGo(id) { const lp = nbP(id); if (lp && /^lista:/.test(lp.kind || '') && typeof tkView !== 'undefined') { tkView = 'list:' + lp.kind.slice(6); return goTab('tareas'); } nbCur = id; nbSide = false; nbSearch = ''; const p = nbP(id); if (p) nbAncestors(p).forEach(a => nbOpen.add(a.id)); render(); scrollTo(0, 0); }
 function nbTree(pid, depth) {
-  return nbKids(pid).map(p => {
+  return nbKids(pid).filter(p => !/^lista:/.test(p.kind || '')).map(p => {
     const kids = nbKids(p.id).length, open = nbOpen.has(p.id);
     return `<div class="nb-row ${p.id === nbCur ? 'on' : ''}" style="padding-left:${4 + depth * 14}px">
       <button class="nb-tw" data-tw="${p.id}" aria-label="Desplegar">${kids ? (open ? '▾' : '▸') : ''}</button>
@@ -275,46 +275,53 @@ function nbCapSave(txt, k) {
 
 // Tras guardar, el cursor sigue en «Apunta lo que sea», para poder apuntar varias cosas seguidas.
 function nbCapFocus() { const i = document.getElementById('nbcap'); if (i) { i.value = ''; i.focus({ preventScroll: true }); } nbCapHint(''); }
+let nbHomeQ = '';
+// Todo lo que escribes: notas rápidas y páginas (no las listas, que viven en Tareas, ni las entradas del diario).
+const nbWritings = () => nbPages().filter(p => (p.kind === 'nota' || !p.kind) && !/^(lista:|diario|notas-root)/.test(p.kind || ''));
+function nbPreview(p) { const t = nbText(p).replace(/\s+/g, ' ').trim(); return t.slice(0, 110); }
+function nbRow(p) {
+  return `<button class="nbr" data-open="${p.id}"><span class="nbr-ic">${esc(p.icon || '📝')}</span><span class="nbr-b"><b>${esc(nbTitle(p))}</b><small><span class="nbr-d">${nbWhen(p.updated)}</span>${nbPreview(p) ? ' ' + esc(nbPreview(p)) : ''}</small></span>${p.fav ? `<span class="nbr-pin" aria-label="Fijada">${ico('pin')}</span>` : ''}</button>`;
+}
+function nbNotesHTML() {
+  const q = Fin.strip(nbHomeQ.trim());
+  let all = nbWritings().sort((a, b) => b.updated - a.updated);
+  if (q) all = all.filter(p => Fin.strip(nbTitle(p) + ' ' + nbText(p)).includes(q));
+  if (!all.length) return q ? '<p class="nb-empty">Nada con eso.</p>' : '<div class="nb-first"><b>Tu primera nota</b><span>Escribe arriba una idea, algo que no quieras olvidar o lo que sea, y pulsa Intro. O toca «＋ Nota» para escribir con calma.</span></div>';
+  if (q) return `<div class="nbr-list">${all.map(nbRow).join('')}</div>`;
+  const t = todayISO(), groups = [['Fijadas', []], ['Hoy', []], ['Esta semana', []], ['Este mes', []], ['Antes', []]];
+  for (const p of all) { const d = isoOf(new Date(p.updated)), n = hDays(d, t); groups[p.fav ? 0 : n === 0 ? 1 : n < 7 ? 2 : n < 31 ? 3 : 4][1].push(p); }
+  return groups.filter(g => g[1].length).map(([g, ps]) => `<h3 class="nbr-g">${g}</h3><div class="nbr-list">${ps.map(nbRow).join('')}</div>`).join('');
+}
+function nbNewNote(title) {
+  const r = nbNotesRoot(), p = nbCreate({ title: title || '', icon: '📝', parent: r.id, kind: 'nota', blocks: [B('text')] });
+  p.order = -Date.now(); nbSaveNow(); nbGo(p.id);
+  const el = document.getElementById('nbtitle'); if (el) el.focus();
+}
 function nbHome() {
   nbAdopt();
-  const today = todayISO(), notes = nbNotes(), lists = nbListDefs();
-  const pages = nbPages().filter(p => !nbSpecial(p) && !p.parent).sort((a, b) => (b.fav - a.fav) || (b.updated - a.updated));
-  const note = p => `<button class="nb-note" data-open="${p.id}"><b>${esc(nbTitle(p))}</b>${nbText(p).trim() ? `<span>${esc(nbText(p).trim().slice(0, 140))}</span>` : ''}<small>${nbWhen(p.updated)}</small></button>`;
-  const card = p => `<button class="nb-card" data-open="${p.id}" style="--cover:${nbCover(p)}"><span style="font-size:22px">${esc(p.icon)}</span><b>${esc(nbTitle(p))}</b><span class="small muted">${p.fav ? '⭐ · ' : ''}${nbWhen(p.updated)}</span></button>`;
-  const tpl = (k, t) => `<button class="nb-tpl" data-tplnew="${k}">${t.i} ${esc(t.n)}</button>`;
+  const today = todayISO();
   return `<div class="nb-page nb-home">
-    <h1 class="nb-hello">Tu cuaderno</h1>
-    <p class="nb-sub">Para lo que no tiene día: listas, notas y cómo te va.</p>
+    <div class="nbh-top"><h1 class="nb-hello">Cuaderno</h1><button class="primary nbh-new" data-newnote>＋ Nota</button></div>
 
-    <div class="nb-cap"><input id="nbcap" placeholder="Apunta lo que sea: «ver Dune», «llamar al banco», una idea…" autocomplete="off" enterkeyhint="done" aria-label="Apuntar algo"><button id="nbcapgo" aria-label="Guardar">↵</button></div>
+    <div class="nb-cap"><input id="nbcap" placeholder="Apunta algo rápido y pulsa Intro…" autocomplete="off" enterkeyhint="done" aria-label="Apuntar algo"><button id="nbcapgo" aria-label="Guardar">↵</button></div>
     <div class="nb-capto" id="nbcapto"></div>
 
-    <section class="nb-sec2 nb-diary">
+    <section class="nb-diary">
       ${nbMoodHTML(today)}
       <div class="nb-diary-foot">${nbWeekMoods()}<span class="nb-dlinks"><button class="link small" data-year>Tu año</button><button class="link small" data-diarymore="${today}">Escribir más ›</button></span></div>
       ${nbMemory()}
     </section>
 
     <section class="nb-sec2">
-      <div class="nb-h"><h2>Listas</h2><button class="link small" data-hubtk="home">Ver todas en Tareas ›</button></div>
-      <div class="nb-lchips">${lists.map(L => { const p = nbListPage(L.k), n = p ? nbItems(p).filter(b => !b.checked).length : 0; return `<button class="nb-lchip" data-hubtk="list:${L.k}" style="--lc:${L.c}"><span class="nb-li">${esc(L.i)}</span>${esc(L.n)}${n ? `<b>${n}</b>` : ''}</button>`; }).join('')}</div>
+      <div class="nb-h"><h2>Notas</h2><label class="nbh-q">${ico('search')}<input id="nbhq" placeholder="Buscar" value="${esc(nbHomeQ)}" autocomplete="off" aria-label="Buscar en tus notas"></label></div>
+      <div id="nbnotes">${nbNotesHTML()}</div>
     </section>
 
     <section class="nb-sec2">
-      <div class="nb-h"><h2>Notas</h2>${notes.length > 6 ? `<button class="link small" data-allnotes>${nbAllNotes ? 'Ver menos' : `Ver las ${notes.length}`}</button>` : ''}</div>
-      ${notes.length ? `<div class="nb-notes">${(nbAllNotes ? notes : notes.slice(0, 6)).map(note).join('')}</div>` : '<p class="nb-empty">Lo que apuntes arriba y no sea de ninguna lista acaba aquí, como en un bloc de notas.</p>'}
+      <div class="nb-h"><h2>Empezar desde una plantilla</h2></div>
+      <div class="nb-tpls">${['viaje', 'cita', 'objetivos', 'ideas', 'blank'].map(k => `<button class="nb-tpl" data-tplnew="${k}">${NB_TEMPLATES[k].i} ${esc(k === 'blank' ? 'Página en blanco' : NB_TEMPLATES[k].n)}</button>`).join('')}</div>
+      <p class="nb-empty" style="margin-top:10px">Tus listas (pelis, sitios, regalos…) están en <button class="link" data-hubtk="home">Tareas</button>.</p>
     </section>
-
-    <section class="nb-sec2">
-      <div class="nb-h"><h2>Páginas</h2></div>
-      <p class="nb-empty" style="margin-top:0">Para cosas más largas: preparar un viaje, una cita médica, tus objetivos…</p>
-      ${pages.length ? `<div class="nb-cards">${pages.slice(0, 12).map(card).join('')}</div>` : ''}
-      <div class="nb-tpls">${['blank', 'viaje', 'cita', 'objetivos', 'ideas'].map(k => tpl(k, NB_TEMPLATES[k])).join('')}</div>
-    </section>
-
-    <details class="why" style="margin-top:18px"><summary>Trucos</summary><div class="small">
-      <b>Apuntar:</b> empieza por «ver», «regalo», «sitio» o «tarea» y va directo a esa lista. Si pones un día o una hora («el jueves a las 10»), va al calendario. Lo demás, a notas. Antes de guardar puedes elegir otro sitio.<br>
-      <b>Dentro de una página:</b> <b>/</b> para elegir tipo de bloque · <b>-</b> + espacio: lista · <b>[]</b> + espacio: casilla · <b>#</b> + espacio: título · <b>⋮⋮</b> a la izquierda: mover o borrar.</div></details>
   </div>`;
 }
 function nbNumber(blocks, i) { let n = 1; for (let j = i - 1; j >= 0 && blocks[j].t === 'number'; j--) n++; return n; }
@@ -326,17 +333,16 @@ function nbBlockHTML(b, i, blocks) {
   return `<div class="blk blk-${b.t} ${b.checked ? 'done' : ''}" data-id="${b.id}">${h}${pre}<div class="nb-txt" contenteditable="true" spellcheck="true" data-ph="${esc(NB_PH[b.t] || '')}">${nbClean(b.html)}</div></div>`;
 }
 function nbPageHTML(p) {
-  const anc = nbAncestors(p);
-  return `<div class="nb-page has-cover">
-    <div class="nb-cover" style="--cover:${nbCover(p)}"></div>
-    <div class="nb-crumbs small muted" style="margin-top:10px">${anc.map(a => `<a data-open="${a.id}" href="#">${esc(a.icon)} ${esc(nbTitle(a))}</a> / `).join('')}<span>${esc(nbTitle(p))}</span></div>
-    <div class="nb-headrow"><button class="nb-icon" id="nbicon" title="Cambiar icono">${esc(p.icon || '📄')}</button>
-      <div class="toolbar" style="margin:0"><button id="nbcov" title="Cambiar color de portada" aria-label="Cambiar color de portada">🎨</button><button id="nbfav" title="Favorito">${p.fav ? '⭐' : '☆'}</button><button id="nbmore" title="Más opciones">⋯</button></div></div>
-    <h1 class="nb-title" id="nbtitle" contenteditable="true" spellcheck="true" data-ph="Sin título">${esc(p.title || '')}</h1>
+  const anc = nbAncestors(p).filter(a => !/^(notas-root)$/.test(a.kind || ''));
+  return `<div class="nb-page nb-doc">
+    <div class="nbd-bar"><button class="nbd-back" data-home>‹ Cuaderno</button><span class="nb-crumbs">${anc.map(a => `<a data-open="${a.id}" href="#">${esc(nbTitle(a))}</a> / `).join('')}</span>
+      <span class="nbd-acts"><button id="nbfav" title="${p.fav ? 'Quitar de fijadas' : 'Fijar arriba'}" aria-label="Fijar">${p.fav ? '⭐' : '☆'}</button><button id="nbmore" title="Más opciones" aria-label="Más opciones">⋯</button></span></div>
+    <button class="nb-icon" id="nbicon" title="Cambiar icono">${esc(p.icon || '📝')}</button>
+    <h1 class="nb-title" id="nbtitle" contenteditable="true" spellcheck="true" data-ph="Título">${esc(p.title || '')}</h1>
+    <div class="nbd-meta">${/^diario:/.test(p.kind || '') ? 'Diario' : 'Editado ' + new Date(p.updated).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
     ${/^diario:/.test(p.kind || '') ? nbMoodHTML(p.kind.slice(7), true) : ''}
     <div id="nbBlocks">${p.blocks.map((b, i) => nbBlockHTML(b, i, p.blocks)).join('')}</div>
-    <div class="nb-add" id="nbadd">+ Añadir un bloque</div>
-    <div class="small muted" style="margin-top:24px">Editado ${new Date(p.updated).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+    <div class="nb-add" id="nbadd">＋ Añadir</div>
   </div>`;
 }
 function vCuaderno() {
@@ -552,6 +558,7 @@ function bindCuaderno() {
     if (t.id === 'nbcapgo') { const i = $('nbcap'); if (i.value.trim()) nbCapSave(i.value); else i.focus(); return; }
     if (t.closest('[data-allnotes]')) { nbAllNotes = !nbAllNotes; return nbRe(); }
     if (t.closest('[data-year]')) return openYear();
+    if (t.closest('[data-newnote]')) return nbNewNote();
     const tk = t.closest('[data-hubtk]'); if (tk) { tkView = tk.dataset.hubtk; return goTab('tareas'); }
     if (t.closest('[data-breath]')) return openBreath();
     const tn = t.closest('[data-tplnew]'); if (tn) {
@@ -583,6 +590,7 @@ function bindCuaderno() {
   });
   root.addEventListener('input', e => {
     const t = e.target;
+    if (t.id === 'nbhq') { nbHomeQ = t.value; const n = document.getElementById('nbnotes'); if (n) n.innerHTML = nbNotesHTML(); return; }
     if (t.id === 'nbcap') return nbCapHint(t.value);
     if (t.dataset.good != null) { const iso = t.dataset.good, v = t.value.trim(), ex = nbDiary(iso); if (!v && !ex) return; const d = ex || nbDiaryEnsure(iso); d.good = v; nbTouch(d); }
   });
@@ -597,7 +605,7 @@ function bindCuaderno() {
     title.oninput = () => { const p = nbCurPage(); p.title = title.textContent.trim(); nbTouch(p); $('nbTree').innerHTML = nbSearch ? $('nbTree').innerHTML : nbTree(null, 0); };
     title.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); const p = nbCurPage(); if (!p.blocks.length || !nbEl(p.blocks[0].id)) { const nb = B('text'); p.blocks.unshift(nb); nbTouch(p); nbRenderBlocks(); } nbFocus(p.blocks.find(b => nbEl(b.id)).id, 'start'); } };
     title.onpaste = e => { e.preventDefault(); document.execCommand('insertText', false, (e.clipboardData.getData('text/plain') || '').replace(/\s+/g, ' ')); };
-    $('nbcov').onclick = () => { const p = nbCurPage(); const cur = NB_COVERS.indexOf(nbCover(p)); p.cover = (cur + 1) % NB_COVERS.length; nbTouch(p); document.querySelector('.nb-cover').style.setProperty('--cover', nbCover(p)); };
+    if ($('nbcov')) $('nbcov').onclick = () => { const p = nbCurPage(); const cur = NB_COVERS.indexOf(nbCover(p)); p.cover = (cur + 1) % NB_COVERS.length; nbTouch(p); document.querySelector('.nb-cover').style.setProperty('--cover', nbCover(p)); };
     $('nbfav').onclick = () => { const p = nbCurPage(); p.fav = !p.fav; nbTouch(p); nbSaveNow(); $('nbfav').textContent = p.fav ? '⭐' : '☆'; };
     $('nbicon').onclick = e => nbIconPicker(e.currentTarget);
     $('nbmore').onclick = e => nbMoreMenu(e.currentTarget);

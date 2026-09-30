@@ -184,6 +184,7 @@ function openPalette(q0) {
     const acts = [
       { i: '🙂', t: 'Diario: ¿qué tal hoy?', s: 'Acción', fn: () => { tab = 'cuaderno'; nbToday(); } },
       { i: '📝', t: 'Nota rápida', s: 'En tu cuaderno', fn: () => { tab = 'cuaderno'; nbCur = null; render(); scrollTo(0, 0); const i = document.getElementById('nbcap'); if (i) i.focus(); } },
+      { i: '🎧', t: 'Abrir mi mando de Spotify', s: 'Música', fn: () => window.open('../mi-musica/mando.html', '_blank', 'noopener') },
       { i: '📅', t: 'Nuevo evento', s: 'En el calendario', fn: () => openEvSheet(null, todayISO()) },
       { i: '☑', t: 'Nuevo recordatorio', s: 'En Tareas', fn: () => { tkView = 'list:tareas'; goTab('tareas'); setTimeout(() => { const i = document.getElementById('tknew'); if (i) i.focus(); }, 80); } },
       { i: '😮‍💨', t: 'Respirar un minuto', s: 'Para bajar revoluciones', fn: () => openBreath() },

@@ -960,3 +960,50 @@ a.ef-row:hover { border-color: var(--ink); }
 .dsc-ic .ico { width: 20px; height: 20px; }
 
 button.al { border-top: 0; border-right: 0; border-bottom: 0; font: inherit; text-align: left; width: 100%; }
+
+/* ---- Cuaderno limpio (sin portadas) ---- */
+.nbh-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 6px 0 16px; }
+.nbh-top .nb-hello { margin: 0; }
+.nbh-new { border-radius: 999px; padding: 10px 18px; font-weight: 700; }
+.nb-home .nb-diary { background: var(--card); box-shadow: var(--shadow); border-radius: 22px; padding: 16px 16px 12px; margin-top: 22px; }
+.nb-home .nb-faces button { background: var(--bg); }
+.nb-home .nb-good { background: var(--bg); }
+.nb-home .nb-memo { background: var(--bg); }
+.nb-home .nb-week button.today { background: var(--bg); }
+.nbh-q { display: flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; color: var(--muted); }
+.nbh-q input { border: 0; background: none; font: inherit; font-size: 14px; outline: none; width: 130px; color: var(--ink); padding: 3px 0; }
+.nbr-g { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 16px 4px 6px; }
+.nbr-list { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
+.nbr { display: flex; align-items: center; gap: 12px; width: 100%; border: 0; border-bottom: 1px solid var(--line); background: none; padding: 12px 14px; text-align: left; font: inherit; color: var(--ink); }
+.nbr:last-child { border-bottom: 0; }
+.nbr:hover { background: var(--bg); }
+.nbr-ic { width: 36px; height: 36px; border-radius: 11px; background: var(--bg); display: grid; place-items: center; flex: none; color: var(--lilac); }
+.nbr-ic .ico { width: 18px; height: 18px; }
+.nbr-b { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.nbr-b b { font-size: 15.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nbr-b small { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nbr-d { color: var(--ink); font-weight: 600; }
+.nbr-pin { color: var(--muted); } .nbr-pin .ico { width: 15px; height: 15px; }
+.nb-first { background: var(--card); border: 2px dashed var(--line); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 4px; }
+.nb-first span { color: var(--muted); font-size: 14px; }
+.nb-doc { padding-top: 6px; }
+.nbd-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+.nbd-back { border: 0; background: none; color: var(--blue); font: inherit; font-weight: 600; padding: 4px 0; white-space: nowrap; }
+.nbd-bar .nb-crumbs { flex: 1; min-width: 0; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+.nbd-acts { display: flex; gap: 4px; }
+.nbd-acts button { border: 0; background: none; width: 36px; height: 36px; border-radius: 10px; color: var(--muted); font-size: 18px; }
+.nbd-acts button:hover { background: var(--card); color: var(--ink); }
+.nb-doc .nb-icon { width: 48px; height: 48px; font-size: 26px; border-radius: 14px; box-shadow: none; border: 0; background: var(--lilac-soft); color: var(--lilac); }
+.nb-doc .nb-icon .ico { width: 26px; height: 26px; color: var(--lilac); stroke-width: 1.8; }
+.nb-doc .nb-title { font-size: clamp(30px, 5vw, 40px); margin: 12px 0 2px; }
+.nbd-meta { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+.nb-doc .nb-add { padding-left: 26px; }
+
+/* Copia del mes */
+.bk { display: flex; gap: 14px; align-items: flex-start; background: var(--card); border-radius: 22px; padding: 16px; box-shadow: var(--shadow); border-left: 4px solid var(--accent); }
+.bk-ic { width: 42px; height: 42px; border-radius: 13px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; flex: none; }
+.bk-ic .ico { width: 22px; height: 22px; }
+.bk-b { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.bk-b b { font-family: var(--display); font-size: 17px; }
+.bk-b small { color: var(--muted); font-size: 14px; }
+.bk-acts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }

@@ -146,6 +146,7 @@ function vInicio() {
       <div class="sky-qah" id="hubqah"></div>
     </section>
 
+    ${typeof backupCardHTML === 'function' ? backupCardHTML() : ''}
     ${weekStrip(today)}
     ${comingHTML(today)}
     ${typeof weekSummaryHTML === 'function' ? weekSummaryHTML(today) : ''}
@@ -203,6 +204,7 @@ function vEspacio() {
     <header class="cal-head"><div><div class="cal-year">Mi Espacio</div><h1 class="cal-month">Ajustes</h1></div></header>
     ${workSettingsHTML()}
     ${avisosHTML()}
+    ${typeof backupSettingsHTML === 'function' ? backupSettingsHTML() : ''}
     ${appsSettingsHTML()}
     <div class="card"><h2>📍 Dónde estás</h2>
       <p class="small muted" style="margin-top:0">Para los festivos, la salida y la puesta del sol y el tiempo. Al servicio del tiempo (Open-Meteo) solo le llegan las coordenadas de la ciudad, nada tuyo.</p>
