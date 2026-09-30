@@ -225,8 +225,10 @@ function appsSettingsHTML() {
     </div>
     <div class="toolbar" style="margin-top:10px"><button data-appsnow>↻ Actualizar ahora</button></div></div>`;
 }
+// Su app guarda la huella del código con el nombre de su carpeta delante; se saca de su dirección.
+const pisoSalt = () => (new URL(pisoUrl() || location.href).pathname.split('/').filter(Boolean).pop() || '') + ':';
 async function pisoCheckCode(code) {
-  const h = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('corcega52:' + code.trim().toLowerCase())))].map(b => b.toString(16).padStart(2, '0')).join('');
+  const h = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pisoSalt() + code.trim().toLowerCase())))].map(b => b.toString(16).padStart(2, '0')).join('');
   return window.PISO_CONFIG && h === String(window.PISO_CONFIG.CODIGO_PISO_SHA256).toLowerCase();
 }
 function bindApps() {
