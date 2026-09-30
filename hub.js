@@ -9,7 +9,7 @@ const CAL_CATS = {
   otro: { n: 'Otro', c: '#8A90AE' },
 };
 const REPEATS = { '': 'No se repite', week: 'Cada semana', month: 'Cada mes', year: 'Cada año' };
-let calMonth = null, calSel = null, calView = 'mes', calShowPay = true;
+let calMonth = null, calSel = null, calView = 'mes';
 
 const evAll = () => Object.values(S.events || {}).filter(Boolean);
 const isoOf = d => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
@@ -23,7 +23,7 @@ const hm = t => t ? t.slice(0, 5) : '';
 const toMin = t => { if (!t) return -1; const [h, m] = t.split(':'); return +h * 60 + +m; };
 
 function occurs(ev, iso) {
-  if (iso < ev.date) return false;
+  if (iso < ev.date || (ev.skip && ev.skip.includes(iso))) return false;
   if (!ev.repeat) return iso <= (ev.end && ev.end > ev.date ? ev.end : ev.date);
   if (ev.until && iso > ev.until) return false;
   if (ev.repeat === 'week') return hDays(ev.date, iso) % 7 === 0;
@@ -49,12 +49,17 @@ function moneyCtx() {
 }
 function itemsOn(iso, withPay) {
   const out = [];
-  for (const ev of evAll()) if (occurs(ev, iso)) {
+  for (const ev of evAll()) if (layerOn(CAL_CATS[ev.cat] ? ev.cat : 'otro') && occurs(ev, iso)) {
     const c = CAL_CATS[ev.cat] || CAL_CATS.otro;
     const age = ev.cat === 'cumple' && ev.repeat === 'year' && ev.year ? ` (${+iso.slice(0, 4) - ev.year})` : '';
-    out.push({ kind: 'ev', id: ev.id, title: ev.title + age, time: ev.allDay ? '' : ev.start, end: ev.allDay ? '' : ev.end2, color: c.c, sort: ev.allDay ? -1 : toMin(ev.start) });
+    out.push({ kind: 'ev', id: ev.id, occ: iso, rep: !!ev.repeat, loc: ev.loc, title: ev.title + age, time: ev.allDay ? '' : ev.start, end: ev.allDay ? '' : ev.end2, color: c.c, sort: ev.allDay ? -1 : toMin(ev.start) });
   }
-  const m = withPay !== false && calShowPay ? moneyCtx() : null;
+  if (layerOn('festivos')) {
+    const h = holidayOn(iso); if (h) out.push({ kind: 'hol', occ: iso, title: h.name, icon: '🎉', color: '#EF5B4C', sort: -3 });
+    if (bridgeDays()[iso] && !['vacas', 'libre'].includes(dayMode(iso))) out.push({ kind: 'sen', occ: iso, title: 'Día puente', icon: '💡', color: '#EF5B4C', sort: -2.8 });
+  }
+  if (layerOn('senalados')) for (const x of specialOn(iso)) out.push({ kind: 'sen', occ: iso, title: x.name, icon: x.icon, color: '#F2A93B', sort: -2.5 });
+  const m = withPay !== false && layerOn('dinero') ? moneyCtx() : null;
   if (m) {
     if (m.pays.has(iso)) out.push({ kind: 'pay', title: 'Cobro de la nómina', icon: '💼', color: '#2FA98C', sort: -2 });
     if (iso >= m.first) for (const r of AN.recurringAll) {
@@ -63,7 +68,8 @@ function itemsOn(iso, withPay) {
     }
     for (const d of debtList()) if (d.due === iso && debtLeft(d) > 0) out.push({ kind: 'pay', title: (d.dir === 'debo' ? 'Pagar a ' : 'Te paga ') + d.who + ' · ' + eur(debtLeft(d)), icon: '🤝', color: '#F2A93B', sort: -1.2 });
   }
-  if (typeof appleItemsOn === 'function') out.push(...appleItemsOn(iso));
+  if (layerOn('apple') && typeof appleItemsOn === 'function') out.push(...appleItemsOn(iso));
+  if (typeof appItemsOn === 'function') out.push(...appItemsOn(iso));
   const di = nbPages().find(p => p.kind === 'diario:' + iso);
   if (di) out.push({ kind: 'diary', id: di.id, title: 'Entrada del diario', icon: '📔', color: '#9B7BEA', sort: 2000 });
   return out.sort((a, b) => a.sort - b.sort);
@@ -71,7 +77,7 @@ function itemsOn(iso, withPay) {
 
 // ---------- el arco del día ----------
 function skyPhase(h) { return h >= 6 && h < 10 ? 'dawn' : h >= 10 && h < 18 ? 'day' : h >= 18 && h < 21.5 ? 'dusk' : 'night'; }
-function dayArc(items, spans) {
+function dayArc(items, spans, sun) {
   const W = 340, H = 180, cx = W / 2, cy = 168, r = 150, H0 = 7, H1 = 24;
   const now = new Date(), h = now.getHours() + now.getMinutes() / 60;
   const pt = hh => { const t = Math.max(0, Math.min(1, (hh - H0) / (H1 - H0))); const a = Math.PI - t * Math.PI; return [cx + r * Math.cos(a), cy - r * Math.sin(a)]; };
@@ -81,13 +87,18 @@ function dayArc(items, spans) {
   const ticks = [9, 12, 15, 18, 21].map(hh => { const [x, y] = pt(hh); const [xi, yi] = [cx + (r - 10) * Math.cos(Math.PI - (hh - H0) / (H1 - H0) * Math.PI), cy - (r - 10) * Math.sin(Math.PI - (hh - H0) / (H1 - H0) * Math.PI)]; return `<line x1="${x}" y1="${y}" x2="${xi}" y2="${yi}" class="arc-tick"/><text x="${cx + (r - 24) * Math.cos(Math.PI - (hh - H0) / (H1 - H0) * Math.PI)}" y="${cy - (r - 24) * Math.sin(Math.PI - (hh - H0) / (H1 - H0) * Math.PI) + 4}" class="arc-lbl">${hh}</text>`; }).join('');
   const seg = (a, b) => { const [ax, ay] = pt(a), [bx, by] = pt(b); return `<path d="M ${ax} ${ay} A ${r} ${r} 0 0 1 ${bx} ${by}" class="arc-work"/>`; };
   const work = (spans || []).map(([a, b]) => seg(Math.max(H0, a), Math.min(H1, b))).join('');
+  const sr = sun ? toMin(sun.rise) / 60 : 0, ss = sun ? toMin(sun.set) / 60 : 0;
+  const night = sun && ss > H0 && ss < H1 ? `<path d="M ${pt(ss)[0]} ${pt(ss)[1]} A ${r} ${r} 0 0 1 ${x1} ${y1}" class="arc-night"/>` : '';
+  const sunMk = sun ? [[sr, '🌅'], [ss, '🌇']].filter(([hh]) => hh > H0 && hh < H1).map(([hh, ic]) => { const [x, y] = pt(hh); return `<circle cx="${x}" cy="${y}" r="3.5" class="arc-sunmk"/><text x="${x}" y="${y - 10}" class="arc-sunic" text-anchor="middle">${ic}</text>`; }).join('') : '';
   const dots = items.filter(i => i.time).map(i => { const [x, y] = pt(toMin(i.time) / 60); return `<circle cx="${x}" cy="${y}" r="6" class="arc-ev" style="fill:${i.color}"><title>${esc(hm(i.time) + ' ' + i.title)}</title></circle>`; }).join('');
   return `<svg class="arc" viewBox="0 0 ${W} ${H}" role="img" aria-label="Tu día, de 7:00 a 24:00${up ? ', ahora son las ' + now.toTimeString().slice(0, 5) : ''}">
     <defs><filter id="glow" x="-2" y="-2" width="5" height="5"><feGaussianBlur stdDeviation="6"/></filter></defs>
     <path d="M ${x0} ${y0} A ${r} ${r} 0 0 1 ${x1} ${y1}" class="arc-track"/>
     ${up ? `<path d="M ${x0} ${y0} A ${r} ${r} 0 0 1 ${sx} ${sy}" class="arc-done"/>` : ''}
-    ${work}${ticks}${dots}
-    ${up ? `<circle cx="${sx}" cy="${sy}" r="16" class="sun-glow" filter="url(#glow)"/><circle cx="${sx}" cy="${sy}" r="10" class="sun"/>` : `<text x="${cx}" y="${cy - 40}" class="arc-moon" text-anchor="middle">☾</text>`}
+    ${night}${work}${ticks}${sunMk}${dots}
+    ${up && !(sun && (h < sr || h >= ss)) ? `<circle cx="${sx}" cy="${sy}" r="16" class="sun-glow" filter="url(#glow)"/><circle cx="${sx}" cy="${sy}" r="10" class="sun"/>`
+      : up ? `<mask id="cres"><circle cx="${sx}" cy="${sy}" r="10" fill="#fff"/><circle cx="${sx + 5}" cy="${sy - 4}" r="8.5" fill="#000"/></mask><circle cx="${sx}" cy="${sy}" r="15" class="moon-glow" filter="url(#glow)"/><circle cx="${sx}" cy="${sy}" r="10" class="moon" mask="url(#cres)"/>`
+      : `<text x="${cx}" y="${cy - 40}" class="arc-moon" text-anchor="middle">☾</text>`}
     <line x1="${x0 - 8}" y1="${cy}" x2="${x1 + 8}" y2="${cy}" class="arc-horizon"/>
   </svg>`;
 }
@@ -102,30 +113,40 @@ function vInicio() {
   const hi = h < 6 ? 'Buenas noches' : h < 13 ? 'Buenos días' : h < 21 ? 'Buenas tardes' : 'Buenas noches';
   const m = moneyCtx();
   const tasksPage = nbPages().find(p => /^tareas$/i.test((p.title || '').trim()));
-  const pendingTasks = appleData().reminders.filter(r => !r.date || r.date <= hAdd(today, 7)).length + nbPages().reduce((a, p) => a + (p.blocks || []).filter(b => b.t === 'todo' && !b.checked && (b.html || '').replace(/<[^>]+>/g, '').trim()).length, 0);
+  const pisoPend = typeof pisoWeek === 'function' && window.Rotacion && APX.piso && layerOn('piso') ? pisoWeek(window.Rotacion.mondayOf(today)).filter(t => !t.done).length : 0;
+  const pendingTasks = pisoPend + appleData().reminders.filter(r => !r.date || r.date <= hAdd(today, 7)).length + nbPages().reduce((a, p) => a + (p.blocks || []).filter(b => b.t === 'todo' && !b.checked && (b.html || '').replace(/<[^>]+>/g, '').trim()).length, 0);
   const diaryToday = nbPages().find(p => p.kind === 'diario:' + today);
-  const week = [...Array(7)].map((_, i) => hAdd(today, i + 1)).map(d => ({ d, items: itemsOn(d).filter(i => i.kind !== 'diary') })).filter(x => x.items.length);
+  const week = [...Array(7)].map((_, i) => hAdd(today, i + 1)).map(d => ({ d, items: itemsOn(d).filter(i => !['diary', 'hol', 'sen'].includes(i.kind)) })).filter(x => x.items.length);
+  const hol = layerOn('festivos') && holidayOn(today), sun = sunToday(today), cur = wxNow(), wd = wxDay(today), tip = wxTip();
+  const wic = cur && wxIcon(cur.code, cur.night);
   const recent = nbPages().filter(p => !/^diario:/.test(p.kind || '')).sort((a, b) => b.updated - a.updated).slice(0, 6);
   const nextTxt = next ? `Siguiente: <b>${esc(next.title)}</b> a las ${hm(next.time)}${toMin(next.time) - nowMin < 90 ? ` · en ${toMin(next.time) - nowMin} min` : ''}` : items.some(i => i.kind === 'ev') ? 'Ya no te queda nada más hoy.' : 'Hoy no tienes nada apuntado.';
   const tile = (go, cls, icon, label, body, extra) => `<button class="tile ${cls}" ${go} style="--i:${tile.n = (tile.n || 0) + 1}"><span class="tile-ic">${icon}</span><span class="tile-lb">${label}</span><span class="tile-bd">${body}</span>${extra || ''}</button>`;
   tile.n = 0;
   return `<div class="hub">
     <section class="sky sky-${phase}">
-      <div class="sky-top"><span class="sky-hi">${hi}</span><button class="sky-gear" data-hubgo="espacio" aria-label="Ajustes">⚙️</button></div>
+      <div class="sky-top"><span class="sky-hi">${hi}</span><span class="sky-tools">${cur ? `<span class="sky-wx" title="${wic.t}${wd ? ` · máx ${wd.max}° mín ${wd.min}°` : ''}">${wic.i} <b>${cur.t}°</b>${wd ? `<small>${wd.max}° · ${wd.min}°</small>` : ''}</span>` : ''}<button class="sky-gear" data-palette aria-label="Buscar" title="Buscar (Ctrl+K)">⌕</button><button class="sky-gear" data-hubgo="espacio" aria-label="Ajustes">⚙️</button></span></div>
       <div class="sky-grid">
         <div class="sky-date">
           <div class="sky-wd">${cap(now.toLocaleDateString('es-ES', { weekday: 'long' }))}</div>
           <div class="sky-num">${now.getDate()}</div>
           <div class="sky-mo">${now.toLocaleDateString('es-ES', { month: 'long' })} · ${now.toTimeString().slice(0, 5)}</div>
+          ${hol ? `<div class="sky-hol">🎉 Festivo: ${esc(hol.name)}</div>` : ''}
         </div>
-        <div class="sky-arc">${dayArc(items, workSpans(today))}${workNow(today) ? `<div class="sky-work">${workNow(today)}</div>` : ''}<div class="sky-next">${nextTxt}</div>${modeChips(today)}</div>
+        <div class="sky-arc">${dayArc(items, workSpans(today), sun)}${workNow(today) ? `<div class="sky-work">${workNow(today)}</div>` : ''}<div class="sky-next">${nextTxt}</div>${modeChips(today)}</div>
       </div>
-      <div class="sky-acts"><button data-newev="${today}">＋ Evento</button><button data-hubtoday>📔 Diario de hoy</button><button data-hubnewpage>＋ Página</button></div>
+      <div class="sky-acts"><label class="sky-qa"><span aria-hidden="true">＋</span><input id="hubqa" placeholder="Apunta algo: «dentista el jueves a las 10»" autocomplete="off" enterkeyhint="done" aria-label="Apuntar un evento escribiendo"></label><button data-hubtoday>📔 Diario</button><button data-hubnewpage>▤ Página</button></div>
+      <div class="sky-qah" id="hubqah"></div>
     </section>
+
+    ${weekStrip(today)}
+    ${comingHTML(today)}
 
     ${workSched() ? '' : workSetupCard()}
     <section class="hub-sec">
       <h2 class="hub-h">Hoy</h2>
+      ${tip ? `<div class="hub-tip">${tip}</div>` : ''}
+      ${appsDayHTML(today, true)}
       <div class="day-list">${items.length ? items.map(dayItemHTML).join('') : `<div class="empty-day">Día despejado. <button class="link" data-newev="${today}">Apunta algo</button></div>`}</div>
     </section>
 
@@ -142,16 +163,16 @@ function vInicio() {
     </section>
 
     ${remsHTML()}
-    ${week.length ? `<section class="hub-sec"><h2 class="hub-h">Próximos días</h2><div class="agenda">${week.map(w => `<button class="ag-row" data-calday="${w.d}"><span class="ag-date"><b>${+w.d.slice(8)}</b><small>${new Date(w.d + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short' })}</small></span><span class="ag-items">${w.items.slice(0, 3).map(i => `<span class="ag-it"><i style="background:${i.color}"></i>${i.time ? hm(i.time) + ' · ' : ''}${esc(i.title)}</span>`).join('')}${w.items.length > 3 ? `<span class="muted small">y ${w.items.length - 3} más</span>` : ''}</span></button>`).join('')}</div></section>` : ''}
+    ${week.length ? `<section class="hub-sec"><h2 class="hub-h">Próximos días</h2><div class="agenda">${week.map(w => `<button class="ag-row" data-goday="${w.d}" data-goview="dia"><span class="ag-date"><b>${+w.d.slice(8)}</b><small>${new Date(w.d + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short' })}</small></span><span class="ag-items">${w.items.slice(0, 3).map(i => `<span class="ag-it"><i style="background:${i.color}"></i>${i.time ? hm(i.time) + ' · ' : ''}${esc(i.title)}</span>`).join('')}${w.items.length > 3 ? `<span class="muted small">y ${w.items.length - 3} más</span>` : ''}</span></button>`).join('')}</div></section>` : ''}
 
     ${recent.length ? `<section class="hub-sec"><h2 class="hub-h">Páginas recientes</h2><div class="pages-strip">${recent.map(p => `<button class="pg-chip" data-nbopen="${p.id}"><span>${esc(p.icon || '📄')}</span>${esc(nbTitle(p))}</button>`).join('')}</div></section>` : ''}
   </div>`;
 }
 function dayItemHTML(i) {
-  const attr = i.kind === 'ev' ? `data-editev="${i.id}"` : i.kind === 'diary' ? `data-nbopen="${i.id}"` : i.kind === 'apple' || i.kind === 'rem' ? `data-appleitem="${i.kind}:${i.id}"` : 'data-hubgo="fijos"';
+  const attr = itemAttr(i);
   const time = i.kind === 'rem' ? (i.time ? '☐ ' + hm(i.time) : '☐') : i.time ? hm(i.time) : i.icon || 'Todo el día';
   const src = i.kind === 'apple' || i.kind === 'rem' ? `<small class="di-src"> · ${esc(i.cal || 'Apple')}</small>` : '';
-  return `<button class="di di-${i.kind}" ${attr} style="--c:${i.color}"><span class="di-time">${time}</span><span class="di-bar"></span><span class="di-t">${esc(i.title)}${i.end ? `<small> hasta las ${hm(i.end)}</small>` : ''}${src}</span></button>`;
+  return `<button class="di di-${i.kind}" ${attr} style="--c:${i.color}"><span class="di-time">${time}</span><span class="di-bar"></span><span class="di-t">${esc(i.title)}${i.end ? `<small> hasta las ${hm(i.end)}</small>` : ''}${i.loc ? `<small> · 📍 ${esc(i.loc)}</small>` : ''}${src}</span></button>`;
 }
 
 function remsHTML() {
@@ -167,105 +188,21 @@ function vEspacio() {
   return `<div class="hub">
     <header class="cal-head"><div><div class="cal-year">Mi Espacio</div><h1 class="cal-month">Ajustes</h1></div></header>
     ${workSettingsHTML()}
+    ${appsSettingsHTML()}
+    <div class="card"><h2>📍 Dónde estás</h2>
+      <p class="small muted" style="margin-top:0">Para los festivos, la salida y la puesta del sol y el tiempo. Al servicio del tiempo (Open-Meteo) solo le llegan las coordenadas de la ciudad, nada tuyo.</p>
+      <div class="grid2"><label class="f"><span>Festivos</span><select data-set="region">${Object.entries(REGIONS).map(([k, n]) => `<option value="${k}" ${region() === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+      <label class="f"><span>Ciudad para el tiempo y el sol</span><select data-city>${Object.entries(CITIES).map(([k, c]) => `<option value="${k}" ${place().n === c.n ? 'selected' : ''}>${c.n}</option>`).join('')}${place().geo ? '<option selected value="geo">Tu ubicación</option>' : ''}</select></label></div>
+      <div class="toolbar" style="margin-top:8px"><button data-geo>📍 Usar mi ubicación</button></div></div>
+    <div class="card"><h2>🏖️ Vacaciones</h2>
+      <p class="small muted" style="margin-top:0">Marca tus días de vacaciones con 🏖️ en el calendario (o desde un festivo, con «Pedir esos días») y aquí llevas la cuenta.</p>
+      <div class="grid2"><label class="f"><span>Días laborables de vacaciones al año</span><input type="text" inputmode="numeric" data-set="vacDays" value="${esc(S.settings.vacDays || '')}" placeholder="p. ej. 23"></label>
+      <div class="kpi"><span class="small muted">Usados en ${todayISO().slice(0, 4)}</span><b>${vacUsed(+todayISO().slice(0, 4))}${+S.settings.vacDays ? ' de ' + S.settings.vacDays : ''}</b></div></div></div>
+    <div class="card"><h2>🗓️ Qué ves en el calendario</h2><div class="lay-grid">${Object.entries(CAL_CATS).map(([k, c]) => layerRow(k, c.n, c.c)).join('')}${Object.entries(LAYERS).map(([k, v]) => layerRow(k, v[0], v[1])).join('')}</div>
+      <div class="toolbar" style="margin-top:10px"><button data-kbhelp>⌨️ Atajos de teclado</button></div></div>
     <div class="card"><h2>🍎 Calendario y Recordatorios de Apple</h2><p class="small">${appleOn() ? 'Conectado · ' + agoTxt(appleData().at) : 'Tráete tus eventos y recordatorios de Apple, y manda allí lo que crees aquí.'}</p><button data-hubgo="apple">${appleOn() ? 'Ver' : 'Conectar'}</button></div>
     <div class="card"><h2>🔒 Mi Dinero, PIN y sincronización</h2><p class="small">Saldos, copias de seguridad, cambiar el PIN y vincular tus dispositivos. Te pedirá el PIN.</p><button data-hubgo="ajustes">Abrir</button></div>
   </div>`;
-}
-
-// ---------- CALENDARIO ----------
-function vCal() {
-  const today = todayISO();
-  if (!calSel) calSel = today;
-  if (!calMonth) calMonth = calSel.slice(0, 8) + '01';
-  const start = hAdd(calMonth, -hDow(calMonth));
-  const cells = [...Array(42)].map((_, i) => hAdd(start, i));
-  const monthName = new Date(calMonth + 'T12:00:00').toLocaleDateString('es-ES', { month: 'long' });
-  const m = moneyCtx();
-  const sel = itemsOn(calSel);
-  const spent = m && m.spent[calSel];
-  const cellHTML = iso => {
-    const all = itemsOn(iso).filter(i => i.kind !== 'diary');
-    // En la celda, los pagos se resumen en una línea discreta para no tapar tus planes.
-    const charges = all.filter(i => i.kind === 'pay' && i.amt), cobro = all.some(i => i.kind === 'pay' && i.icon === '💼');
-    const its = all.filter(i => i.kind === 'ev' || i.kind === 'apple' || i.kind === 'rem').concat(cobro ? [{ kind: 'pay', title: '💼 Cobro', color: '#2FA98C' }] : [], charges.length ? [{ kind: 'pay', title: '↻ −' + eur0(charges.reduce((a, i) => a + i.amt, 0)), color: '#8A90AE' }] : []);
-    const out = iso.slice(0, 7) !== calMonth.slice(0, 7);
-    const cls = ['cc', out && 'out', iso === today && 'today', iso === calSel && 'sel', hDow(iso) >= 5 && 'we'].filter(Boolean).join(' ');
-    const md = workSched() && dayMode(iso) !== 'oficina' && (workSched()[hDow(iso)] || {}).on ? `<span class="cc-mode" title="${DAY_MODES[dayMode(iso)].n}">${DAY_MODES[dayMode(iso)].i}</span>` : '';
-    return `<button class="${cls}" data-calday="${iso}" aria-label="${fmtDay(iso)}${its.length ? ', ' + its.length + ' cosas' : ''}"><span class="cc-n">${+iso.slice(8)}</span>${md}<span class="cc-evs">${its.slice(0, 3).map(i => `<i class="${i.kind}" style="--c:${i.color}">${esc(i.title)}</i>`).join('')}${its.length > 3 ? `<em>+${its.length - 3}</em>` : ''}</span></button>`;
-  };
-  const agenda = () => {
-    const rows = [];
-    for (let i = 0; i < 60 && rows.length < 40; i++) { const d = hAdd(today, i); const its = itemsOn(d); if (its.length) rows.push({ d, its }); }
-    return rows.length ? rows.map(r => `<div class="ag-day"><div class="ag-dh ${r.d === today ? 'is-today' : ''}"><b>${+r.d.slice(8)}</b><span>${fmtDay(r.d, { weekday: 'long', month: 'long' })}</span></div>${r.its.map(dayItemHTML).join('')}</div>`).join('') : '<div class="empty-day">No tienes nada en los próximos dos meses.</div>';
-  };
-  return `<div class="hub cal">
-    <header class="cal-head">
-      <div><div class="cal-year">${calMonth.slice(0, 4)}</div><h1 class="cal-month">${cap(monthName)}</h1></div>
-      <div class="cal-ctrl">
-        <div class="seg2"><button data-calview="mes" class="${calView === 'mes' ? 'on' : ''}">Mes</button><button data-calview="agenda" class="${calView === 'agenda' ? 'on' : ''}">Agenda</button></div>
-        ${calView === 'mes' ? `<button class="icon-btn" data-calnav="-1" aria-label="Mes anterior">‹</button><button class="pill-btn" data-calnav="0">Hoy</button><button class="icon-btn" data-calnav="1" aria-label="Mes siguiente">›</button>` : ''}
-        <button class="pill-btn primary" data-newev="${calSel}">＋ Evento</button>
-      </div>
-    </header>
-    ${calView === 'agenda' ? `<div class="agenda-full">${agenda()}</div>` : `
-    <div class="cal-layout">
-      <div class="cal-grid-wrap">
-        <div class="cal-wd">${['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(d => `<span>${d}</span>`).join('')}</div>
-        <div class="cal-grid">${cells.map(cellHTML).join('')}</div>
-        <div class="cal-foot">${financeUnlocked || !AN ? `<label class="cal-toggle"><input type="checkbox" id="calpay" ${calShowPay ? 'checked' : ''}> Ver pagos y cobros de Mi Dinero</label>` : '<button class="cal-toggle link" data-hubgo="hoy" style="text-decoration:none">🔒 Entra en Mi Dinero para ver aquí tus pagos</button>'}
-          <div class="ap-bar"><span>🍎 ${appleOn() ? 'Apple · ' + agoTxt(appleData().at) : 'Calendario de Apple'}</span>${IS_APPLE && appleOn() ? '<button class="pill-btn" data-applefetch>Traer</button>' : ''}<button class="pill-btn" data-hubgo="apple">${appleOn() ? 'Ajustes' : 'Conectar'}</button></div></div>
-      </div>
-      <aside class="cal-day">
-        <div class="cd-head"><div class="cd-num">${+calSel.slice(8)}</div><div><div class="cd-wd">${fmtDay(calSel, { weekday: 'long' })}</div><div class="muted">${new Date(calSel + 'T12:00:00').toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}${calSel === today ? ' · hoy' : ''}</div></div></div>
-        ${workLine(calSel)}${modeChips(calSel, true)}
-        <div class="day-list">${sel.length ? sel.map(dayItemHTML).join('') : '<div class="empty-day">Nada este día.</div>'}</div>
-        ${spent && calSel <= today ? `<button class="cd-spent" data-hubgo="movs" data-q="${calSel}">Ese día gastaste <b>${eur(spent.v)}</b> en ${spent.n} ${spent.n === 1 ? 'compra' : 'compras'} ›</button>` : ''}
-        <button class="add-line" data-newev="${calSel}">＋ Añadir al ${+calSel.slice(8)} de ${new Date(calSel + 'T12:00:00').toLocaleDateString('es-ES', { month: 'long' })}</button>
-      </aside>
-    </div>`}
-  </div>`;
-}
-
-// ---------- hoja de evento ----------
-function openEvSheet(id, dateISO) {
-  const ev = id ? S.events[id] : null;
-  const e = ev || { title: '', date: dateISO || todayISO(), allDay: false, start: '', end2: '', cat: 'personal', repeat: '', notes: '' };
-  const box = document.createElement('div'); box.className = 'sheet-veil'; box.id = 'evsheet';
-  box.innerHTML = `<div class="sheet" role="dialog" aria-label="${ev ? 'Editar evento' : 'Nuevo evento'}">
-    <div class="sheet-grab"></div>
-    <input id="evt" class="sheet-title" placeholder="¿Qué es?" value="${esc(e.title)}" autocomplete="off">
-    <div class="ev-cats">${Object.entries(CAL_CATS).map(([k, c]) => `<button type="button" data-cat="${k}" class="${e.cat === k ? 'on' : ''}" style="--c:${c.c}"><i></i>${c.n}</button>`).join('')}</div>
-    <div class="ev-row"><label>Día<input type="date" id="evd" value="${esc(e.date)}"></label><label class="ev-sw"><input type="checkbox" id="evall" ${e.allDay ? 'checked' : ''}> Todo el día</label></div>
-    <div class="ev-row ${e.allDay ? 'hidden' : ''}" id="evtimes"><label>Empieza<input type="time" id="evs" value="${esc(e.start || '')}"></label><label>Acaba<input type="time" id="eve" value="${esc(e.end2 || '')}"></label></div>
-    <div class="ev-clash" id="evclash"></div>
-    <div class="ev-row"><label>Repetir<select id="evr">${Object.entries(REPEATS).map(([k, n]) => `<option value="${k}" ${e.repeat === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
-      <label class="${e.cat === 'cumple' ? '' : 'hidden'}" id="evyl">Año de nacimiento<input type="number" id="evy" min="1900" max="2100" value="${esc(e.year || '')}" placeholder="opcional"></label></div>
-    <label class="ev-notes">Notas<textarea id="evn" rows="3" placeholder="Dirección, qué llevar…">${esc(e.notes || '')}</textarea></label>
-    ${IS_APPLE && !ev ? `<label class="ev-sw ev-apple"><input type="checkbox" id="evap" ${appleOn() ? 'checked' : ''}> Añadir también a mi Calendario de Apple</label>` : ''}
-    <div class="sheet-acts">${ev ? '<button id="evdel" class="danger">Borrar</button>' : '<span></span>'}<span style="flex:1"></span><button id="evx">Cancelar</button><button id="evok" class="primary">${ev ? 'Guardar' : 'Añadir'}</button></div>
-  </div>`;
-  document.body.appendChild(box);
-  const $ = i => document.getElementById(i);
-  let cat = e.cat;
-  const close = () => box.remove();
-  box.onclick = ev2 => { if (ev2.target === box) close(); };
-  box.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { cat = b.dataset.cat; box.querySelectorAll('[data-cat]').forEach(x => x.classList.toggle('on', x === b)); $('evyl').classList.toggle('hidden', cat !== 'cumple'); if (cat === 'cumple') { $('evall').checked = true; $('evtimes').classList.add('hidden'); $('evr').value = 'year'; } });
-  const clash = () => { const m = $('evall').checked ? '' : clashesWork($('evd').value, $('evs').value, $('eve').value); $('evclash').textContent = m ? '💼 ' + m : ''; };
-  ['evd', 'evs', 'eve'].forEach(i => $(i).addEventListener('change', clash));
-  $('evall').onchange = () => { $('evtimes').classList.toggle('hidden', $('evall').checked); clash(); };
-  clash();
-  $('evx').onclick = close;
-  if ($('evdel')) $('evdel').onclick = () => { if (confirm(ev.repeat ? '¿Borrar este evento y todas sus repeticiones?' : '¿Borrar este evento?')) { set('events', id, null); save(); close(); render(); } };
-  $('evok').onclick = () => {
-    const title = $('evt').value.trim(); if (!title) { $('evt').focus(); $('evt').classList.add('shake'); return; }
-    const all = $('evall').checked;
-    const out = { id: id || 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title, date: $('evd').value || todayISO(), allDay: all, start: all ? '' : $('evs').value, end2: all ? '' : $('eve').value, cat, repeat: $('evr').value, notes: $('evn').value.trim(), year: cat === 'cumple' && +$('evy').value ? +$('evy').value : undefined };
-    if (!out.allDay && !out.start) out.allDay = true;
-    set('events', out.id, out); save(); close(); calSel = out.date; calMonth = out.date.slice(0, 8) + '01'; render();
-    if ($('evap') && $('evap').checked) setTimeout(() => sendEventToApple(out), 150);
-  };
-  box.addEventListener('keydown', k => { if (k.key === 'Escape') close(); if (k.key === 'Enter' && k.target.id === 'evt') $('evok').click(); });
-  setTimeout(() => $('evt').focus(), 30);
 }
 
 function bindHub() {
@@ -276,19 +213,59 @@ function bindHub() {
     const nb = t.closest('[data-nbopen]'); if (nb) { tab = 'cuaderno'; return nbGo(nb.dataset.nbopen); }
     if (t.closest('[data-hubtoday]')) { tab = 'cuaderno'; return nbToday(); }
     if (t.closest('[data-hubnewpage]')) { tab = 'cuaderno'; render(); return nbNewPage(null); }
+    if (t.closest('[data-palette]')) return openPalette();
+    if (t.closest('[data-kbhelp]')) return showShortcuts();
+    if (t.closest('[data-calside]')) return openSideSheet();
+    if (t.closest('[data-geo]')) return useMyLocation();
     const ne = t.closest('[data-newev]'); if (ne) return openEvSheet(null, ne.dataset.newev);
-    const ed = t.closest('[data-editev]'); if (ed) return openEvSheet(ed.dataset.editev);
-    const cd = t.closest('[data-calday]'); if (cd) { calSel = cd.dataset.calday; if (tab !== 'cal' || calSel.slice(0, 7) !== (calMonth || '').slice(0, 7)) calMonth = calSel.slice(0, 8) + '01'; calView = 'mes'; if (tab !== 'cal') return goTab('cal'); return render(); }
-    const cn = t.closest('[data-calnav]'); if (cn) { const k = +cn.dataset.calnav; if (!k) { calSel = todayISO(); calMonth = calSel.slice(0, 8) + '01'; } else { const d = new Date(calMonth + 'T12:00:00'); d.setMonth(d.getMonth() + k); calMonth = isoOf(d).slice(0, 8) + '01'; } return render(); }
-    const cv = t.closest('[data-calview]'); if (cv) { calView = cv.dataset.calview; return render(); }
+    const ed = t.closest('[data-editev]'); if (ed) return openEvSheet(ed.dataset.editev, ed.dataset.occ || null);
+    const ao = t.closest('[data-appopen]'); if (ao) return openAppItem(ao.dataset.appopen, ao.dataset.occ);
+    const di = t.closest('[data-dayinfo]'); if (di) return openDayInfo(di.dataset.dayinfo);
+    const va = t.closest('[data-vacas]'); if (va) return markVacation(va.dataset.vacas.split(','));
+    const mn = t.closest('[data-mininav]'); if (mn) { const d = new Date((miniMonth || calSel.slice(0, 8) + '01') + 'T12:00:00'); d.setMonth(d.getMonth() + +mn.dataset.mininav); miniMonth = isoOf(d).slice(0, 8) + '01'; return render(); }
+    const gd = t.closest('[data-goday]'); if (gd) return goDay(gd.dataset.goday, gd.dataset.goview || null);
+    const md = t.closest('[data-mday]'); if (md && !t.closest('[data-appleitem]')) { calSel = md.dataset.mday; return render(); }
+    const cn = t.closest('[data-calnav]'); if (cn) return calStep(+cn.dataset.calnav);
+    const cv = t.closest('[data-calview]'); if (cv) return setCalView(cv.dataset.calview);
   };
-  const cp = document.getElementById('calpay'); if (cp) cp.onchange = () => { calShowPay = cp.checked; render(); };
+  bindCal(); bindApps();
+  bindQuickAdd(document.getElementById('hubqa'), document.getElementById('hubqah'));
+  const cs = root.querySelector('[data-city]'); if (cs) cs.onchange = () => { if (CITIES[cs.value]) { set('settings', 'city', CITIES[cs.value]); save(); wxFetch(true); render(); } };
 }
-document.addEventListener('keydown', e => {
-  if (tab !== 'cal' || calView !== 'mes' || document.getElementById('evsheet') || /INPUT|TEXTAREA|SELECT/.test((e.target.tagName || '')) || e.target.isContentEditable) return;
-  const mv = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e.key];
-  if (mv) { e.preventDefault(); calSel = hAdd(calSel, mv); if (calSel.slice(0, 7) !== calMonth.slice(0, 7)) calMonth = calSel.slice(0, 8) + '01'; render(); const b = document.querySelector(`[data-calday="${calSel}"]`); if (b) b.focus(); }
-  else if (e.key === 'Enter' && e.target.closest && e.target.closest('[data-calday]')) { /* ya selecciona con click */ }
-  else if (e.key.toLowerCase() === 'n') { e.preventDefault(); openEvSheet(null, calSel); }
-});
+function useMyLocation() {
+  if (!navigator.geolocation) return toast('Este navegador no puede darme tu ubicación.');
+  navigator.geolocation.getCurrentPosition(p => {
+    set('settings', 'city', { n: 'Tu ubicación', lat: Math.round(p.coords.latitude * 100) / 100, lon: Math.round(p.coords.longitude * 100) / 100, geo: 1 }); save(); wxFetch(true); render();
+    toast('📍 Listo: uso tu ubicación aproximada (a unos cientos de metros).');
+  }, () => toast('No he podido saber dónde estás. Elige la ciudad en la lista.'), { timeout: 10000, maximumAge: 36e5 });
+}
+
+// ---------- tu semana y lo que se viene ----------
+function weekStrip(today) {
+  return `<section class="hub-sec"><div class="wstrip">${[...Array(7)].map((_, i) => hAdd(today, i)).map((d, i) => {
+    const its = compactItems(itemsOn(d)).filter(x => x.kind !== 'sen' && x.kind !== 'hol'), h = layerOn('festivos') && holidayOn(d), w = wxDay(d);
+    const md = workSched() && isWorkday(d) && !h ? dayMode(d) : '';
+    return `<button class="ws-d ${i === 0 ? 'is-today' : ''} ${h ? 'is-hol' : ''} ${hDow(d) >= 5 ? 'we' : ''}" data-goday="${d}" data-goview="dia" aria-label="${fmtDay(d)}${its.length ? ', ' + its.length + ' cosas' : ''}${h ? ', festivo' : ''}">
+      <span class="ws-wd">${i === 0 ? 'hoy' : WD_S[hDow(d)]}</span><b class="ws-n">${+d.slice(8)}</b>
+      <span class="ws-wx">${w ? `${wxIcon(w.code).i}<small>${w.max}°</small>` : ''}</span>
+      <span class="ws-dots">${its.slice(0, 4).map(x => `<i style="--c:${x.color}"></i>`).join('')}</span>
+      <span class="ws-tag">${h ? '🎉' : md && md !== 'oficina' ? DAY_MODES[md].i : ''}</span></button>`;
+  }).join('')}</div></section>`;
+}
+function comingHTML(today) {
+  const cards = [], seen = new Set();
+  const card = (n, icon, title, when, attr, color, sub) => ({ n, html: `<button class="sv" ${attr} style="--c:${color}"><span class="sv-n">${n === 0 ? 'Hoy' : n === 1 ? 'Mañana' : `<b>${n}</b> días`}</span><span class="sv-t">${icon} ${esc(title)}</span><span class="sv-d">${when}</span>${sub ? `<span class="sv-s">${sub}</span>` : ''}</button>` });
+  for (const e of evAll()) {
+    if (!e.star && e.cat !== 'cumple') continue;
+    const d = nextOcc(e, today), n = hDays(today, d);
+    if (n < 0 || n > (e.star ? 400 : 21)) continue;
+    const age = e.cat === 'cumple' && e.year ? ` (${+d.slice(0, 4) - e.year})` : '';
+    cards.push(card(n, e.star ? '⭐' : '🎂', e.title + age, dShort(d), `data-editev="${e.id}" data-occ="${d}"`, (CAL_CATS[e.cat] || CAL_CATS.otro).c, e.loc ? '📍 ' + esc(e.loc) : ''));
+  }
+  if (layerOn('festivos')) { const h = upcomingHolidays(hAdd(today, 1), 150, 1)[0]; if (h) cards.push(card(hDays(today, h.iso), '🎉', h.names.join(' y '), dShort(h.iso), `data-dayinfo="${h.iso}"`, '#EF5B4C', bridgeTxt(h))); }
+  if (layerOn('senalados')) for (let i = 0; i <= 14; i++) { const d = hAdd(today, i); for (const x of specialOn(d)) if (!seen.has(x.name)) { seen.add(x.name); cards.push(card(i, x.icon, x.name, dShort(d), `data-dayinfo="${d}"`, '#F2A93B', esc(x.tip))); } }
+  if (!cards.length) return '';
+  cards.sort((a, b) => a.n - b.n);
+  return `<section class="hub-sec"><div class="hub-hrow"><h2 class="hub-h">Se viene</h2><span class="muted small">Marca ⭐ en un evento para verlo aquí</span></div><div class="sv-row">${cards.slice(0, 8).map(c => c.html).join('')}</div></section>`;
+}
 setInterval(() => { if (tab === 'inicio' && !lockMode && !document.getElementById('evsheet') && document.visibilityState === 'visible') { const y = scrollY; render(); scrollTo(0, y); } }, 60000);

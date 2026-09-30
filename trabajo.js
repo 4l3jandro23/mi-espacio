@@ -3,21 +3,25 @@
 const WD_LONG = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const WORK_PRESET = [0, 1, 2, 3].map(() => ({ on: true, from: '09:00', to: '18:00', l1: '14:00', l2: '15:00' }))
   .concat([{ on: true, from: '09:00', to: '15:00', l1: '', l2: '' }, { on: false }, { on: false }]);
-const DAY_MODES = { oficina: { n: 'Oficina', i: '🏢' }, tele: { n: 'Teletrabajo', i: '🏠' }, libre: { n: 'Libre', i: '🌴' } };
+const DAY_MODES = { oficina: { n: 'Oficina', i: '🏢' }, tele: { n: 'Teletrabajo', i: '🏠' }, libre: { n: 'Libre', i: '🌴' }, vacas: { n: 'Vacaciones', i: '🏖️' }, festivo: { n: 'Festivo', i: '🎉' } };
+const MODE_CHIPS = ['oficina', 'tele', 'libre', 'vacas'];
 
 const workSched = () => Array.isArray(S.settings.work) ? S.settings.work : null;
-const dayMode = iso => (S.days && S.days[iso] && S.days[iso].mode) || 'oficina';
+// Si no lo has marcado aquí, vale lo que diga tu app de alimentación (sus días en casa).
+const dayMode = iso => (S.days && S.days[iso] && S.days[iso].mode) || (typeof aliWfh === 'function' && aliWfh(iso) ? 'tele' : 'oficina');
 function workOn(iso) {
   const s = workSched(); if (!s) return null;
   const d = s[hDow(iso)]; if (!d || !d.on || !d.from || !d.to) return null;
+  const h = typeof holidayOn === 'function' && holidayOn(iso);
+  if (h) return { off: true, mode: 'festivo', name: h.name };
   const mode = dayMode(iso);
-  return mode === 'libre' ? { off: true, mode } : Object.assign({ mode }, d);
+  return mode === 'libre' || mode === 'vacas' ? { off: true, mode } : Object.assign({ mode }, d);
 }
-function setDayMode(iso, mode) { set('days', iso, mode === 'oficina' ? null : { mode }); save(); render(); }
+function setDayMode(iso, mode) { set('days', iso, mode === 'oficina' && !(typeof aliWfh === 'function' && aliWfh(iso)) ? null : { mode }); save(); render(); }
 
 // Qué toca ahora mismo según el horario (para la cabecera).
 function workNow(iso) {
-  const w = workOn(iso); if (!w || w.off) return w && w.off ? 'Hoy tienes el día libre 🌴' : '';
+  const w = workOn(iso); if (!w || w.off) return !w ? '' : w.mode === 'festivo' ? `Hoy es festivo (${w.name}): no se trabaja 🎉` : w.mode === 'vacas' ? 'Hoy estás de vacaciones 🏖️' : 'Hoy tienes el día libre 🌴';
   const now = new Date(), m = now.getHours() * 60 + now.getMinutes();
   const where = w.mode === 'tele' ? ' desde casa' : '';
   const left = t => { const d = toMin(t) - m, h = Math.floor(d / 60), mi = d % 60; return h ? `${h} h${mi ? ' ' + mi + ' min' : ''}` : `${mi} min`; };
@@ -34,13 +38,13 @@ function workSpans(iso) {
   return w.l1 && w.l2 ? [[h(w.from), h(w.l1)], [h(w.l2), h(w.to)]] : [[h(w.from), h(w.to)]];
 }
 function modeChips(iso, compact) {
-  const s = workSched(); if (!s || !(s[hDow(iso)] || {}).on) return '';
+  const s = workSched(); if (!s || !(s[hDow(iso)] || {}).on || (typeof holidayOn === 'function' && holidayOn(iso))) return '';
   const cur = dayMode(iso);
-  return `<div class="mode-chips ${compact ? 'compact' : ''}" role="group" aria-label="Cómo es este día">${Object.entries(DAY_MODES).map(([k, v]) => `<button data-daymode="${k}" data-dayiso="${iso}" class="${cur === k ? 'on' : ''}" aria-pressed="${cur === k}">${v.i} ${v.n}</button>`).join('')}</div>`;
+  return `<div class="mode-chips ${compact ? 'compact' : ''}" role="group" aria-label="Cómo es este día">${MODE_CHIPS.map(k => `<button data-daymode="${k}" data-dayiso="${iso}" class="${cur === k ? 'on' : ''}" aria-pressed="${cur === k}" title="${DAY_MODES[k].n}">${DAY_MODES[k].i}<span> ${DAY_MODES[k].n}</span></button>`).join('')}</div>`;
 }
 function workLine(iso) {
   const w = workOn(iso); if (!w) return '';
-  if (w.off) return `<div class="work-line off">🌴 Día libre</div>`;
+  if (w.off) return `<div class="work-line off">${w.mode === 'festivo' ? '🎉 Festivo · no se trabaja' : w.mode === 'vacas' ? '🏖️ De vacaciones' : '🌴 Día libre'}</div>`;
   return `<div class="work-line"><span>${DAY_MODES[w.mode].i} ${DAY_MODES[w.mode].n}</span><b>${w.from}–${w.to}</b>${w.l1 ? `<span class="muted">comida ${w.l1}–${w.l2}</span>` : ''}</div>`;
 }
 // ¿Choca con el trabajo? (para avisar al crear un evento)

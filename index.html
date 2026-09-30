@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<!-- Seguridad: la página solo puede conectarse a GitHub (para sincronizar, y lo que sube va cifrado). -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file: 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src https://api.github.com https://gist.githubusercontent.com; form-action 'none'; base-uri 'none'">
+<!-- Seguridad: la página solo puede conectarse a GitHub (para sincronizar, y lo que sube va cifrado), a Open-Meteo (el tiempo de tu ciudad) y al Supabase de la app del piso. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file: 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src https://api.github.com https://gist.githubusercontent.com https://api.open-meteo.com https://*.supabase.co; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -212,6 +212,7 @@ body.locked .wrap,body.locked nav{visibility:hidden}
   <button data-hub="cal"><b>◷</b>Calendario</button>
   <button data-hub="cuaderno"><b>▤</b>Páginas</button>
   <button data-hub="hoy"><b>€</b>Dinero</button>
+  <button data-palette class="hubnav-s" aria-label="Buscar o apuntar (Ctrl+K)"><b>⌕</b>Buscar</button>
 </nav>
 <nav id="nav" class="hidden"><div class="in">
   <button data-tab="hoy" class="on"><span>☀️</span>Hoy</button>
@@ -229,6 +230,11 @@ body.locked .wrap,body.locked nav{visibility:hidden}
 <script src="cuaderno.js"></script>
 <script src="hub.js"></script>
 <script src="trabajo.js"></script>
+<script src="festivos.js"></script>
+<script src="tiempo.js"></script>
+<script src="rapido.js"></script>
+<script src="calendario.js"></script>
+<script src="apps.js"></script>
 <script src="apple.js"></script>
 <script src="vendor/qrcode.min.js"></script>
 <script src="vendor/jsQR.min.js"></script>
@@ -331,7 +337,6 @@ async function importFiles(files) {
   save(); render();
   if (msgs.length) toast(msgs.join('\n'));
 }
-function toast(t) { alert(t); }
 
 // ---------- render ----------
 let AN = null;
@@ -374,6 +379,7 @@ document.querySelectorAll('#nav button').forEach(b => b.onclick = () => goTab(b.
 document.getElementById('btnCfg').onclick = () => goTab('ajustes');
 document.getElementById('btnHome').onclick = () => goTab('inicio');
 document.querySelectorAll('#hubnav [data-hub]').forEach(b => b.onclick = () => goTab(b.dataset.hub));
+document.querySelector('#hubnav [data-palette]').onclick = () => openPalette();
 document.getElementById('goSync').onclick = () => goTab('ajustes');
 
 function lastDataDate() { return AN.list[AN.list.length - 1].date; }
@@ -1118,6 +1124,7 @@ render();
 if (/^#(cuaderno|cal)$/.test(location.hash)) { const t = location.hash.slice(1); history.replaceState(null, '', location.pathname); goTab(t); }
 if (/^#vincular=/.test(location.hash)) { const code = location.hash; history.replaceState(null, '', location.pathname); linkWith(code); }
 else doSync();
+wxFetch(); appsFetch();
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   const hadCtrl = !!navigator.serviceWorker.controller; let reloaded = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadCtrl && !reloaded && !lockMode) { reloaded = true; location.reload(); } });
