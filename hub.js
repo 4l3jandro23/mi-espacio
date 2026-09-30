@@ -192,6 +192,7 @@ function vEspacio() {
   return `<div class="hub">
     <header class="cal-head"><div><div class="cal-year">Mi Espacio</div><h1 class="cal-month">Ajustes</h1></div></header>
     ${workSettingsHTML()}
+    ${avisosHTML()}
     ${appsSettingsHTML()}
     <div class="card"><h2>📍 Dónde estás</h2>
       <p class="small muted" style="margin-top:0">Para los festivos, la salida y la puesta del sol y el tiempo. Al servicio del tiempo (Open-Meteo) solo le llegan las coordenadas de la ciudad, nada tuyo.</p>
@@ -235,7 +236,7 @@ function bindHub() {
     const cn = t.closest('[data-calnav]'); if (cn) return calStep(+cn.dataset.calnav);
     const cv = t.closest('[data-calview]'); if (cv) return setCalView(cv.dataset.calview);
   };
-  bindCal(); bindApps();
+  bindCal(); bindApps(); bindAvisos();
   bindQuickAdd(document.getElementById('hubqa'), document.getElementById('hubqah'));
   const cs = root.querySelector('[data-city]'); if (cs) cs.onchange = () => { if (CITIES[cs.value]) { set('settings', 'city', CITIES[cs.value]); save(); wxFetch(true); render(); } };
 }
