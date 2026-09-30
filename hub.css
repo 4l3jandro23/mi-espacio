@@ -536,7 +536,7 @@ body.tg-dragging, body.tg-dragging * { cursor: grabbing !important; user-select:
 .sky-hol { margin-top: 10px; font-weight: 700; font-size: 14px; padding: 5px 12px; background: rgba(255, 255, 255, .3); border-radius: 999px; display: inline-block; }
 .arc-night { fill: none; stroke: var(--sky-ink); stroke-width: 2.5; opacity: .2; stroke-linecap: round; }
 .arc-sunmk { fill: var(--sky-ink); opacity: .6; }
-.arc-sunic { font-size: 12px; }
+.arc-sunic.ico { width: 16px; height: 16px; color: var(--sky-ink); opacity: .8; }
 .moon { fill: #F4F1FF; }
 .moon-glow { fill: #B9B2FF; opacity: .45; }
 .sky-qa { flex: 1 1 300px; display: flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, .34); border: 1px solid rgba(255, 255, 255, .5); border-radius: 999px; padding: 0 8px 0 14px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); cursor: text; }
@@ -733,3 +733,30 @@ a.ef-row:hover { border-color: var(--ink); }
 .al-t small { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .al-go { color: var(--muted); font-weight: 700; }
 .al:hover { transform: translateY(-1px); }
+
+/* Mientras arranca: el esqueleto del inicio en vez de la cabecera de Mi Dinero */
+.boot { display: flex; flex-direction: column; gap: 14px; padding-top: 16px; }
+.boot-sky { height: min(330px, 52vh); border-radius: 28px; background: linear-gradient(165deg, #E4EEFF 0%, #A9C6FA 50%, #6E9BF0 100%); opacity: .55; animation: bootp 1.2s ease-in-out infinite alternate; }
+.boot-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.boot-row i { height: 110px; border-radius: 22px; background: var(--card); animation: bootp 1.2s ease-in-out infinite alternate; }
+@keyframes bootp { from { opacity: .45; } to { opacity: .8; } }
+@media (prefers-reduced-motion: reduce) { .boot-sky, .boot-row i { animation: none; } }
+.nb-top .homebtn { flex: none; }
+
+/* Iconos de línea (iconos.js) */
+.ico { width: 1.15em; height: 1.15em; vertical-align: -.2em; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; color: var(--it, currentColor); }
+.ico.fill { fill: currentColor; }
+.hubnav .ico, .sky .ico, .primary .ico, .chip .ico, .mc .ico, .tg .ico, .nb-to.on .ico, .tile-ic .ico, .homebtn .ico, .toast .ico, .sky-acts .ico { color: currentColor; }
+.hubnav b .ico { width: 22px; height: 22px; vertical-align: 0; }
+.tile-ic .ico { width: 22px; height: 22px; vertical-align: 0; }
+.nb-faces .ico { width: 30px; height: 30px; stroke-width: 1.7; }
+.nb-faces button:nth-child(1) { --mc: #8A93B8; } .nb-faces button:nth-child(2) { --mc: #9B7BEA; } .nb-faces button:nth-child(3) { --mc: #5B8DEF; } .nb-faces button:nth-child(4) { --mc: #2FA98C; } .nb-faces button:nth-child(5) { --mc: #F2A93B; }
+.nb-faces button span { filter: none; opacity: 1; color: var(--muted); }
+.nb-faces button:hover span, .nb-faces button.on span { color: var(--mc); }
+.nb-faces button.on .ico { stroke-width: 2.2; }
+.nb-icon .ico { width: 50px; height: 50px; stroke-width: 1.5; color: var(--ink); }
+.nb-week .ico { width: 18px; height: 18px; }
+.nb-li .ico, .al-ic .ico { width: 22px; height: 22px; vertical-align: -.25em; }
+.nb-list .nb-li { color: var(--lc); } .nb-list .nb-li .ico { color: currentColor; }
+.ef-ic .ico { width: 20px; height: 20px; }
+@media (max-width: 520px) { .nb-faces .ico { width: 26px; height: 26px; } }

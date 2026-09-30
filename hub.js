@@ -92,7 +92,7 @@ function dayArc(items, spans, sun) {
   const work = (spans || []).map(([a, b]) => seg(Math.max(H0, a), Math.min(H1, b))).join('');
   const sr = sun ? toMin(sun.rise) / 60 : 0, ss = sun ? toMin(sun.set) / 60 : 0;
   const night = sun && ss > H0 && ss < H1 ? `<path d="M ${pt(ss)[0]} ${pt(ss)[1]} A ${r} ${r} 0 0 1 ${x1} ${y1}" class="arc-night"/>` : '';
-  const sunMk = sun ? [[sr, '🌅'], [ss, '🌇']].filter(([hh]) => hh > H0 && hh < H1).map(([hh, ic]) => { const [x, y] = pt(hh); return `<circle cx="${x}" cy="${y}" r="3.5" class="arc-sunmk"/><text x="${x}" y="${y - 10}" class="arc-sunic" text-anchor="middle">${ic}</text>`; }).join('') : '';
+  const sunMk = sun ? [[sr, '🌅'], [ss, '🌇']].filter(([hh]) => hh > H0 && hh < H1).map(([hh, ic]) => { const [x, y] = pt(hh); return `<circle cx="${x}" cy="${y}" r="3.5" class="arc-sunmk"/><svg x="${x - 8}" y="${y - 26}" width="16" height="16" viewBox="0 0 24 24" class="arc-sunic ico">${ICONS[ic === '🌅' ? 'sunrise' : 'sunset']}</svg>`; }).join('') : '';
   const dots = items.filter(i => i.time).map(i => { const [x, y] = pt(toMin(i.time) / 60); return `<circle cx="${x}" cy="${y}" r="6" class="arc-ev" style="fill:${i.color}"><title>${esc(hm(i.time) + ' ' + i.title)}</title></circle>`; }).join('');
   return `<svg class="arc" viewBox="0 0 ${W} ${H}" role="img" aria-label="Tu día, de 7:00 a 24:00${up ? ', ahora son las ' + now.toTimeString().slice(0, 5) : ''}">
     <defs><filter id="glow" x="-2" y="-2" width="5" height="5"><feGaussianBlur stdDeviation="6"/></filter></defs>
@@ -160,7 +160,7 @@ function vInicio() {
     <section class="hub-sec">
       <h2 class="hub-h">Tus apartados</h2>
       <div class="tiles">
-        ${tile('data-hubgo="hoy"', 'tile-money', '€', 'Mi Dinero', m ? `<b class="tile-big">${eur(Math.max(0, m.A.perDay))}</b><span>al día hasta el cobro</span>` : AN ? '<span>🔒 Con PIN · toca para entrar</span>' : '<span>Carga tus extractos para empezar</span>')}
+        ${tile('data-hubgo="hoy"', 'tile-money', '💰', 'Mi Dinero', m ? `<b class="tile-big">${eur(Math.max(0, m.A.perDay))}</b><span>al día hasta el cobro</span>` : AN ? '<span>🔒 Con PIN · toca para entrar</span>' : '<span>Carga tus extractos para empezar</span>')}
         ${tile('data-hubgo="cal"', 'tile-cal', '◷', 'Calendario', next ? `<span>${esc(next.title)} · ${hm(next.time)}</span>` : week[0] ? `<span>${fmtDay(week[0].d, { weekday: 'short', day: 'numeric' })}: ${esc(week[0].items[0].title)}</span>` : '<span>Nada en los próximos días</span>')}
         ${tile(tasksPage ? `data-nbopen="${tasksPage.id}"` : 'data-hubgo="cuaderno"', 'tile-tasks', '✓', 'Tareas', `<b class="tile-big">${pendingTasks}</b><span>${pendingTasks === 1 ? 'pendiente' : 'pendientes'}</span>`)}
         ${tile('data-hubtoday', 'tile-diary', moodToday ? moodToday[0] : '✎', 'Diario', moodToday ? `<span>Hoy: ${moodToday[1].toLowerCase()}${diaryToday.good ? ' · ' + esc(diaryToday.good) : ''}</span>` : '<span>¿Qué tal hoy? Un toque y listo</span>')}

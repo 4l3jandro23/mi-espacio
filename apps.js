@@ -252,3 +252,19 @@ function bindApps() {
 document.addEventListener('DOMContentLoaded', () => pisoLoad().then(() => { if (window.Rotacion && !lockMode && ['inicio', 'cal', 'espacio'].includes(tab)) softRender(); }));
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') appsFetch(); });
 addEventListener('storage', e => { if (e.key && /^(planEjercicio|planAlimentacion|piso_)/.test(e.key) && ['inicio', 'cal'].includes(tab) && !document.querySelector('.sheet-veil')) softRender(); });
+
+// ---------- al momento ----------
+// Si cambias algo en Ejercicio, Alimentación o el piso en otra pestaña de este mismo navegador, el navegador
+// avisa aquí y se repinta enseguida. Desde otro dispositivo llega por sus copias en GitHub: se miran al volver
+// a esta app y cada minuto mientras la tienes delante.
+const APPS_LIVE = /^(planEjercicio|planAlimentacion|c52_|piso_|mando_mis_artistas)/;
+let appsLiveT = null;
+window.addEventListener('storage', e => {
+  if (e.key && !APPS_LIVE.test(e.key)) return;
+  _av.clear(); _avT = 0;
+  if (e.key === 'mando_mis_artistas_v1' && typeof _arts !== 'undefined') _arts = null;
+  clearTimeout(appsLiveT);
+  appsLiveT = setTimeout(() => { if (!lockMode && !document.querySelector('.sheet-veil') && !(typeof nbBusy === 'function' && nbBusy())) softRender(); }, 250);
+});
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { _av.clear(); _avT = 0; appsFetch(true); } });
+setInterval(() => { if (document.visibilityState === 'visible' && ghToken()) appsFetch(true); }, 60e3);

@@ -79,7 +79,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 .hidden{display:none!important}
 .nb-entry{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;padding:14px 16px}
 body.nbmode .wrap{max-width:1180px;padding:0 0 60px}
-body.nbmode header,body.nbmode nav{display:none!important}
+body.nbmode .wrap>header,body.nbmode nav#nav{display:none!important}
 .nb-top{position:sticky;top:0;z-index:6;display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--line)}
 .nb-top button{padding:6px 10px}
 .nb-burger{display:none}
@@ -177,7 +177,7 @@ body.locked .wrap,body.locked nav{visibility:hidden}
 </style>
 <link rel="stylesheet" href="hub.css">
 </head>
-<body>
+<body class="hubmode">
 <div class="wrap">
   <header>
     <div style="display:flex;align-items:center;gap:10px"><button id="btnHome" class="homebtn" aria-label="Volver al inicio" title="Volver al inicio">‹</button><div><h1>Mi Dinero</h1><div id="syncst" class="small muted"></div></div></div>
@@ -194,7 +194,7 @@ body.locked .wrap,body.locked nav{visibility:hidden}
     <p class="small muted">Lo que cargues se queda guardado; la próxima vez solo tienes que añadir los extractos nuevos.</p>
   </div>
 
-  <main id="app"></main>
+  <main id="app"><div class="boot" aria-hidden="true"><div class="boot-sky"></div><div class="boot-row"><i></i><i></i><i></i></div></div></main>
 </div>
 
 <div id="lock" class="lock hidden" role="dialog" aria-label="Bloqueo con PIN"><div class="lockbox">
@@ -211,7 +211,7 @@ body.locked .wrap,body.locked nav{visibility:hidden}
   <button data-hub="inicio"><b>☀︎</b>Inicio</button>
   <button data-hub="cal"><b>◷</b>Calendario</button>
   <button data-hub="cuaderno"><b>▤</b>Cuaderno</button>
-  <button data-hub="hoy"><b>€</b>Dinero</button>
+  <button data-hub="hoy"><b>💰</b>Dinero</button>
   <button data-palette class="hubnav-s" aria-label="Buscar o apuntar (Ctrl+K)"><b>⌕</b>Buscar</button>
 </nav>
 <nav id="nav" class="hidden"><div class="in">
@@ -224,7 +224,8 @@ body.locked .wrap,body.locked nav{visibility:hidden}
   <button data-tab="deudas"><span>🤝</span>Deudas</button>
 </div></nav>
 
-<script src="vendor/xlsx.full.min.js"></script>
+<script src="iconos-data.js"></script>
+<script src="iconos.js"></script>
 <script src="engine.js"></script>
 <script src="sync.js"></script>
 <script src="cuaderno.js"></script>
@@ -241,8 +242,6 @@ body.locked .wrap,body.locked nav{visibility:hidden}
 <script src="planes.js"></script>
 <script src="barcelona.js"></script>
 <script src="apple.js"></script>
-<script src="vendor/qrcode.min.js"></script>
-<script src="vendor/jsQR.min.js"></script>
 <script>
 'use strict';
 const KEY = 'midinero.v1';
@@ -319,12 +318,16 @@ drop.onclick = () => $file.click();
 ['dragleave', 'drop'].forEach(e => document.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove('over'); }));
 document.addEventListener('drop', ev => importFiles([...ev.dataTransfer.files]));
 
+// Las librerías grandes (Excel, QR) se cargan solo cuando hacen falta: así la app abre al momento.
+const _libs = {};
+const lazyLib = src => _libs[src] || (_libs[src] = new Promise((ok, ko) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => { delete _libs[src]; ko(new Error('No se ha podido cargar ' + src)); }; document.head.appendChild(s); }));
 async function importFiles(files) {
   const msgs = [];
   for (const f of files) {
     try {
       let res;
       if (/\.xlsx?$/i.test(f.name)) {
+        await lazyLib('vendor/xlsx.full.min.js');
         const wb = XLSX.read(new Uint8Array(await f.arrayBuffer()), { type: 'array' });
         const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: '' });
         res = Fin.parseBBVA(rows);
@@ -974,8 +977,9 @@ function bindSync() {
   };
   if ($('sscan')) $('sscan').onclick = openScanner;
   if ($('slink')) $('slink').onclick = () => linkWith($('scode').value);
-  if ($('sqr')) $('sqr').onclick = () => {
+  if ($('sqr')) $('sqr').onclick = async () => {
     const box = $('sqrbox'); box.classList.toggle('hidden'); if (box.classList.contains('hidden')) return;
+    try { await lazyLib('vendor/qrcode.min.js'); } catch (e) { return toast('Sin conexión: no puedo dibujar el QR. Copia el código de abajo.'); }
     const q = qrcode(0, 'M'); q.addData(linkURL()); q.make();
     $('qrimg').innerHTML = q.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
     $('scodeout').value = linkCode();
@@ -1106,6 +1110,7 @@ let scanStream = null;
 async function openScanner() {
   const box = document.getElementById('scan'), video = document.getElementById('scanvideo'), msg = document.getElementById('scanmsg');
   box.classList.remove('hidden'); msg.textContent = 'Apunta al código QR del otro dispositivo…';
+  try { await lazyLib('vendor/jsQR.min.js'); } catch (e) { msg.textContent = 'Sin conexión: pega el código a mano.'; return; }
   try { scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false }); }
   catch (e) { msg.textContent = 'No puedo usar la cámara. Da permiso a la cámara o pega el código a mano.'; return; }
   video.srcObject = scanStream; await video.play().catch(() => {});

@@ -333,7 +333,7 @@ function vCuaderno() {
   const p = nbCur && nbP(nbCur);
   if (nbCur && !p) nbCur = null;
   return `<div class="nb">
-    <div class="nb-top"><button id="nbmenu" class="nb-burger" aria-label="Páginas">☰</button><b style="flex:1">📓 Mi cuaderno</b><button data-nbset aria-label="Ajustes">⚙️</button></div>
+    <div class="nb-top"><button class="homebtn" data-nbhome aria-label="Volver a Mi Espacio" title="Volver a Mi Espacio">‹</button><button id="nbmenu" class="nb-burger" aria-label="Páginas">☰</button><b style="flex:1">Cuaderno</b><button data-nbset aria-label="Ajustes">⚙️</button></div>
     <div class="nb-body">${nbSideHTML()}<main class="nb-main">${p ? nbPageHTML(p) : nbHome()}</main></div>
     ${nbSide ? '<div class="nb-veil" id="nbveil"></div>' : ''}
   </div>`;
@@ -550,6 +550,7 @@ function bindCuaderno() {
   $('nbmenu').onclick = () => { nbSide = !nbSide; render(); };
   if ($('nbveil')) $('nbveil').onclick = () => { nbSide = false; render(); };
   root.querySelector('[data-nbset]').onclick = () => goTab('espacio');
+  root.querySelector('[data-nbhome]').onclick = () => { if (nbCur) { const p = nbP(nbCur); nbCur = p && p.parent && !/^(diario-root|notas-root)$/.test((nbP(p.parent) || {}).kind || '') ? p.parent : null; render(); scrollTo(0, 0); } else goTab('inicio'); };
   $('nbq').oninput = e => { nbSearch = e.target.value; const pos = e.target.selectionStart; const side = document.querySelector('.nb-side'); side.outerHTML = nbSideHTML(); const q = $('nbq'); q.focus(); q.setSelectionRange(pos, pos); };
   root.addEventListener('keydown', e => {
     if (e.key !== 'Enter' || e.isComposing) return;
