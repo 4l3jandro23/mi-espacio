@@ -608,3 +608,45 @@ a.ef-row:hover { border-color: var(--ink); }
 .cd-ef .ef-img { width: 36px; height: 36px; }
 .mode-chips.compact button:not(.on) span { display: none; }
 .mode-chips.compact { flex-wrap: wrap; }
+
+/* ---------- Barcelona ---------- */
+.tile-city { --tc: var(--warm); --tc-soft: var(--warm-soft); }
+.pl-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.pl { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 16px 16px 14px 18px; border-radius: 20px; background: var(--card); border: 1px solid var(--line); overflow: hidden; }
+.pl::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--c); }
+.pl h3 { text-transform: none; color: var(--ink); margin: 2px 0 0; font-family: var(--display); font-size: 19px; letter-spacing: -.015em; line-height: 1.15; }
+.pl p { margin: 4px 0 0; font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+.pl-top { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.pl-tipo { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: color-mix(in srgb, var(--c) 70%, var(--ink)); }
+.pl-free, .pl-now { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.pl-now { background: var(--now-soft); color: var(--now); }
+.pl-when { font-weight: 700; font-size: 14px; }
+.pl-when i { font-weight: 500; color: var(--muted); }
+.pl-where { font-size: 13px; color: var(--muted); font-weight: 600; }
+.pl-acts { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.pl-acts .pill-btn { padding: 6px 12px; font-size: 13px; text-decoration: none; color: var(--ink); }
+.fx { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.fx-it { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 16px; background: color-mix(in srgb, var(--c) 9%, var(--card)); border: 1px solid color-mix(in srgb, var(--c) 25%, var(--line)); }
+.fx-it > span { font-size: 22px; line-height: 1.1; }
+.fx-it b { font-size: 14.5px; }
+.fx-it small { display: block; color: var(--muted); font-size: 12.5px; line-height: 1.4; margin-top: 2px; }
+.fx-it b + small { display: inline; margin-left: 4px; font-weight: 700; color: var(--ink); }
+.fx-it b + small + small, .fx-it b + small:last-child { display: block; margin-left: 0; font-weight: 500; color: var(--muted); }
+.ag-chips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 10px; scrollbar-width: none; }
+.ag-chips button { flex: none; border-radius: 999px; padding: 7px 13px; font-weight: 600; font-size: 13px; white-space: nowrap; }
+.ag-chips button small { color: var(--muted); font-weight: 700; margin-left: 2px; }
+.ag-chips button.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.ag-chips button.on small { color: inherit; opacity: .7; }
+.ag-list { display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+.ag-it { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.ag-it:last-child { border-bottom: 0; }
+.ag-t { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 13px; color: var(--muted); text-align: center; line-height: 1.25; }
+.ag-b a { color: inherit; text-decoration: none; }
+.ag-b a:hover b { text-decoration: underline; }
+.ag-b b { font-size: 14px; font-weight: 650; line-height: 1.3; display: block; }
+.ag-b small { color: var(--muted); font-size: 12.5px; }
+.ag-b .pl-free { font-size: 10.5px; padding: 1px 7px; }
+.ag-it .icon-btn.sm { border: 1px solid var(--line); background: var(--bg); }
+.chip.k-plan { background: color-mix(in srgb, var(--c) 14%, var(--card)); }
+.di-plan { background: transparent; border-style: dashed; }
+.ag-dayh { padding: 10px 14px 6px; font-family: var(--display); font-weight: 800; font-size: 15px; background: var(--bg); border-bottom: 1px solid var(--line); position: sticky; top: 0; }

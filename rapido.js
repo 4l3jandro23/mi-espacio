@@ -144,7 +144,7 @@ function toast(t, o) {
 const SECTIONS = [
   ['Inicio', 'inicio', '☀︎'], ['Calendario', 'cal', '◷'], ['Páginas', 'cuaderno', '▤'], ['Mi Dinero', 'hoy', '€'], ['Previsión del mes', 'prev', '↗'],
   ['Meses', 'mes', '📅'], ['Gastos hormiga', 'hormiga', '🐜'], ['Gastos fijos', 'fijos', '🔁'], ['Movimientos', 'movs', '🧾'], ['Deudas', 'deudas', '🤝'],
-  ['Ajustes de Mi Espacio', 'espacio', '⚙️'], ['Mi Dinero: PIN, copias y sincronización', 'ajustes', '🔒'], ['Calendario de Apple', 'apple', '🍎'],
+  ['Barcelona: planes, gratis y agenda', 'ciudad', '🏙️'], ['Ajustes de Mi Espacio', 'espacio', '⚙️'], ['Mi Dinero: PIN, copias y sincronización', 'ajustes', '🔒'], ['Calendario de Apple', 'apple', '🍎'],
 ];
 const normTxt = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 function nextOcc(ev, from) { for (let i = 0; i < 400; i++) { const d = hAdd(from, i); if (occurs(ev, d)) return d; } return ev.date; }
@@ -182,6 +182,7 @@ function openPalette(q0) {
       for (const [d, h] of Object.entries(holidaysOf(y))) if (d >= today && normTxt(h.name).includes(n)) hols.push({ i: '🎉', t: h.name, s: 'Festivo · ' + dShort(d) + ' ' + y, fn: () => { calSel = d; calMonth = d.slice(0, 8) + '01'; goTab('cal'); } });
       for (const [d, arr] of Object.entries(specialOf(y))) for (const x of arr) if (d >= today && normTxt(x.name).includes(n)) hols.push({ i: x.icon, t: x.name, s: dShort(d) + ' ' + y, fn: () => { calSel = d; calMonth = d.slice(0, 8) + '01'; goTab('cal'); } });
     }
+    if (n.length > 2 && typeof PLANES_BCN !== 'undefined') for (const pl of PLANES_BCN) if (planEnd(pl) >= today && normTxt(pl.n).includes(n)) hols.unshift({ i: (PLAN_TIPOS[pl.tipo] || PLAN_TIPOS.ciudad)[1], t: pl.n, s: 'Plan · ' + planWhen(pl), fn: () => goTab('ciudad') });
     // Si la frase trae día u hora, lo primero es apuntarla; si no, lo que ya tienes con ese nombre.
     const found = evs.concat(pages, secs, acts, hols.sort((a, b) => a.s < b.s ? -1 : 1).slice(0, 4));
     res = (p && p.found ? make.concat(found) : found.concat(make)).slice(0, 14);

@@ -72,6 +72,7 @@ function itemsOn(iso, withPay) {
   }
   if (layerOn('apple') && typeof appleItemsOn === 'function') out.push(...appleItemsOn(iso));
   if (typeof appItemsOn === 'function') out.push(...appItemsOn(iso));
+  if (typeof planItemsOn === 'function') out.push(...planItemsOn(iso));
   const di = nbPages().find(p => p.kind === 'diario:' + iso);
   if (di) out.push({ kind: 'diary', id: di.id, title: 'Entrada del diario', icon: '📔', color: '#9B7BEA', sort: 2000 });
   return out.sort((a, b) => a.sort - b.sort);
@@ -145,6 +146,7 @@ function vInicio() {
 
     ${weekStrip(today)}
     ${comingHTML(today)}
+    ${ciudadHoyHTML(today)}
 
     ${workSched() ? '' : workSetupCard()}
     <section class="hub-sec">
@@ -162,7 +164,7 @@ function vInicio() {
         ${tile(tasksPage ? `data-nbopen="${tasksPage.id}"` : 'data-hubgo="cuaderno"', 'tile-tasks', '✓', 'Tareas', `<b class="tile-big">${pendingTasks}</b><span>${pendingTasks === 1 ? 'pendiente' : 'pendientes'}</span>`)}
         ${tile('data-hubtoday', 'tile-diary', '✎', 'Diario', diaryToday ? '<span>Hoy ya has escrito ✓</span>' : '<span>Hoy aún no has escrito</span>')}
         ${tile('data-hubgo="cuaderno"', 'tile-pages', '▤', 'Páginas', `<span>${nbPages().length ? nbPages().length + ' páginas' : 'Tu cuaderno para todo'}</span>`)}
-        ${tile('data-hubgo="prev"', 'tile-prev', '↗', 'Previsión', m ? `<span>Cómo acabarás el mes</span>` : '<span>Necesita tus extractos</span>')}
+        ${tile('data-hubgo="ciudad"', 'tile-city', '◎', 'Barcelona', '<span>Planes, gratis y agenda de la ciudad</span>')}
       </div>
     </section>
 
