@@ -149,6 +149,7 @@ function vInicio() {
     ${comingHTML(today)}
     ${typeof weekSummaryHTML === 'function' ? weekSummaryHTML(today) : ''}
     ${ciudadHoyHTML(today)}
+    ${typeof findeHTML === 'function' ? findeHTML(today) : ''}
 
     ${workSched() ? '' : workSetupCard()}
     <section class="hub-sec">
@@ -230,6 +231,7 @@ function bindHub() {
     if (t.closest('[data-palette]')) return openPalette();
     if (t.closest('[data-year]')) return openYear();
     if (t.closest('[data-breath]')) return openBreath();
+    if (t.closest('[data-findego]')) { agRango = 'finde'; return goTab('ciudad'); }
     const hm = t.closest('[data-hmood]'); if (hm) { nbSetMood(todayISO(), hm.dataset.hmood); softRender(); return toast('Apuntado en tu diario', { actions: [{ n: 'Añadir algo bueno', fn: () => { tab = 'cuaderno'; nbToday(); setTimeout(() => { const g = document.querySelector('[data-good]'); if (g) g.focus(); }, 400); } }] }); }
     if (t.closest('[data-kbhelp]')) return showShortcuts();
     const efm = t.closest('[data-efmore]'); if (efm) return openEfemerides(efm.dataset.efmore);

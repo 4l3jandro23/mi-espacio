@@ -53,7 +53,7 @@ function weekSummaryHTML(today) {
 }
 
 // ---------- novedades ----------
-const NOVEDADES_V = 'v23';
+const NOVEDADES_V = 'v24';
 const NOVEDADES = [
   ['sparkles', 'Iconos nuevos', 'Toda la app con iconos de línea, más limpia.'],
   ['notebook-pen', 'Cuaderno con sentido', '«Apunta lo que sea» y va solo a su sitio: pelis, música, tareas, sitios, regalos, notas o el calendario.'],
@@ -62,6 +62,7 @@ const NOVEDADES = [
   ['bookmark', 'Guarda planes de Barcelona', 'Guárdalos en «Sitios y planes» o compártelos con quien quieras.'],
   ['music', 'Tus artistas en la agenda', 'Si alguno toca en Barcelona, sale arriba del todo.'],
   ['calendar-heart', 'Tu semana', 'Domingo por la tarde y lunes: un resumen amable de la semana.'],
+  ['sun', 'Tu finde', 'De jueves a sábado: el tiempo del finde, planes, museos gratis y una idea de tu lista.'],
   ['wind', 'Un minuto para respirar', 'Cinco respiraciones lentas cuando lo necesites (en el buscador, o en el diario si el día va regular).'],
   ['tree-palm', 'Cuenta atrás de vacaciones', 'Marca tus días de vacaciones y el inicio te dice cuánto falta.'],
   ['search', 'Del apunte a la acción', 'En tus listas, un toque para buscar el disco en Spotify, dónde ver la peli o el sitio en el mapa. Y puedes compartir cualquier lista.'],
@@ -150,3 +151,28 @@ function netPill() {
 window.addEventListener('online', () => { netPill(); if (typeof doSync === 'function') doSync(); if (typeof appsFetch === 'function') appsFetch(true); if (typeof wxFetch === 'function') wxFetch(); });
 window.addEventListener('offline', netPill);
 document.addEventListener('DOMContentLoaded', netPill);
+
+// ---------- tu finde (jueves, viernes y sábado) ----------
+// Junta el tiempo del sábado y el domingo, lo destacado de Barcelona, cuántos planes gratis hay y alguna idea de tu lista.
+function findeHTML(today) {
+  const w = hDow(today); if (w < 3 || w > 5 || !layerOn('planes')) return '';
+  const sat = hAdd(today, 5 - w), sun = hAdd(sat, 1), days = [sat, sun];
+  const wx = days.map(d => { const x = wxDay(d); if (!x) return ''; const ic = wxIcon(x.code); return `<span class="fd-wx">${WD_L[hDow(d)].slice(0, 3)} ${ic.i} ${x.max}°${x.rain >= 40 ? ` · ${x.rain}% lluvia` : ''}</span>`; }).filter(Boolean);
+  const ps = PLANES_BCN.filter(p => days.some(d => planOn(p, d))).slice(0, 3);
+  const k = sat + '|' + sun, c = AGC[k];
+  if (!c) agFetch(sat, sun).then(l => { if (l && tab === 'inicio') softRender(); });
+  const free = c ? c.list.filter(x => x.gratis && !x.largo).length : 0;
+  const mine = c ? c.list.filter(agMine).slice(0, 2) : [];
+  const pl = nbListPage('planes'), idea = pl ? nbItems(pl).filter(b => !b.checked) : [];
+  const pick = idea.length ? idea[(+today.slice(8)) % idea.length] : null; // una distinta cada día
+  const fsun = isFirstSunday(sun);
+  if (!ps.length && !free && !pick && !fsun) return '';
+  return `<section class="hub-sec"><div class="hub-hrow"><h2 class="hub-h">Tu finde</h2><button class="pill-btn" data-findego>Ver planes</button></div>
+    <div class="fd">${wx.length ? `<div class="fd-row">${wx.join('')}</div>` : ''}
+      ${mine.map(x => `<div class="fd-it mine">${emoIco('💿')} Toca <b>${esc(x.n)}</b> · ${dShort(x.s > sat ? x.s : sat)}</div>`).join('')}
+      ${ps.map(p => `<div class="fd-it">${(PLAN_TIPOS[p.tipo] || PLAN_TIPOS.ciudad)[1]} <b>${esc(p.n)}</b>${p.gratis ? ' · gratis' : ''}</div>`).join('')}
+      ${fsun ? `<div class="fd-it">🏛️ El domingo es primer domingo: <b>museos gratis</b></div>` : ''}
+      ${free ? `<div class="fd-it">🎟️ <b>${free} planes gratis</b> en la agenda del Ayuntamiento</div>` : ''}
+      ${pick ? `<div class="fd-it fd-idea">📍 De tu lista: <b>${nbClean(pick.html)}</b></div>` : ''}
+    </div></section>`;
+}

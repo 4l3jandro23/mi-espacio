@@ -823,3 +823,11 @@ a.ef-row:hover { border-color: var(--ink); }
 @media (prefers-reduced-motion: reduce) { .br-circle { transition: none !important; } }
 .nb-breath { display: block; border: 0; background: color-mix(in srgb, var(--card) 70%, transparent); border-radius: 12px; padding: 8px 12px; margin: 0 0 10px; font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); }
 #netpill { position: fixed; top: calc(10px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); z-index: 90; background: var(--ink); color: var(--bg); border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 600; box-shadow: var(--shadow); white-space: nowrap; }
+
+/* Tu finde */
+.fd { background: var(--card); border-radius: 22px; padding: 14px 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 8px; border-left: 4px solid var(--warm); }
+.fd-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.fd-wx { background: var(--bg); border-radius: 999px; padding: 5px 11px; font-size: 13px; font-weight: 600; }
+.fd-it { font-size: 15px; line-height: 1.4; }
+.fd-it.mine { background: var(--lilac-soft); border-radius: 12px; padding: 6px 10px; }
+.fd-idea a { color: var(--blue); }
