@@ -27,12 +27,15 @@ function wxFetch(force) {
   if (!wxOn() || wxBusy || !navigator.onLine) return;
   if (!force && WX && WX.key === wxKey() && Date.now() - WX.at < 45 * 60e3) return;
   const p = place();
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${p.lat.toFixed(2)}&longitude=${p.lon.toFixed(2)}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=14`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${p.lat.toFixed(2)}&longitude=${p.lon.toFixed(2)}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&hourly=precipitation_probability&timezone=auto&forecast_days=14`;
   wxBusy = true;
   fetch(url, { referrerPolicy: 'no-referrer', credentials: 'omit' }).then(r => r.ok ? r.json() : Promise.reject()).then(j => {
     const days = {};
     (j.daily.time || []).forEach((d, i) => days[d] = { code: j.daily.weather_code[i], max: Math.round(j.daily.temperature_2m_max[i]), min: Math.round(j.daily.temperature_2m_min[i]), rain: j.daily.precipitation_probability_max[i] || 0 });
-    WX = { at: Date.now(), key: wxKey(), cur: { t: Math.round(j.current.temperature_2m), code: j.current.weather_code, night: !j.current.is_day }, days };
+    // Lluvia hora a hora, solo hoy y mañana (para avisar si te pilla al salir del trabajo).
+    const hours = {}, lim = hAdd(todayISO(), 2);
+    ((j.hourly && j.hourly.time) || []).forEach((t, i) => { if (t < lim) hours[t.slice(0, 13)] = j.hourly.precipitation_probability[i] || 0; });
+    WX = { at: Date.now(), key: wxKey(), cur: { t: Math.round(j.current.temperature_2m), code: j.current.weather_code, night: !j.current.is_day }, days, hours };
     try { localStorage.setItem(WX_KEY, JSON.stringify(WX)); } catch (e) {}
     if (['inicio', 'cal'].includes(tab) && !lockMode && !document.querySelector('.sheet-veil') && !(typeof nbBusy === 'function' && nbBusy())) softRender();
   }).catch(() => {}).finally(() => { wxBusy = false; });
@@ -47,9 +50,16 @@ function softRender() {
 document.addEventListener('focusout', () => setTimeout(() => { if (softPending && !document.querySelector('.sheet-veil')) softRender(); }, 150));
 const wxChip = (iso, cls) => { const w = wxDay(iso); if (!w) return ''; const ic = wxIcon(w.code); return `<span class="wx ${cls || ''}" title="${ic.t} · máx ${w.max}° mín ${w.min}°${w.rain >= 30 ? ' · lluvia ' + w.rain + '%' : ''}">${ic.i} ${w.max}°</span>`; };
 // Frase útil para el inicio: si va a llover hoy o mañana.
+const rainAt = (iso, h) => wxOk() && WX.hours ? WX.hours[`${iso}T${String(h).padStart(2, '0')}`] : undefined;
 function wxTip() {
   const t = todayISO(), a = wxDay(t), b = wxDay(hAdd(t, 1)), h = new Date().getHours();
-  if (a && a.rain >= 50 && h < 20) return `☔ Hoy hay un ${a.rain}% de probabilidad de lluvia: sal con paraguas.`;
+  if (a && a.rain >= 40 && h < 22 && WX.hours) {
+    const w = typeof workOn === 'function' ? workOn(t) : null, out = w && !w.off && w.mode !== 'tele' ? +w.to.slice(0, 2) : null;
+    if (out != null && out >= h && (rainAt(t, out) || 0) >= 50) return `☔ Hacia las ${w.to}, cuando sales del trabajo, hay un ${rainAt(t, out)}% de lluvia: coge paraguas.`;
+    let first = null; for (let x = h; x < 24; x++) if ((rainAt(t, x) || 0) >= 50) { first = x; break; }
+    if (first != null) return `☔ Puede llover ${first === h ? 'ya' : 'a partir de las ' + first + ':00'} (${rainAt(t, first)}%). Mejor con paraguas.`;
+  }
+  if (a && a.rain >= 50 && h < 20 && !(WX && WX.hours)) return `☔ Hoy hay un ${a.rain}% de probabilidad de lluvia: sal con paraguas.`;
   if (b && b.rain >= 50) return `☔ Mañana ${b.rain}% de lluvia. Deja el paraguas a mano esta noche.`;
   if (a && a.max >= 32) return `🥵 Hoy llega a ${a.max}°: agua a mano y a la sombra en las horas centrales.`;
   return '';

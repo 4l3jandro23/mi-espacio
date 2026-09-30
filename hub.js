@@ -203,7 +203,8 @@ function vEspacio() {
       <div class="grid2"><label class="f"><span>Días laborables de vacaciones al año</span><input type="text" inputmode="numeric" data-set="vacDays" value="${esc(S.settings.vacDays || '')}" placeholder="p. ej. 23"></label>
       <div class="kpi"><span class="small muted">Usados en ${todayISO().slice(0, 4)}</span><b>${vacUsed(+todayISO().slice(0, 4))}${+S.settings.vacDays ? ' de ' + S.settings.vacDays : ''}</b></div></div></div>
     <div class="card"><h2>🗓️ Qué ves en el calendario</h2><div class="lay-grid">${Object.entries(CAL_CATS).map(([k, c]) => layerRow(k, c.n, c.c)).join('')}${Object.entries(LAYERS).map(([k, v]) => layerRow(k, v[0], v[1])).join('')}</div>
-      <div class="toolbar" style="margin-top:10px"><button data-kbhelp>⌨️ Atajos de teclado</button></div></div>
+      <div class="toolbar" style="margin-top:10px"><button data-icsin>📥 Importar un calendario (.ics)</button><button data-icsout>📤 Descargar mis eventos (.ics)</button><button data-kbhelp>⌨️ Atajos de teclado</button></div>
+      <p class="small muted" style="margin-bottom:0">Importar sirve para traerte de una vez el calendario del trabajo, de Google o de Outlook (en todos se puede exportar a .ics). Si lo vuelves a importar, se actualiza sin duplicar.</p></div>
     <div class="card"><h2>🍎 Calendario y Recordatorios de Apple</h2><p class="small">${appleOn() ? 'Conectado · ' + agoTxt(appleData().at) : 'Tráete tus eventos y recordatorios de Apple, y manda allí lo que crees aquí.'}</p><button data-hubgo="apple">${appleOn() ? 'Ver' : 'Conectar'}</button></div>
     <div class="card"><h2>🔒 Mi Dinero, PIN y sincronización</h2><p class="small">Saldos, copias de seguridad, cambiar el PIN y vincular tus dispositivos. Te pedirá el PIN.</p><button data-hubgo="ajustes">Abrir</button></div>
   </div>`;
@@ -219,6 +220,8 @@ function bindHub() {
     if (t.closest('[data-hubnewpage]')) { tab = 'cuaderno'; render(); return nbNewPage(null); }
     if (t.closest('[data-palette]')) return openPalette();
     if (t.closest('[data-kbhelp]')) return showShortcuts();
+    if (t.closest('[data-icsin]')) return icsPick();
+    if (t.closest('[data-icsout]')) return icsExport();
     if (t.closest('[data-calside]')) return openSideSheet();
     if (t.closest('[data-geo]')) return useMyLocation();
     const ne = t.closest('[data-newev]'); if (ne) return openEvSheet(null, ne.dataset.newev);
