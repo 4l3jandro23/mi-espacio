@@ -127,7 +127,7 @@ const NB_LISTS = [
 ];
 const NB_MOODS = [['😞', 'Fatal'], ['😕', 'Regular'], ['😐', 'Normal'], ['🙂', 'Bien'], ['😄', 'Genial']];
 let nbAllNotes = false;
-const nbPlain = h => String(h || '').replace(/<br>/g, ' ').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+const nbPlain = h => String(h || '').replace(/<br>/g, ' ').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"').trim();
 const nbSpecial = p => /^(lista:|diario|nota|notas-root)/.test(p.kind || '');
 
 // Las páginas que ya tenías con esos nombres pasan a ser esas listas (no se pierde nada).
@@ -280,7 +280,7 @@ function nbHome() {
 
     <section class="nb-sec2 nb-diary">
       ${nbMoodHTML(today)}
-      <div class="nb-diary-foot">${nbWeekMoods()}<button class="link small" data-diarymore="${today}">Escribir más ›</button></div>
+      <div class="nb-diary-foot">${nbWeekMoods()}<span class="nb-dlinks"><button class="link small" data-year>Tu año</button><button class="link small" data-diarymore="${today}">Escribir más ›</button></span></div>
       ${nbMemory()}
     </section>
 
@@ -540,6 +540,7 @@ function bindCuaderno() {
     const ct = t.closest('[data-capto]'); if (ct) { const i = $('nbcap'); nbCapSave(i.value, ct.dataset.capto); return; }
     if (t.id === 'nbcapgo') { const i = $('nbcap'); if (i.value.trim()) nbCapSave(i.value); else i.focus(); return; }
     if (t.closest('[data-allnotes]')) { nbAllNotes = !nbAllNotes; return nbRe(); }
+    if (t.closest('[data-year]')) return openYear();
     const tn = t.closest('[data-tplnew]'); if (tn) {
       const k = tn.dataset.tplnew, T = NB_TEMPLATES[k], p = nbCreate({ title: k === 'blank' ? '' : T.n, icon: T.i, blocks: T.b() });
       nbSaveNow(); nbGo(p.id); const el = $('nbtitle'); if (el) { el.focus(); const r = document.createRange(); r.selectNodeContents(el); r.collapse(false); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r); }

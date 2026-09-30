@@ -147,6 +147,7 @@ function vInicio() {
 
     ${weekStrip(today)}
     ${comingHTML(today)}
+    ${typeof weekSummaryHTML === 'function' ? weekSummaryHTML(today) : ''}
     ${ciudadHoyHTML(today)}
 
     ${workSched() ? '' : workSetupCard()}
@@ -226,6 +227,7 @@ function bindHub() {
     if (t.closest('[data-hubnewpage]')) { tab = 'cuaderno'; render(); return nbNewPage(null); }
     if (t.closest('[data-hubnote]')) { tab = 'cuaderno'; nbCur = null; render(); scrollTo(0, 0); const i = document.getElementById('nbcap'); if (i) i.focus(); return; }
     if (t.closest('[data-palette]')) return openPalette();
+    if (t.closest('[data-year]')) return openYear();
     if (t.closest('[data-kbhelp]')) return showShortcuts();
     const efm = t.closest('[data-efmore]'); if (efm) return openEfemerides(efm.dataset.efmore);
     if (t.closest('[data-icsin]')) return icsPick();
@@ -275,7 +277,8 @@ function comingHTML(today) {
     const d = nextOcc(e, today), n = hDays(today, d);
     if (n < 0 || n > (e.star ? 400 : 21)) continue;
     const age = e.cat === 'cumple' && e.year ? ` (${+d.slice(0, 4) - e.year})` : '';
-    cards.push(card(n, e.star ? '⭐' : '🎂', e.title + age, dShort(d), `data-editev="${e.id}" data-occ="${d}"`, (CAL_CATS[e.cat] || CAL_CATS.otro).c, e.loc ? '📍 ' + esc(e.loc) : ''));
+    const gi = e.cat === 'cumple' && typeof giftIdeasFor === 'function' ? giftIdeasFor(e.title) : 0;
+    cards.push(card(n, e.star ? '⭐' : '🎂', e.title + age, dShort(d), `data-editev="${e.id}" data-occ="${d}"`, (CAL_CATS[e.cat] || CAL_CATS.otro).c, [e.loc ? '📍 ' + esc(e.loc) : '', gi ? `🎁 ${gi === 1 ? '1 idea' : gi + ' ideas'} de regalo apuntada${gi === 1 ? '' : 's'}` : e.cat === 'cumple' && n <= 14 ? '🎁 ¿Ideas de regalo? Apúntalas en el cuaderno' : ''].filter(Boolean).join(' · ')));
   }
   if (layerOn('festivos')) { const h = upcomingHolidays(hAdd(today, 1), 150, 1)[0]; if (h) cards.push(card(hDays(today, h.iso), '🎉', h.names.join(' y '), dShort(h.iso), `data-dayinfo="${h.iso}"`, '#EF5B4C', bridgeTxt(h))); }
   if (layerOn('senalados')) for (let i = 0; i <= 14; i++) { const d = hAdd(today, i); for (const x of specialOn(d)) if (!seen.has(x.name)) { seen.add(x.name); cards.push(card(i, x.icon, x.name, dShort(d), `data-dayinfo="${d}"`, '#F2A93B', esc(x.tip))); } }

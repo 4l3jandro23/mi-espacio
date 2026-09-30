@@ -175,6 +175,8 @@ function openPalette(q0) {
       { i: '🏠', t: 'Hoy teletrabajo', s: 'Acción', fn: () => setDayMode(todayISO(), 'tele') },
       { i: '⌨️', t: 'Atajos de teclado', s: 'Ayuda', fn: () => showShortcuts() },
     ].filter(x => !n || normTxt(x.t).includes(n));
+    const listHits = !n ? [] : nbPages().filter(p => /^lista:/.test(p.kind || '')).flatMap(p => nbItems(p).filter(b => !b.checked && normTxt(nbPlain(b.html)).includes(n)).map(b => ({ i: p.icon || '📋', t: nbPlain(b.html), s: nbTitle(p), fn: () => { tab = 'cuaderno'; nbGo(p.id); } }))).slice(0, 5);
+    const noteHits = !n ? [] : nbPages().filter(p => p.kind === 'nota' && !normTxt(nbTitle(p)).includes(n) && normTxt(nbText(p)).includes(n)).slice(0, 4).map(p => ({ i: '📝', t: nbTitle(p), s: 'Nota', fn: () => { tab = 'cuaderno'; nbGo(p.id); } }));
     const pages = !n ? [] : nbPages().filter(p => normTxt(nbTitle(p)).includes(n)).slice(0, 6).map(p => ({ i: p.icon || '📄', t: nbTitle(p), s: 'Página', fn: () => { tab = 'cuaderno'; nbGo(p.id); } }));
     const evs = !n ? [] : evAll().filter(e => normTxt(e.title).includes(n)).map(e => ({ e, d: nextOcc(e, today) })).sort((a, b) => a.d < b.d ? -1 : 1).slice(0, 6)
       .map(({ e, d }) => ({ i: '●', c: (CAL_CATS[e.cat] || CAL_CATS.otro).c, t: e.title, s: dShort(d) + (d.slice(0, 4) !== today.slice(0, 4) ? ' ' + d.slice(0, 4) : '') + (e.allDay ? '' : ' · ' + e.start), fn: () => { calSel = d; calMonth = d.slice(0, 8) + '01'; goTab('cal'); openEvSheet(e.id, d); } }));
@@ -185,7 +187,7 @@ function openPalette(q0) {
     }
     if (n.length > 2 && typeof PLANES_BCN !== 'undefined') for (const pl of PLANES_BCN) if (planEnd(pl) >= today && normTxt(pl.n).includes(n)) hols.unshift({ i: (PLAN_TIPOS[pl.tipo] || PLAN_TIPOS.ciudad)[1], t: pl.n, s: 'Plan · ' + planWhen(pl), fn: () => goTab('ciudad') });
     // Si la frase trae día u hora, lo primero es apuntarla; si no, lo que ya tienes con ese nombre.
-    const found = evs.concat(pages, secs, acts, hols.sort((a, b) => a.s < b.s ? -1 : 1).slice(0, 4));
+    const found = evs.concat(listHits, noteHits, pages, secs, acts, hols.sort((a, b) => a.s < b.s ? -1 : 1).slice(0, 4));
     res = (p && p.found ? make.concat(found) : found.concat(make)).slice(0, 14);
     idx = 0; paint();
   };
