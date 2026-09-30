@@ -313,6 +313,8 @@ function nbHome() {
       ${nbMemory()}
     </section>
 
+    ${typeof paisesHTML === 'function' ? paisesHTML() : ''}
+
     <section class="nb-sec2">
       <div class="nb-h"><h2>Notas</h2><label class="nbh-q">${ico('search')}<input id="nbhq" placeholder="Buscar" value="${esc(nbHomeQ)}" autocomplete="off" aria-label="Buscar en tus notas"></label></div>
       <div id="nbnotes">${nbNotesHTML()}</div>

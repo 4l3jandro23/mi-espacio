@@ -1041,8 +1041,16 @@ button.al { border-top: 0; border-right: 0; border-bottom: 0; font: inherit; tex
 .ph-add { display: inline-flex; align-items: center; gap: 8px; border: 1px dashed var(--line); border-radius: 12px; padding: 8px 12px; font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer; }
 .ph-add .ico { width: 18px; height: 18px; }
 
-.pais-grid, .pais-dud { display: flex; flex-wrap: wrap; gap: 8px; }
-.pais-ch { display: inline-flex; align-items: center; gap: 6px; background: var(--bg); border-radius: 999px; padding: 7px 13px; font-size: 14px; font-weight: 600; }
-.pais-tg { cursor: pointer; }
-.pais-tg small { color: var(--muted); font-weight: 500; }
-.pais-tg input { accent-color: var(--ink); }
+.nb-pasaporte .nb-h { align-items: baseline; }
+.pp-count { display: flex; align-items: baseline; gap: 5px; font-family: var(--display); font-weight: 800; font-size: 22px; color: var(--lilac); }
+.pp-count small { font-family: var(--body); font-weight: 600; font-size: 12.5px; color: var(--muted); text-transform: none; letter-spacing: 0; }
+.pp-stamps { display: flex; flex-wrap: wrap; gap: 10px 8px; }
+.pp-stamp { --r: 0deg; display: inline-flex; align-items: center; gap: 6px; background: var(--card); border: 1.5px dashed color-mix(in srgb, var(--lilac) 55%, var(--line)); border-radius: 12px; padding: 7px 12px 7px 8px;
+  font-size: 13.5px; font-weight: 700; color: var(--ink); transform: rotate(var(--r)); transition: transform .15s; }
+.pp-stamp:hover { transform: rotate(0deg) scale(1.05); }
+.pp-flag { font-size: 17px; }
+.pp-dud { margin-top: 14px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.pp-tg { cursor: pointer; opacity: 1; }
+.pp-tg.off { opacity: .4; border-style: solid; border-color: var(--line); }
+.pp-tg input { position: absolute; opacity: 0; width: 0; height: 0; }
+.pp-tg small { color: var(--muted); font-weight: 500; margin-left: 2px; }

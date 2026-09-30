@@ -229,12 +229,14 @@ const paisesExtra = () => Object.assign({ andorra: false, belgica: false }, S.se
 function paisesHTML() {
   const ex = paisesExtra(), extraOn = [PAISES_DUDOSOS[0][1].toLowerCase() === 'andorra' && ex.andorra, ex.belgica].filter(Boolean).length;
   const n = PAISES.length + extraOn;
-  return `<div class="card"><h2>🌍 Tus viajes</h2>
-    <p class="small muted" style="margin-top:0"><b>${n} países</b> visitados.</p>
-    <div class="pais-grid">${PAISES.map(([f, n2]) => `<span class="pais-ch">${f} ${esc(n2)}</span>`).join('')}</div>
-    <p class="small muted" style="margin:12px 0 6px">Dudosos, cuenta tú si valen:</p>
-    <div class="pais-dud">${PAISES_DUDOSOS.map(([f, n2, why], i) => { const k = n2.toLowerCase() === 'andorra' ? 'andorra' : 'belgica'; return `<label class="pais-ch pais-tg"><input type="checkbox" data-paisex="${k}" ${ex[k] ? 'checked' : ''}> ${f} ${esc(n2)} <small>(${esc(why)})</small></label>`; }).join('')}</div>
-  </div>`;
+  return `<section class="nb-sec2 nb-pasaporte">
+    <div class="nb-h"><h2>Tu pasaporte</h2><span class="pp-count">${n}<small>países</small></span></div>
+    <div class="pp-stamps">${PAISES.map(([f, n2], i) => `<span class="pp-stamp" style="--r:${(i % 5 - 2) * 2.2}deg"><span class="pp-flag">${f}</span>${esc(n2)}</span>`).join('')}</div>
+    <div class="pp-dud">
+      <span class="small muted">¿Cuentan estos?</span>
+      ${PAISES_DUDOSOS.map(([f, n2, why]) => { const k = n2.toLowerCase() === 'andorra' ? 'andorra' : 'belgica'; return `<label class="pp-stamp pp-tg${ex[k] ? '' : ' off'}"><input type="checkbox" data-paisex="${k}" ${ex[k] ? 'checked' : ''}><span class="pp-flag">${f}</span>${esc(n2)}<small>${esc(why)}</small></label>`; }).join('')}
+    </div>
+  </section>`;
 }
 document.addEventListener('change', e => {
   const t = e.target.closest && e.target.closest('[data-paisex]'); if (!t) return;

@@ -209,7 +209,6 @@ function vEspacio() {
     ${typeof ntfyHTML === 'function' ? ntfyHTML() : ''}
     ${typeof backupSettingsHTML === 'function' ? backupSettingsHTML() : ''}
     ${appsSettingsHTML()}
-    ${typeof paisesHTML === 'function' ? paisesHTML() : ''}
     <div class="card"><h2>📍 Dónde estás</h2>
       <p class="small muted" style="margin-top:0">Para los festivos, la salida y la puesta del sol y el tiempo. Al servicio del tiempo (Open-Meteo) solo le llegan las coordenadas de la ciudad, nada tuyo.</p>
       <div class="grid2"><label class="f"><span>Festivos</span><select data-set="region">${Object.entries(REGIONS).map(([k, n]) => `<option value="${k}" ${region() === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
