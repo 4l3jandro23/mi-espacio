@@ -137,7 +137,7 @@ function vInicio() {
           <div class="sky-wd">${cap(now.toLocaleDateString('es-ES', { weekday: 'long' }))}</div>
           <div class="sky-num">${now.getDate()}</div>
           <div class="sky-mo">${now.toLocaleDateString('es-ES', { month: 'long' })} · ${now.toTimeString().slice(0, 5)}</div>
-          ${hol ? `<div class="sky-hol">🎉 Festivo: ${esc(hol.name)}</div>` : ''}
+          ${hol ? `<div class="sky-hol">🎉 Festivo: ${esc(hol.name)}</div>` : typeof vacCountdown === 'function' && vacCountdown(today) ? `<div class="sky-hol">🏖️ ${vacCountdown(today)}</div>` : ''}
         </div>
         <div class="sky-arc">${dayArc(items, workSpans(today), sun)}${workNow(today) ? `<div class="sky-work">${workNow(today)}</div>` : ''}<div class="sky-next">${nextTxt}</div>${modeChips(today)}</div>
       </div>
@@ -229,6 +229,7 @@ function bindHub() {
     if (t.closest('[data-hubnote]')) { tab = 'cuaderno'; nbCur = null; render(); scrollTo(0, 0); const i = document.getElementById('nbcap'); if (i) i.focus(); return; }
     if (t.closest('[data-palette]')) return openPalette();
     if (t.closest('[data-year]')) return openYear();
+    if (t.closest('[data-breath]')) return openBreath();
     const hm = t.closest('[data-hmood]'); if (hm) { nbSetMood(todayISO(), hm.dataset.hmood); softRender(); return toast('Apuntado en tu diario', { actions: [{ n: 'Añadir algo bueno', fn: () => { tab = 'cuaderno'; nbToday(); setTimeout(() => { const g = document.querySelector('[data-good]'); if (g) g.focus(); }, 400); } }] }); }
     if (t.closest('[data-kbhelp]')) return showShortcuts();
     const efm = t.closest('[data-efmore]'); if (efm) return openEfemerides(efm.dataset.efmore);

@@ -202,6 +202,7 @@ function nbMoodHTML(iso, inPage) {
   return `<div class="nb-mood ${inPage ? 'in-page' : ''}">
     ${inPage ? '' : `<div class="nb-mood-q">${today ? '¿Qué tal hoy?' : '¿Qué tal fue el día?'}<small>Sin obligación: cuando te apetezca.</small></div>`}
     <div class="nb-faces" role="radiogroup" aria-label="Cómo ha ido el día">${NB_MOODS.map(([f, n], i) => `<button role="radio" aria-checked="${m === i + 1}" class="${m === i + 1 ? 'on' : ''}" data-mood="${iso}|${i + 1}"><span>${f}</span><small>${n}</small></button>`).join('')}</div>
+    ${!inPage && m && m <= 2 ? '<button class="nb-breath" data-breath>😮‍💨 ¿Un minuto para respirar?</button>' : ''}
     <input class="nb-good" data-good="${iso}" value="${esc(e && e.good || '')}" placeholder="Una cosa buena${today ? ' de hoy' : ''}, aunque sea pequeña…" maxlength="200" enterkeyhint="done" autocomplete="off" aria-label="Una cosa buena del día">
   </div>`;
 }
@@ -543,6 +544,7 @@ function bindCuaderno() {
     }
     const md = t.closest('[data-mood]'); if (md) {
       const [iso, v] = md.dataset.mood.split('|'), e = nbSetMood(iso, v);
+      if (!nbCur) return nbRe();
       document.querySelectorAll(`[data-mood^="${iso}|"]`).forEach(x => { const on = +x.dataset.mood.split('|')[1] === e.mood; x.classList.toggle('on', on); x.setAttribute('aria-checked', on); });
       if (!nbCur) { const w = document.querySelector('.nb-week'); if (w) w.outerHTML = nbWeekMoods(); }
       return;
@@ -553,6 +555,7 @@ function bindCuaderno() {
     if (t.id === 'nbcapgo') { const i = $('nbcap'); if (i.value.trim()) nbCapSave(i.value); else i.focus(); return; }
     if (t.closest('[data-allnotes]')) { nbAllNotes = !nbAllNotes; return nbRe(); }
     if (t.closest('[data-year]')) return openYear();
+    if (t.closest('[data-breath]')) return openBreath();
     const tn = t.closest('[data-tplnew]'); if (tn) {
       const k = tn.dataset.tplnew, T = NB_TEMPLATES[k], p = nbCreate({ title: k === 'blank' ? '' : T.n, icon: T.i, blocks: T.b() });
       nbSaveNow(); nbGo(p.id); const el = $('nbtitle'); if (el) { el.focus(); const r = document.createRange(); r.selectNodeContents(el); r.collapse(false); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r); }

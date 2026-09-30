@@ -171,6 +171,7 @@ function openPalette(q0) {
     const secs = SECTIONS.filter(x => !n || normTxt(x[0]).includes(n)).map(x => ({ i: x[2], t: x[0], s: 'Ir a', fn: () => goTab(x[1]) }));
     const acts = [
       { i: '🙂', t: 'Diario: ¿qué tal hoy?', s: 'Acción', fn: () => { tab = 'cuaderno'; nbToday(); } },
+      { i: '😮‍💨', t: 'Respirar un minuto', s: 'Para bajar revoluciones', fn: () => openBreath() },
       { i: '◷', t: 'Ver hoy en el calendario', s: 'Acción', fn: () => { calSel = todayISO(); calMonth = calSel.slice(0, 8) + '01'; calView = calView === 'agenda' ? 'semana' : calView; goTab('cal'); } },
       { i: '🏠', t: 'Hoy teletrabajo', s: 'Acción', fn: () => setDayMode(todayISO(), 'tele') },
       { i: '⌨️', t: 'Atajos de teclado', s: 'Ayuda', fn: () => showShortcuts() },

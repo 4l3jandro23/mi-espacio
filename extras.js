@@ -53,7 +53,7 @@ function weekSummaryHTML(today) {
 }
 
 // ---------- novedades ----------
-const NOVEDADES_V = 'v22';
+const NOVEDADES_V = 'v23';
 const NOVEDADES = [
   ['sparkles', 'Iconos nuevos', 'Toda la app con iconos de línea, más limpia.'],
   ['notebook-pen', 'Cuaderno con sentido', '«Apunta lo que sea» y va solo a su sitio: pelis, música, tareas, sitios, regalos, notas o el calendario.'],
@@ -62,6 +62,8 @@ const NOVEDADES = [
   ['bookmark', 'Guarda planes de Barcelona', 'Guárdalos en «Sitios y planes» o compártelos con quien quieras.'],
   ['music', 'Tus artistas en la agenda', 'Si alguno toca en Barcelona, sale arriba del todo.'],
   ['calendar-heart', 'Tu semana', 'Domingo por la tarde y lunes: un resumen amable de la semana.'],
+  ['wind', 'Un minuto para respirar', 'Cinco respiraciones lentas cuando lo necesites (en el buscador, o en el diario si el día va regular).'],
+  ['tree-palm', 'Cuenta atrás de vacaciones', 'Marca tus días de vacaciones y el inicio te dice cuánto falta.'],
   ['search', 'Del apunte a la acción', 'En tus listas, un toque para buscar el disco en Spotify, dónde ver la peli o el sitio en el mapa. Y puedes compartir cualquier lista.'],
 ];
 function novedadesCheck() {
@@ -107,3 +109,44 @@ function agMine(x) {
   for (const a of A) if (a.length >= 5 && t.includes(' ' + a + ' ')) return a;
   return '';
 }
+
+// ---------- un minuto para respirar ----------
+// Respiración lenta: 4 s tomando aire, 2 s arriba, 6 s soltándolo. Cinco vueltas (un minuto). Sin prisa y sin puntuación.
+let breathT = null;
+function openBreath() {
+  if (document.getElementById('breath')) return;
+  const box = document.createElement('div'); box.className = 'sheet-veil breath-veil'; box.id = 'breath';
+  box.innerHTML = `<div class="breath" role="dialog" aria-label="Respirar un minuto"><div class="br-circle"><span></span></div><div class="br-txt" aria-live="polite">Busca una postura cómoda</div><div class="br-sub">Cinco respiraciones lentas. Si te distraes, no pasa nada: vuelves y ya.</div><button data-close>Terminar</button></div>`;
+  document.body.appendChild(box);
+  const c = box.querySelector('.br-circle'), tx = box.querySelector('.br-txt'), sub = box.querySelector('.br-sub');
+  const steps = [['Toma aire…', 4000, 'in'], ['Mantén', 2000, 'hold'], ['Suéltalo despacio…', 6000, 'out']];
+  let n = 0, i = 0;
+  const close = () => { clearTimeout(breathT); box.remove(); };
+  const next = () => {
+    if (n >= 5) { tx.textContent = 'Muy bien'; sub.textContent = 'Un minuto para ti. Vuelve cuando quieras.'; c.className = 'br-circle'; breathT = setTimeout(close, 3500); return; }
+    const [t, ms, cls] = steps[i];
+    tx.textContent = t; c.className = 'br-circle ' + cls; c.style.transitionDuration = ms + 'ms'; sub.textContent = `${n + 1} de 5`;
+    breathT = setTimeout(() => { i = (i + 1) % 3; if (!i) n++; next(); }, ms);
+  };
+  breathT = setTimeout(next, 1200);
+  box.onclick = e => { if (e.target.closest('[data-close]')) close(); };
+  document.addEventListener('keydown', function k(e) { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', k); } });
+}
+
+// ---------- cuánto falta para tus vacaciones ----------
+function vacCountdown(today) {
+  if (typeof dayMode !== 'function' || dayMode(today) === 'vacas') return '';
+  for (let i = 1; i <= 120; i++) { const d = hAdd(today, i); if (S.days && S.days[d] && S.days[d].mode === 'vacas') return i === 1 ? 'Mañana empiezan tus vacaciones' : `Vacaciones en ${i} días`; }
+  return '';
+}
+
+// ---------- sin conexión ----------
+function netPill() {
+  let el = document.getElementById('netpill');
+  if (navigator.onLine) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.id = 'netpill'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+  el.textContent = 'Sin conexión · todo lo que apuntes se guarda igual';
+}
+window.addEventListener('online', () => { netPill(); if (typeof doSync === 'function') doSync(); if (typeof appsFetch === 'function') appsFetch(true); if (typeof wxFetch === 'function') wxFetch(); });
+window.addEventListener('offline', netPill);
+document.addEventListener('DOMContentLoaded', netPill);
