@@ -201,8 +201,9 @@ function nbMoodHTML(iso, inPage) {
   return `<div class="nb-mood ${inPage ? 'in-page' : ''}">
     ${inPage ? '' : `<div class="nb-mood-q">${today ? '¿Qué tal hoy?' : '¿Qué tal fue el día?'}<small>Sin obligación: cuando te apetezca.</small></div>`}
     <div class="nb-faces" role="radiogroup" aria-label="Cómo ha ido el día">${NB_MOODS.map(([f, n], i) => `<button role="radio" aria-checked="${m === i + 1}" class="${m === i + 1 ? 'on' : ''}" data-mood="${iso}|${i + 1}"><span>${f}</span><small>${n}</small></button>`).join('')}</div>
-    ${!inPage && m && m <= 2 ? '<button class="nb-breath" data-breath>😮‍💨 ¿Un minuto para respirar?</button>' : ''}
+    ${!inPage && m && m <= 2 ? `<div class="nb-breaths"><button class="nb-breath" data-breath>😮‍💨 ¿Un minuto para respirar?</button>${calmOn() ? '' : '<button class="nb-breath" data-calm="on">🌙 Inicio en modo calma hoy</button>'}</div>` : ''}
     <input class="nb-good" data-good="${iso}" value="${esc(e && e.good || '')}" placeholder="Una cosa buena${today ? ' de hoy' : ''}, aunque sea pequeña…" maxlength="200" enterkeyhint="done" autocomplete="off" aria-label="Una cosa buena del día">
+    ${typeof photoSlot === 'function' ? photoSlot(iso) : ''}
   </div>`;
 }
 function nbWeekMoods() {

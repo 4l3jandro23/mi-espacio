@@ -130,6 +130,41 @@ function vInicio() {
   const nextTxt = next ? `Siguiente: <b>${esc(next.title)}</b> a las ${hm(next.time)}${toMin(next.time) - nowMin < 90 ? ` · en ${toMin(next.time) - nowMin} min` : ''}` : items.some(i => i.kind === 'ev') ? 'Ya no te queda nada más hoy.' : 'Hoy no tienes nada apuntado.';
   const tile = (go, cls, icon, label, body, extra) => `<button class="tile ${cls}" ${go} style="--i:${tile.n = (tile.n || 0) + 1}"><span class="tile-ic">${icon}</span><span class="tile-lb">${label}</span><span class="tile-bd">${body}</span>${extra || ''}</button>`;
   tile.n = 0;
+  const SEC = {
+    calma: () => typeof calmHTML === 'function' ? calmHTML() : '',
+    copia: () => (typeof syncGuideHTML === 'function' ? syncGuideHTML() : '') + (typeof backupCardHTML === 'function' ? backupCardHTML() : ''),
+    semana: () => weekStrip(today),
+    seviene: () => comingHTML(today),
+    resumen: () => (typeof reviewDue === 'function' && reviewDue() ? `<section class="hub-sec"><div class="bk rvcard"><span class="bk-ic">${ico('calendar-heart')}</span><div class="bk-b"><b>Revisión de la semana</b><small>5 minutos para mirar la semana que viene con calma.</small><div class="bk-acts"><button class="primary" data-review>Empezar</button></div></div></div></section>` : '') + (typeof weekSummaryHTML === 'function' ? weekSummaryHTML(today) : ''),
+    ciudad: () => ciudadHoyHTML(today),
+    finde: () => typeof findeHTML === 'function' ? findeHTML(today) : '',
+    hoy: () => `    ${workSched() ? '' : workSetupCard()}
+    <section class="hub-sec">
+      <h2 class="hub-h">Hoy</h2>
+      ${tip ? `<div class="hub-tip">${tip}</div>` : ''}
+      ${h >= 19 && !moodToday ? `<div class="hub-mood"><span>¿Qué tal hoy?</span><div class="nb-faces">${NB_MOODS.map(([f, n], i) => `<button data-hmood="${i + 1}" title="${n}"><span>${f}</span><small>${n}</small></button>`).join('')}</div></div>` : ''}
+      ${appsDayHTML(today, true)}
+      <div class="day-list">${items.length ? items.map(dayItemHTML).join('') : `<div class="empty-day">Día despejado. <button class="link" data-newev="${today}">Apunta algo</button></div>`}</div>
+    </section>`,
+    apartados: () => `    <section class="hub-sec">
+      <h2 class="hub-h">Tus apartados</h2>
+      <div class="tiles">
+        ${tile('data-hubgo="hoy"', 'tile-money', '💰', 'Mi Dinero', m ? `<b class="tile-big">${eur(Math.max(0, m.A.perDay))}</b><span>al día hasta el cobro</span>` : AN ? '<span>🔒 Con PIN · toca para entrar</span>' : '<span>Carga tus extractos para empezar</span>')}
+        ${tile('data-hubgo="cal"', 'tile-cal', '◷', 'Calendario', next ? `<span>${esc(next.title)} · ${hm(next.time)}</span>` : week[0] ? `<span>${fmtDay(week[0].d, { weekday: 'short', day: 'numeric' })}: ${esc(week[0].items[0].title)}</span>` : '<span>Nada en los próximos días</span>')}
+        ${tile('data-hubgo="tareas"', 'tile-tasks', '☑', 'Tareas', typeof tkCount === 'function' && tkCount('hoy') ? `<b class="tile-big">${tkCount('hoy')}</b><span>para hoy · ${pendingTasks} en total</span>` : `<b class="tile-big">${pendingTasks}</b><span>${pendingTasks === 1 ? 'pendiente' : 'pendientes'}</span>`)}
+        ${tile('data-hubtoday', 'tile-diary', moodToday ? moodToday[0] : '✎', 'Diario', moodToday ? `<span>Hoy: ${moodToday[1].toLowerCase()}${diaryToday.good ? ' · ' + esc(diaryToday.good) : ''}</span>` : '<span>¿Qué tal hoy? Un toque y listo</span>')}
+        ${tile('data-hubgo="cuaderno"', 'tile-pages', '▤', 'Cuaderno', listN ? `<b class="tile-big">${listN}</b><span>en tus listas</span>` : '<span>Listas, notas e ideas</span>')}
+        ${tile('data-hubgo="ciudad"', 'tile-city', '◎', 'Barcelona', '<span>Planes, gratis y agenda de la ciudad</span>')}
+      </div>
+    </section>`,
+    apps: () => typeof appsLauncherHTML === 'function' ? appsLauncherHTML(today) : '',
+    descubre: () => typeof descubreHTML === 'function' ? descubreHTML(today) : '',
+    efemerides: () => efHTML(today, true),
+    recordatorios: () => remsHTML(),
+    proximos: () => week.length ? `<section class="hub-sec"><h2 class="hub-h">Próximos días</h2><div class="agenda">${week.map(w => `<button class="ag-row" data-goday="${w.d}" data-goview="dia"><span class="ag-date"><b>${+w.d.slice(8)}</b><small>${new Date(w.d + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short' })}</small></span><span class="ag-items">${w.items.slice().sort((a, b) => (a.kind === 'plan') - (b.kind === 'plan')).slice(0, 3).map(i => `<span class="ag-it"><i style="background:${i.color}"></i>${i.time ? hm(i.time) + ' · ' : ''}${esc(i.title)}</span>`).join('')}${w.items.length > 3 ? `<span class="muted small">y ${w.items.length - 3} más</span>` : ''}</span></button>`).join('')}</div></section>` : '',
+    cuaderno: () => recent.length ? `<section class="hub-sec"><h2 class="hub-h">Del cuaderno</h2><div class="pages-strip">${recent.map(p => `<button class="pg-chip" data-nbopen="${p.id}"><span>${esc(p.icon || '📄')}</span>${esc(nbTitle(p))}</button>`).join('')}</div></section>` : '',
+  };
+
   return `<div class="hub">
     <section class="sky sky-${phase}">
       <div class="sky-top"><span class="sky-hi">${hi}${myFirst() ? ', ' + esc(myFirst()) : ''}</span><span class="sky-tools">${cur ? `<span class="sky-wx" title="${wic.t}${wd ? ` · máx ${wd.max}° mín ${wd.min}°` : ''}">${wic.i} <b>${cur.t}°</b>${wd ? `<small>${wd.max}° · ${wd.min}°</small>` : ''}</span>` : ''}<button class="sky-gear" data-palette aria-label="Buscar" title="Buscar (Ctrl+K)">⌕</button><button class="sky-gear" data-hubgo="espacio" aria-label="Ajustes">⚙️</button></span></div>
@@ -146,41 +181,8 @@ function vInicio() {
       <div class="sky-qah" id="hubqah"></div>
     </section>
 
-    ${typeof backupCardHTML === 'function' ? backupCardHTML() : ''}
-    ${weekStrip(today)}
-    ${comingHTML(today)}
-    ${typeof weekSummaryHTML === 'function' ? weekSummaryHTML(today) : ''}
-    ${ciudadHoyHTML(today)}
-    ${typeof findeHTML === 'function' ? findeHTML(today) : ''}
-
-    ${workSched() ? '' : workSetupCard()}
-    <section class="hub-sec">
-      <h2 class="hub-h">Hoy</h2>
-      ${tip ? `<div class="hub-tip">${tip}</div>` : ''}
-      ${h >= 19 && !moodToday ? `<div class="hub-mood"><span>¿Qué tal hoy?</span><div class="nb-faces">${NB_MOODS.map(([f, n], i) => `<button data-hmood="${i + 1}" title="${n}"><span>${f}</span><small>${n}</small></button>`).join('')}</div></div>` : ''}
-      ${appsDayHTML(today, true)}
-      <div class="day-list">${items.length ? items.map(dayItemHTML).join('') : `<div class="empty-day">Día despejado. <button class="link" data-newev="${today}">Apunta algo</button></div>`}</div>
-    </section>
-
-    <section class="hub-sec">
-      <h2 class="hub-h">Tus apartados</h2>
-      <div class="tiles">
-        ${tile('data-hubgo="hoy"', 'tile-money', '💰', 'Mi Dinero', m ? `<b class="tile-big">${eur(Math.max(0, m.A.perDay))}</b><span>al día hasta el cobro</span>` : AN ? '<span>🔒 Con PIN · toca para entrar</span>' : '<span>Carga tus extractos para empezar</span>')}
-        ${tile('data-hubgo="cal"', 'tile-cal', '◷', 'Calendario', next ? `<span>${esc(next.title)} · ${hm(next.time)}</span>` : week[0] ? `<span>${fmtDay(week[0].d, { weekday: 'short', day: 'numeric' })}: ${esc(week[0].items[0].title)}</span>` : '<span>Nada en los próximos días</span>')}
-        ${tile('data-hubgo="tareas"', 'tile-tasks', '☑', 'Tareas', typeof tkCount === 'function' && tkCount('hoy') ? `<b class="tile-big">${tkCount('hoy')}</b><span>para hoy · ${pendingTasks} en total</span>` : `<b class="tile-big">${pendingTasks}</b><span>${pendingTasks === 1 ? 'pendiente' : 'pendientes'}</span>`)}
-        ${tile('data-hubtoday', 'tile-diary', moodToday ? moodToday[0] : '✎', 'Diario', moodToday ? `<span>Hoy: ${moodToday[1].toLowerCase()}${diaryToday.good ? ' · ' + esc(diaryToday.good) : ''}</span>` : '<span>¿Qué tal hoy? Un toque y listo</span>')}
-        ${tile('data-hubgo="cuaderno"', 'tile-pages', '▤', 'Cuaderno', listN ? `<b class="tile-big">${listN}</b><span>en tus listas</span>` : '<span>Listas, notas e ideas</span>')}
-        ${tile('data-hubgo="ciudad"', 'tile-city', '◎', 'Barcelona', '<span>Planes, gratis y agenda de la ciudad</span>')}
-      </div>
-    </section>
-
-    ${typeof appsLauncherHTML === 'function' ? appsLauncherHTML(today) : ''}
-    ${typeof descubreHTML === 'function' ? descubreHTML(today) : ''}
-    ${efHTML(today, true)}
-    ${remsHTML()}
-    ${week.length ? `<section class="hub-sec"><h2 class="hub-h">Próximos días</h2><div class="agenda">${week.map(w => `<button class="ag-row" data-goday="${w.d}" data-goview="dia"><span class="ag-date"><b>${+w.d.slice(8)}</b><small>${new Date(w.d + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short' })}</small></span><span class="ag-items">${w.items.slice().sort((a, b) => (a.kind === 'plan') - (b.kind === 'plan')).slice(0, 3).map(i => `<span class="ag-it"><i style="background:${i.color}"></i>${i.time ? hm(i.time) + ' · ' : ''}${esc(i.title)}</span>`).join('')}${w.items.length > 3 ? `<span class="muted small">y ${w.items.length - 3} más</span>` : ''}</span></button>`).join('')}</div></section>` : ''}
-
-    ${recent.length ? `<section class="hub-sec"><h2 class="hub-h">Del cuaderno</h2><div class="pages-strip">${recent.map(p => `<button class="pg-chip" data-nbopen="${p.id}"><span>${esc(p.icon || '📄')}</span>${esc(nbTitle(p))}</button>`).join('')}</div></section>` : ''}
+    ${homeOrder().filter(k => SEC[k]).map(k => SEC[k]()).join('')}
+    <div class="home-edit"><button class="link small" data-homeedit>Personalizar el inicio</button>${calmOn() ? '' : '<button class="link small" data-calm="on">Modo calma para hoy</button>'}</div>
   </div>`;
 }
 function dayItemHTML(i) {
@@ -204,6 +206,7 @@ function vEspacio() {
     <header class="cal-head"><div><div class="cal-year">Mi Espacio</div><h1 class="cal-month">Ajustes</h1></div></header>
     ${workSettingsHTML()}
     ${avisosHTML()}
+    ${typeof ntfyHTML === 'function' ? ntfyHTML() : ''}
     ${typeof backupSettingsHTML === 'function' ? backupSettingsHTML() : ''}
     ${appsSettingsHTML()}
     <div class="card"><h2>📍 Dónde estás</h2>

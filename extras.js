@@ -43,7 +43,8 @@ function weekSummaryHTML(today) {
   const plans = days.reduce((a, d) => a + itemsOn(d, false).filter(i => i.kind === 'ev' && i.cat !== 'trabajo').length, 0);
   const done = nbPages().filter(p => /^lista:/.test(p.kind || '')).reduce((a, p) => a + nbItems(p).filter(b => b.checked).length, 0);
   if (!moods.some(Boolean) && !goods.length && !gym && !plans) return '';
-  const bits = [gym && `<span>${emoIco('💪')} ${gym === 1 ? 'Entrenaste 1 día' : `Entrenaste ${gym} días`}</span>`, plans && `<span>${emoIco('📅')} ${plans === 1 ? '1 plan' : plans + ' planes'} en el calendario</span>`, done && `<span>${emoIco('✅')} ${done} ${done === 1 ? 'cosa tachada' : 'cosas tachadas'} de tus listas</span>`].filter(Boolean);
+  const m = typeof moneyCtx === 'function' ? moneyCtx() : null, spentW = m ? days.reduce((a, d) => a + ((m.spent[d] || {}).v || 0), 0) : 0;
+  const bits = [m && spentW > 0 && `<span>${emoIco('💶')} ${eur(Math.round(spentW))} en el día a día${m.A.perDay > 0 ? ' · vas bien' : ''}</span>`, gym && `<span>${emoIco('💪')} ${gym === 1 ? 'Entrenaste 1 día' : `Entrenaste ${gym} días`}</span>`, plans && `<span>${emoIco('📅')} ${plans === 1 ? '1 plan' : plans + ' planes'} en el calendario</span>`, done && `<span>${emoIco('✅')} ${done} ${done === 1 ? 'cosa tachada' : 'cosas tachadas'} de tus listas</span>`].filter(Boolean);
   return `<section class="hub-sec wk"><div class="hub-hrow"><h2 class="hub-h">${w === 6 ? 'Tu semana' : 'Tu semana pasada'}</h2><button class="pill-btn" data-year>Tu año</button></div>
     <div class="wk-card">
       ${moods.some(Boolean) ? `<div class="wk-moods">${days.map((d, i) => `<span style="${moods[i] ? `--mc:${MOOD_C[NB_MOODS.indexOf(moods[i])]}` : ''}"><small>${WD_S[hDow(d)]}</small>${moods[i] ? emoIco(moods[i][0]) : '<i></i>'}</span>`).join('')}</div>` : ''}
@@ -53,14 +54,17 @@ function weekSummaryHTML(today) {
 }
 
 // ---------- novedades ----------
-const NOVEDADES_V = 'v25';
+const NOVEDADES_V = 'v27';
 const NOVEDADES = [
-  ['square-check', 'Tareas, como Recordatorios del iPhone', 'Hoy, Programados, Todos y Marcados, y tus listas. Con fecha, hora, notas y bandera; lo que tiene fecha sale en el calendario.'],
-  ['calendar-range', 'Calendario más claro', 'Lo que dura varios días va en una barra que cruza la semana, y en el móvil el mes enseña los títulos.'],
-  ['search', 'Buscador nuevo', 'Accesos rápidos, acciones y lo próximo; y al escribir, resultados agrupados.'],
-  ['tree-palm', 'Vacaciones con saldo', 'Cuántas te quedan, cuántas tienes marcadas y cuántas pasan al año que viene.'],
-  ['image', 'Descubre', 'En el inicio: la foto del día, un artista de tu lista y un recuerdo bonito de tu diario.'],
-  ['calendar', 'Planes de varios días', 'Al apuntar Oktoberfest o parecidos, se apuntan todos sus días.'],
+  ['notebook', 'Cuaderno limpio', 'Sin portadas: tus notas en una lista, con buscador, fijadas arriba y agrupadas por fecha.'],
+  ['layout-grid', 'Tu inicio, a tu gusto', 'Abajo del todo, «Personalizar el inicio»: quita y ordena lo que quieras.'],
+  ['moon', 'Modo calma', 'Para los días malos: el inicio solo con lo de hoy. Se quita solo al día siguiente.'],
+  ['bell', 'Avisos con la app cerrada', 'En Ajustes › Avisos con la app cerrada, con la app gratuita ntfy.'],
+  ['calendar-heart', 'Revisión del domingo', '5 minutos para mirar la semana que viene, lo pendiente y el dinero.'],
+  ['camera', 'Foto del día', 'En el diario, una foto por día (se guarda en este dispositivo).'],
+  ['download', 'Copia del mes y exportar', 'Cada mes, el inicio te recuerda guardar una copia. Y puedes sacar tus notas en texto.'],
+  ['mic-vocal', 'Conciertos de tus artistas', 'Cada mes busco conciertos en Barcelona y te marco los de tus artistas.'],
+  ['headphones', 'Tu mando de Spotify', 'En «Tus otras apps», junto a Alimentación y Ejercicio.'],
 ];
 function novedadesCheck() {
   let seen = ''; try { seen = localStorage.getItem('miespacio.novedades') || ''; } catch (e) {}
@@ -196,11 +200,18 @@ function descubreHTML(today) {
   const img = DSC.d === today && DSC.img, names = artistNames(), art = names.length ? names[dayNum(today) % names.length] : '';
   const goods = nbPages().filter(p => /^diario:/.test(p.kind || '') && p.good && p.kind.slice(7) <= hAdd(today, -7));
   const mem = goods.length ? goods[dayNum(today) % goods.length] : null;
-  if (!img && !art && !mem) return '';
+  if (!img && !art && !mem && !myConcerts(today, 120).length) return '';
   return `<section class="hub-sec"><h2 class="hub-h">Descubre</h2><div class="dsc">
     ${img ? `<a class="dsc-img" href="${esc(img.link || '#')}" target="_blank" rel="noopener noreferrer"><img src="${esc(img.src)}" alt="${esc(img.desc)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.dsc-img').remove()"><span><small>Foto del día</small>${esc(img.desc.slice(0, 140))}${img.desc.length > 140 ? '…' : ''}</span></a>` : ''}
     <div class="dsc-side">
+      ${myConcerts(today, 120).slice(0, 2).map(p => `<button class="dsc-it" data-hubgo="ciudad"><span class="dsc-ic" style="--c:#9B7BEA">${ico('mic-vocal')}</span><span><small>Concierto de tus artistas · ${planWhen(p)}</small><b>${esc(p.n)}</b></span></button>`).join('')}
       ${art ? `<a class="dsc-it" href="https://open.spotify.com/search/${encodeURIComponent(art)}" target="_blank" rel="noopener noreferrer"><span class="dsc-ic" style="--c:#1DB954">${ico('headphones')}</span><span><small>Tu artista de hoy</small><b>${esc(art)}</b></span><span class="al-go">↗</span></a>` : ''}
       ${mem ? `<button class="dsc-it" data-nbopen="${mem.id}"><span class="dsc-ic" style="--c:#9B7BEA">${ico('book-heart')}</span><span><small>Un recuerdo · ${dShort(mem.kind.slice(7))}</small><b>«${esc(mem.good)}»</b></span></button>` : ''}
     </div></div></section>`;
+}
+
+// Conciertos (de la lista de planes, que se revisa cada mes) de artistas que tienes en tu lista.
+function myConcerts(from, days) {
+  const lim = hAdd(from, days);
+  return PLANES_BCN.filter(p => p.tipo === 'musica' && planEnd(p) >= from && (p.days ? p.days[0] : p.from) <= lim && agMine({ n: p.n }));
 }
