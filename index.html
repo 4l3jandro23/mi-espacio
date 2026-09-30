@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<!-- Seguridad: la página solo puede conectarse a GitHub (para sincronizar, y lo que sube va cifrado), a Open-Meteo (el tiempo de tu ciudad) y al Supabase de la app del piso. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file: 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src https://api.github.com https://gist.githubusercontent.com https://api.open-meteo.com https://*.supabase.co; form-action 'none'; base-uri 'none'">
+<!-- Seguridad: la página solo puede conectarse a GitHub (para sincronizar, y lo que sube va cifrado), a Open-Meteo (el tiempo de tu ciudad) al Supabase de la app del piso y a Wikipedia (efemérides). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file: 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.wikimedia.org; connect-src 'self' https://api.github.com https://gist.githubusercontent.com https://api.open-meteo.com https://*.supabase.co https://api.wikimedia.org; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -237,6 +237,7 @@ body.locked .wrap,body.locked nav{visibility:hidden}
 <script src="apps.js"></script>
 <script src="ics.js"></script>
 <script src="avisos.js"></script>
+<script src="efemerides.js"></script>
 <script src="apple.js"></script>
 <script src="vendor/qrcode.min.js"></script>
 <script src="vendor/jsQR.min.js"></script>

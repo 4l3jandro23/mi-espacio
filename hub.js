@@ -166,6 +166,7 @@ function vInicio() {
       </div>
     </section>
 
+    ${efHTML(today, true)}
     ${remsHTML()}
     ${week.length ? `<section class="hub-sec"><h2 class="hub-h">Próximos días</h2><div class="agenda">${week.map(w => `<button class="ag-row" data-goday="${w.d}" data-goview="dia"><span class="ag-date"><b>${+w.d.slice(8)}</b><small>${new Date(w.d + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short' })}</small></span><span class="ag-items">${w.items.slice(0, 3).map(i => `<span class="ag-it"><i style="background:${i.color}"></i>${i.time ? hm(i.time) + ' · ' : ''}${esc(i.title)}</span>`).join('')}${w.items.length > 3 ? `<span class="muted small">y ${w.items.length - 3} más</span>` : ''}</span></button>`).join('')}</div></section>` : ''}
 
@@ -221,6 +222,7 @@ function bindHub() {
     if (t.closest('[data-hubnewpage]')) { tab = 'cuaderno'; render(); return nbNewPage(null); }
     if (t.closest('[data-palette]')) return openPalette();
     if (t.closest('[data-kbhelp]')) return showShortcuts();
+    const efm = t.closest('[data-efmore]'); if (efm) return openEfemerides(efm.dataset.efmore);
     if (t.closest('[data-icsin]')) return icsPick();
     if (t.closest('[data-icsout]')) return icsExport();
     if (t.closest('[data-calside]')) return openSideSheet();

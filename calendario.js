@@ -4,7 +4,7 @@
 const HH = 48; // píxeles por hora
 const LAYERS = {
   festivos: ['Festivos y puentes', '#EF5B4C'], senalados: ['Días señalados', '#F2A93B'], trabajo: ['Horario de trabajo', '#5B8DEF'],
-  tiempo: ['El tiempo', '#6FA8F5'], ejercicio: ['Plan de Ejercicio', '#EF7F72'], comida: ['Plan de Alimentación', '#2FA98C'], piso: ['Tareas del piso', '#F2A93B'],
+  tiempo: ['El tiempo', '#6FA8F5'], efemerides: ['Efemérides y música', '#9B7BEA'], ejercicio: ['Plan de Ejercicio', '#EF7F72'], comida: ['Plan de Alimentación', '#2FA98C'], piso: ['Tareas del piso', '#F2A93B'],
   apple: ['Apple', '#A2845E'], dinero: ['Mi Dinero', '#2FA98C'],
 };
 const layerOn = k => !((S.settings.calOff || {})[k]);
@@ -134,6 +134,7 @@ function dayPanel(iso) {
     ${appsDayHTML(iso, false)}
     <div class="day-list">${sel.filter(i => i.kind !== 'hol' && i.kind !== 'sen').length ? sel.filter(i => i.kind !== 'hol' && i.kind !== 'sen').map(dayItemHTML).join('') : '<div class="empty-day">Nada este día.</div>'}</div>
     ${spent && iso <= today ? `<button class="cd-spent" data-hubgo="movs" data-q="${iso}">Ese día gastaste <b>${eur(spent.v)}</b> en ${spent.n} ${spent.n === 1 ? 'compra' : 'compras'} ›</button>` : ''}
+    ${efHTML(iso, false)}
     <button class="add-line" data-newev="${iso}">＋ Añadir al ${+iso.slice(8)} de ${MONTHS_ES[+iso.slice(5, 7) - 1]}</button>
   </aside>`;
 }

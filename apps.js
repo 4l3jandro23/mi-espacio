@@ -192,11 +192,7 @@ function appsDayHTML(iso, big) {
     if (m && m.pausa) rows.push(`<div class="ax-row"><span class="ax-ic">🥗</span><span>El plan de comida está en pausa: come lo que te apetezca.</span></div>`);
     else if (m) rows.push(`<a class="ax-row" href="${APPS.ali.url}" target="_blank" rel="noopener"><span class="ax-ic">🥗</span><span><small>${m.team ? 'Comida de equipo' : m.tele ? 'Comes en casa' : 'Comes'}</small>${esc(m.comida.replace(/^\S+\s/, ''))}</span><span><small>Cenas</small>${esc(m.cena.replace(/^\S+\s/, ''))}</span></a>`);
   }
-  if (ejOn()) {
-    const d = ejDone(iso), t = ejTipo(iso);
-    if (d) rows.push(`<a class="ax-row" href="${APPS.ej.url}" target="_blank" rel="noopener"><span class="ax-ic">🏋️</span><span><small>Ejercicio</small>✓ ${esc(ejDoneTxt(d))}</span></a>`);
-    else if (t && iso >= todayISO()) { const [s] = ejSlot(iso, t); rows.push(`<a class="ax-row" href="${APPS.ej.url}" target="_blank" rel="noopener"><span class="ax-ic">🏋️</span><span><small>Ejercicio · sobre las ${s}</small>${EJ_TIPOS[t]}</span></a>`); }
-  }
+  // El ejercicio ya sale en la lista del día (con su hora o con ✓), así que aquí no se repite.
   if (big && layerOn('piso') && window.Rotacion && pisoWho() && APX.piso) {
     const mon = window.Rotacion.mondayOf(iso), ts = pisoWeek(mon);
     rows.push(`<div class="ax-row ax-piso"><span class="ax-ic">🧹</span><span><small>Esta semana en el piso</small>${ts.length ? ts.map(t => `<button class="ax-task ${t.done ? 'done' : ''}" data-pisotask="${t.key}" data-pisomon="${mon}" data-pisodone="${t.done ? 1 : ''}" aria-pressed="${t.done}"><i>${t.done ? '✓' : ''}</i>${t.icon} ${esc(t.zone)}</button>`).join('') : 'Esta semana estás libre 🎉'}</span></div>`);

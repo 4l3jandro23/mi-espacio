@@ -82,6 +82,14 @@ function specialOf(y) {
   add(hAdd(nthWeekday(y, 10, 4, 4), 1), 'Black Friday', '🛍️', 'Buen día para comprar lo que ya tenías pensado. Lo demás no es un chollo, es un gasto.');
   add(`${y}-12-24`, 'Nochebuena', '🎄');
   add(`${y}-12-31`, 'Nochevieja', '🥂');
+  // Música
+  add(`${y}-03-09`, 'Día Mundial del DJ', '🎧');
+  add(nthWeekday(y, 3, 6, 3), 'Record Store Day', '💽', 'Día de las tiendas de discos: ediciones especiales en vinilo.');
+  add(`${y}-04-30`, 'Día Internacional del Jazz', '🎷');
+  add(`${y}-06-21`, 'Día de la Música', '🎶', 'Conciertos gratis en la calle en muchas ciudades.');
+  add(`${y}-07-13`, 'Día Mundial del Rock', '🎸');
+  add(`${y}-10-01`, 'Día Internacional de la Música', '🎼');
+  add(`${y}-11-22`, 'Santa Cecilia, patrona de la música', '🎻');
   add(lastSunday(y, 2), 'Cambio de hora', '⏰', 'A las 2:00 serán las 3:00. Duermes una hora menos.');
   add(lastSunday(y, 9), 'Cambio de hora', '⏰', 'A las 3:00 volverán a ser las 2:00. Una hora más de sueño.');
   const [sp, su, au, wi] = seasonStarts(y);
