@@ -362,6 +362,7 @@ function openEvSheet(id, dateISO, pre) {
     </div>
     <div class="ev-clash" id="evclash"></div>
     <div class="ev-row"><label>Repetir<select id="evr">${Object.entries(REPEATS).map(([k, n]) => `<option value="${k}" ${e.repeat === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+      <label class="${e.repeat && e.cat !== 'cumple' ? '' : 'hidden'}" id="evul">Hasta (opcional)<input type="date" id="evu" value="${esc(e.until || '')}"></label>
       <label class="${e.cat === 'cumple' ? '' : 'hidden'}" id="evyl">Año de nacimiento<input type="number" id="evy" min="1900" max="2100" value="${esc(e.year || '')}" placeholder="opcional"></label></div>
     <label class="ev-notes">Dónde<span class="ev-loc"><input id="evl" value="${esc(e.loc || '')}" placeholder="Sitio o dirección" autocomplete="off"><a id="evmap" class="pill-btn ${e.loc ? '' : 'hidden'}" target="_blank" rel="noopener noreferrer">🗺️ Mapa</a></span></label>
     <label class="ev-notes">Notas<textarea id="evn" rows="2" placeholder="Qué llevar, a quién avisar…">${esc(e.notes || '')}</textarea></label>
@@ -386,7 +387,8 @@ function openEvSheet(id, dateISO, pre) {
   $('evs').addEventListener('change', () => { touched.add('time'); if ($('evs').value) $('eve').value = hhmmOf(Math.min(toMin($('evs').value) + dur, 1439)); clash(); });
   $('eve').addEventListener('change', () => { touched.add('time'); const d = toMin($('eve').value) - toMin($('evs').value); if (d > 0) dur = d; mark(); clash(); });
   $('evd').addEventListener('change', () => { touched.add('date'); clash(); });
-  $('evr').addEventListener('change', () => touched.add('repeat'));
+  const upUntil = () => $('evul').classList.toggle('hidden', !$('evr').value || cat === 'cumple');
+  $('evr').addEventListener('change', () => { touched.add('repeat'); upUntil(); });
   box.querySelectorAll('[data-dur]').forEach(b => b.onclick = () => { touched.add('time'); dur = +b.dataset.dur; if (!$('evs').value) $('evs').value = defStart; $('eve').value = hhmmOf(Math.min(toMin($('evs').value) + dur, 1439)); mark(); clash(); });
   $('evall').onchange = () => { touched.add('time'); $('evtimes').classList.toggle('hidden', $('evall').checked); if (!$('evall').checked && !$('evs').value) { $('evs').value = defStart; $('eve').value = hhmmOf(toMin(defStart) + dur); } clash(); };
   const mapUrl = q => (IS_APPLE ? 'https://maps.apple.com/?q=' : 'https://www.google.com/maps/search/?api=1&query=') + encodeURIComponent(q);
@@ -403,7 +405,7 @@ function openEvSheet(id, dateISO, pre) {
       if (p.start) { $('evall').checked = false; $('evtimes').classList.remove('hidden'); $('evs').value = p.start; $('eve').value = p.end; dur = toMin(p.end) - toMin(p.start); mark(); }
       else if (p.allDay) { $('evall').checked = true; $('evtimes').classList.add('hidden'); }
     }
-    if (p.repeat && !touched.has('repeat')) $('evr').value = p.repeat;
+    if (p.repeat && !touched.has('repeat')) { $('evr').value = p.repeat; upUntil(); }
     if (p.loc && !touched.has('loc')) { $('evl').value = p.loc; upMap(); }
     if (p.cat && !touched.has('cat')) setCat(p.cat);
     clash();
@@ -414,7 +416,7 @@ function openEvSheet(id, dateISO, pre) {
     let title = $('evt').value.trim(); if (parsed && parsed.title) title = parsed.title;
     if (!title) { $('evt').focus(); $('evt').classList.remove('shake'); void $('evt').offsetWidth; $('evt').classList.add('shake'); return null; }
     const all = $('evall').checked;
-    const out = Object.assign({}, ev || {}, { id: id || 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title, date: $('evd').value || todayISO(), allDay: all, start: all ? '' : $('evs').value, end2: all ? '' : $('eve').value, cat, repeat: $('evr').value, notes: $('evn').value.trim(), loc: $('evl').value.trim(), star: $('evstar').checked || undefined, year: cat === 'cumple' && +$('evy').value ? +$('evy').value : undefined });
+    const out = Object.assign({}, ev || {}, { id: id || 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title, date: $('evd').value || todayISO(), allDay: all, start: all ? '' : $('evs').value, end2: all ? '' : $('eve').value, cat, repeat: $('evr').value, notes: $('evn').value.trim(), until: $('evr').value && $('evu').value ? $('evu').value : undefined, loc: $('evl').value.trim(), star: $('evstar').checked || undefined, year: cat === 'cumple' && +$('evy').value ? +$('evy').value : undefined });
     // Si abres una repetición y no cambias el día, la serie sigue empezando en su fecha original.
     if (ev && ev.repeat && out.repeat && $('evd').value === occ) out.date = ev.date;
     if (!out.allDay && !out.start) out.allDay = true;

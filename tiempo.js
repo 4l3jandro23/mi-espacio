@@ -37,8 +37,14 @@ function wxFetch(force) {
     if (['inicio', 'cal'].includes(tab) && !lockMode && !document.querySelector('.sheet-veil') && !(typeof nbBusy === 'function' && nbBusy())) softRender();
   }).catch(() => {}).finally(() => { wxBusy = false; });
 }
-// Vuelve a pintar sin perder la posición (ni la del calendario).
-function softRender() { const y = scrollY; render(); scrollTo(0, y); }
+// Vuelve a pintar sin perder la posición (ni la del calendario). Si estás escribiendo, espera a que termines.
+let softPending = false;
+function softRender() {
+  const a = document.activeElement;
+  if (a && a !== document.body && (/INPUT|TEXTAREA|SELECT/.test(a.tagName) || a.isContentEditable)) { softPending = true; return; }
+  softPending = false; const y = scrollY; render(); scrollTo(0, y);
+}
+document.addEventListener('focusout', () => setTimeout(() => { if (softPending && !document.querySelector('.sheet-veil')) softRender(); }, 150));
 const wxChip = (iso, cls) => { const w = wxDay(iso); if (!w) return ''; const ic = wxIcon(w.code); return `<span class="wx ${cls || ''}" title="${ic.t} · máx ${w.max}° mín ${w.min}°${w.rain >= 30 ? ' · lluvia ' + w.rain + '%' : ''}">${ic.i} ${w.max}°</span>`; };
 // Frase útil para el inicio: si va a llover hoy o mañana.
 function wxTip() {

@@ -21,7 +21,9 @@ function parseQuick(text, base) {
   const T = '(\\d{1,2})(?:[:.h](\\d{2}))?\\s*h?';
 
   // se repite
-  take(/\s(?:cada\s+(semana|mes|año|ano)|todas\s+las\s+semanas|todos\s+los\s+(meses|años))\s/i, m => { const k = (m[1] || m[2] || 'semana').toLowerCase(); out.repeat = /^sem/.test(k) ? 'week' : /^mes/.test(k) ? 'month' : 'year'; });
+  take(/\s(?:cada\s+(?:dos|2)\s+semanas|semana\s+s[ií]\s+semana\s+no)\s/i, () => { out.repeat = 'biweek'; });
+  take(/\s(?:de\s+lunes\s+a\s+viernes|entre\s+semana|todos\s+los\s+d[ií]as\s+laborables|cada\s+d[ií]a\s+laborable)\s/i, () => { out.repeat = 'weekdays'; });
+  if (!out.repeat) take(/\s(?:cada\s+(semana|mes|año|ano)|todas\s+las\s+semanas|todos\s+los\s+(meses|años))\s/i, m => { const k = (m[1] || m[2] || 'semana').toLowerCase(); out.repeat = /^sem/.test(k) ? 'week' : /^mes/.test(k) ? 'month' : 'year'; });
   take(new RegExp(`\\s(?:cada|todos\\s+los)\\s+(${WDAYS_RE})\\s`, 'i'), m => { out.repeat = 'week'; out.wd = wdIndex(m[1].toLowerCase()); });
   if (take(/\stodo\s+el\s+d[ií]a\s/i, () => {})) out.allDay = true;
 

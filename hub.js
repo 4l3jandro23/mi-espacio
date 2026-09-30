@@ -8,7 +8,7 @@ const CAL_CATS = {
   cumple: { n: 'Cumpleaños', c: '#F2A93B' },
   otro: { n: 'Otro', c: '#8A90AE' },
 };
-const REPEATS = { '': 'No se repite', week: 'Cada semana', month: 'Cada mes', year: 'Cada año' };
+const REPEATS = { '': 'No se repite', weekdays: 'De lunes a viernes', week: 'Cada semana', biweek: 'Cada 2 semanas', month: 'Cada mes', year: 'Cada año' };
 let calMonth = null, calSel = null, calView = 'mes';
 
 const evAll = () => Object.values(S.events || {}).filter(Boolean);
@@ -27,6 +27,8 @@ function occurs(ev, iso) {
   if (!ev.repeat) return iso <= (ev.end && ev.end > ev.date ? ev.end : ev.date);
   if (ev.until && iso > ev.until) return false;
   if (ev.repeat === 'week') return hDays(ev.date, iso) % 7 === 0;
+  if (ev.repeat === 'biweek') return hDays(ev.date, iso) % 14 === 0;
+  if (ev.repeat === 'weekdays') return hDow(iso) < 5;
   const d0 = +ev.date.slice(8), d = +iso.slice(8);
   if (ev.repeat === 'month') return d === Math.min(d0, hMonthLen(iso));
   if (ev.repeat === 'year') return iso.slice(5, 7) === ev.date.slice(5, 7) && d === Math.min(d0, hMonthLen(iso));
@@ -104,6 +106,8 @@ function dayArc(items, spans, sun) {
 }
 
 // ---------- INICIO ----------
+// Tu nombre de pila, del nombre que pusiste en Mi Dinero (como sale en el banco).
+const myFirst = () => { const n = String(S.settings.myName || '').trim().split(/\s+/)[0] || ''; return n ? n.charAt(0).toUpperCase() + n.slice(1).toLowerCase() : ''; };
 function vInicio() {
   const today = todayISO(), now = new Date(), h = now.getHours() + now.getMinutes() / 60;
   const phase = skyPhase(h);
@@ -125,7 +129,7 @@ function vInicio() {
   tile.n = 0;
   return `<div class="hub">
     <section class="sky sky-${phase}">
-      <div class="sky-top"><span class="sky-hi">${hi}</span><span class="sky-tools">${cur ? `<span class="sky-wx" title="${wic.t}${wd ? ` · máx ${wd.max}° mín ${wd.min}°` : ''}">${wic.i} <b>${cur.t}°</b>${wd ? `<small>${wd.max}° · ${wd.min}°</small>` : ''}</span>` : ''}<button class="sky-gear" data-palette aria-label="Buscar" title="Buscar (Ctrl+K)">⌕</button><button class="sky-gear" data-hubgo="espacio" aria-label="Ajustes">⚙️</button></span></div>
+      <div class="sky-top"><span class="sky-hi">${hi}${myFirst() ? ', ' + esc(myFirst()) : ''}</span><span class="sky-tools">${cur ? `<span class="sky-wx" title="${wic.t}${wd ? ` · máx ${wd.max}° mín ${wd.min}°` : ''}">${wic.i} <b>${cur.t}°</b>${wd ? `<small>${wd.max}° · ${wd.min}°</small>` : ''}</span>` : ''}<button class="sky-gear" data-palette aria-label="Buscar" title="Buscar (Ctrl+K)">⌕</button><button class="sky-gear" data-hubgo="espacio" aria-label="Ajustes">⚙️</button></span></div>
       <div class="sky-grid">
         <div class="sky-date">
           <div class="sky-wd">${cap(now.toLocaleDateString('es-ES', { weekday: 'long' }))}</div>
@@ -268,4 +272,4 @@ function comingHTML(today) {
   cards.sort((a, b) => a.n - b.n);
   return `<section class="hub-sec"><div class="hub-hrow"><h2 class="hub-h">Se viene</h2><span class="muted small">Marca ⭐ en un evento para verlo aquí</span></div><div class="sv-row">${cards.slice(0, 8).map(c => c.html).join('')}</div></section>`;
 }
-setInterval(() => { if (tab === 'inicio' && !lockMode && !document.getElementById('evsheet') && document.visibilityState === 'visible') { const y = scrollY; render(); scrollTo(0, y); } }, 60000);
+setInterval(() => { if (tab === 'inicio' && !lockMode && !document.querySelector('.sheet-veil') && document.visibilityState === 'visible') softRender(); }, 60000);

@@ -181,7 +181,7 @@ body.locked .wrap,body.locked nav{visibility:hidden}
 <div class="wrap">
   <header>
     <div style="display:flex;align-items:center;gap:10px"><button id="btnHome" class="homebtn" aria-label="Volver al inicio" title="Volver al inicio">‹</button><div><h1>Mi Dinero</h1><div id="syncst" class="small muted"></div></div></div>
-    <div style="display:flex;gap:8px"><button id="btnImport" class="primary">Cargar extractos</button><button id="btnCfg" aria-label="Ajustes">⚙️</button></div>
+    <div style="display:flex;gap:8px"><button id="btnImport" class="primary">＋ Extractos</button><button id="btnCfg" class="homebtn" aria-label="Ajustes de Mi Dinero" title="Ajustes de Mi Dinero">⚙️</button></div>
     <input id="file" type="file" multiple accept=".xlsx,.xls,.csv" class="hidden">
   </header>
 
@@ -289,7 +289,7 @@ async function doSync() {
   try {
     const r = await Sync.sync(S, c);
     c.gistId = r.gistId; c.last = Date.now(); setSyncCfg(c);
-    if (r.changedLocal) { S = normalize(r.state); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} if (nbBusy()) nbPendingRender = true; else render(); }
+    if (r.changedLocal) { S = normalize(r.state); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} if (nbBusy()) nbPendingRender = true; else softRender(); }
   } catch (e) { syncMsg = '⚠️ ' + e.message; }
   syncing = false; paintSync();
   if (tab === 'ajustes') { const el = document.getElementById('syncinfo'); if (el) el.innerHTML = syncInfo(); }
