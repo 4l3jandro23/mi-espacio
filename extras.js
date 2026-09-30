@@ -215,3 +215,28 @@ function myConcerts(from, days) {
   const lim = hAdd(from, days);
   return PLANES_BCN.filter(p => p.tipo === 'musica' && planEnd(p) >= from && (p.days ? p.days[0] : p.from) <= lim && agMine({ n: p.n }));
 }
+
+// ---------- países visitados ----------
+// Lista fija tuya. Andorra y Bélgica son dudosos (uno de pequeño, el otro solo el aeropuerto), así que
+// se guardan aparte con un interruptor: tú decides si cuentan.
+const PAISES = [
+  ['🇪🇸', 'España'], ['🇫🇷', 'Francia'], ['🇨🇿', 'República Checa'], ['🇩🇪', 'Alemania'], ['🇨🇭', 'Suiza'],
+  ['🇦🇹', 'Austria'], ['🇭🇷', 'Croacia'], ['🇲🇪', 'Montenegro'], ['🇬🇷', 'Grecia'], ['🇲🇨', 'Mónaco'],
+  ['🇮🇹', 'Italia'], ['🇻🇦', 'Vaticano'], ['🇵🇱', 'Polonia'], ['🇸🇰', 'Eslovaquia'], ['🇭🇺', 'Hungría'], ['🇳🇱', 'Países Bajos'],
+];
+const PAISES_DUDOSOS = [['🇦🇩', 'Andorra', 'de pequeño'], ['🇧🇪', 'Bélgica', 'solo el aeropuerto']];
+const paisesExtra = () => Object.assign({ andorra: false, belgica: false }, S.settings.paisesExtra || {});
+function paisesHTML() {
+  const ex = paisesExtra(), extraOn = [PAISES_DUDOSOS[0][1].toLowerCase() === 'andorra' && ex.andorra, ex.belgica].filter(Boolean).length;
+  const n = PAISES.length + extraOn;
+  return `<div class="card"><h2>🌍 Tus viajes</h2>
+    <p class="small muted" style="margin-top:0"><b>${n} países</b> visitados.</p>
+    <div class="pais-grid">${PAISES.map(([f, n2]) => `<span class="pais-ch">${f} ${esc(n2)}</span>`).join('')}</div>
+    <p class="small muted" style="margin:12px 0 6px">Dudosos, cuenta tú si valen:</p>
+    <div class="pais-dud">${PAISES_DUDOSOS.map(([f, n2, why], i) => { const k = n2.toLowerCase() === 'andorra' ? 'andorra' : 'belgica'; return `<label class="pais-ch pais-tg"><input type="checkbox" data-paisex="${k}" ${ex[k] ? 'checked' : ''}> ${f} ${esc(n2)} <small>(${esc(why)})</small></label>`; }).join('')}</div>
+  </div>`;
+}
+document.addEventListener('change', e => {
+  const t = e.target.closest && e.target.closest('[data-paisex]'); if (!t) return;
+  const ex = paisesExtra(); ex[t.dataset.paisex] = t.checked; set('settings', 'paisesExtra', ex); save(); softRender();
+});

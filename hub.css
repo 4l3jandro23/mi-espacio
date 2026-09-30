@@ -1040,3 +1040,9 @@ button.al { border-top: 0; border-right: 0; border-bottom: 0; font: inherit; tex
 .ph-del { position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, .5); color: #fff; }
 .ph-add { display: inline-flex; align-items: center; gap: 8px; border: 1px dashed var(--line); border-radius: 12px; padding: 8px 12px; font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer; }
 .ph-add .ico { width: 18px; height: 18px; }
+
+.pais-grid, .pais-dud { display: flex; flex-wrap: wrap; gap: 8px; }
+.pais-ch { display: inline-flex; align-items: center; gap: 6px; background: var(--bg); border-radius: 999px; padding: 7px 13px; font-size: 14px; font-weight: 600; }
+.pais-tg { cursor: pointer; }
+.pais-tg small { color: var(--muted); font-weight: 500; }
+.pais-tg input { accent-color: var(--ink); }
