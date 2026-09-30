@@ -141,7 +141,7 @@ function vInicio() {
         </div>
         <div class="sky-arc">${dayArc(items, workSpans(today), sun)}${workNow(today) ? `<div class="sky-work">${workNow(today)}</div>` : ''}<div class="sky-next">${nextTxt}</div>${modeChips(today)}</div>
       </div>
-      <div class="sky-acts"><label class="sky-qa"><span aria-hidden="true">＋</span><input id="hubqa" placeholder="Apunta algo: «dentista el jueves a las 10»" autocomplete="off" enterkeyhint="done" aria-label="Apuntar un evento escribiendo"></label><button data-hubtoday>${moodToday ? moodToday[0] : '📔'} Diario</button><button data-hubnote>✎ Nota</button></div>
+      <div class="sky-acts"><label class="sky-qa"><span aria-hidden="true">＋</span><input id="hubqa" placeholder="Apunta lo que sea: «dentista el jueves a las 10», «ver Dune»…" autocomplete="off" enterkeyhint="done" aria-label="Apuntar un evento escribiendo"></label><button data-hubtoday>${moodToday ? moodToday[0] : '📔'} Diario</button><button data-hubnote>✎ Nota</button></div>
       <div class="sky-qah" id="hubqah"></div>
     </section>
 
@@ -154,6 +154,7 @@ function vInicio() {
     <section class="hub-sec">
       <h2 class="hub-h">Hoy</h2>
       ${tip ? `<div class="hub-tip">${tip}</div>` : ''}
+      ${h >= 19 && !moodToday ? `<div class="hub-mood"><span>¿Qué tal hoy?</span><div class="nb-faces">${NB_MOODS.map(([f, n], i) => `<button data-hmood="${i + 1}" title="${n}"><span>${f}</span><small>${n}</small></button>`).join('')}</div></div>` : ''}
       ${appsDayHTML(today, true)}
       <div class="day-list">${items.length ? items.map(dayItemHTML).join('') : `<div class="empty-day">Día despejado. <button class="link" data-newev="${today}">Apunta algo</button></div>`}</div>
     </section>
@@ -228,6 +229,7 @@ function bindHub() {
     if (t.closest('[data-hubnote]')) { tab = 'cuaderno'; nbCur = null; render(); scrollTo(0, 0); const i = document.getElementById('nbcap'); if (i) i.focus(); return; }
     if (t.closest('[data-palette]')) return openPalette();
     if (t.closest('[data-year]')) return openYear();
+    const hm = t.closest('[data-hmood]'); if (hm) { nbSetMood(todayISO(), hm.dataset.hmood); softRender(); return toast('Apuntado en tu diario', { actions: [{ n: 'Añadir algo bueno', fn: () => { tab = 'cuaderno'; nbToday(); setTimeout(() => { const g = document.querySelector('[data-good]'); if (g) g.focus(); }, 400); } }] }); }
     if (t.closest('[data-kbhelp]')) return showShortcuts();
     const efm = t.closest('[data-efmore]'); if (efm) return openEfemerides(efm.dataset.efmore);
     if (t.closest('[data-icsin]')) return icsPick();
@@ -246,7 +248,7 @@ function bindHub() {
     const cv = t.closest('[data-calview]'); if (cv) return setCalView(cv.dataset.calview);
   };
   bindCal(); bindApps(); bindAvisos();
-  bindQuickAdd(document.getElementById('hubqa'), document.getElementById('hubqah'));
+  bindQuickAdd(document.getElementById('hubqa'), document.getElementById('hubqah'), null, true);
   const cs = root.querySelector('[data-city]'); if (cs) cs.onchange = () => { if (CITIES[cs.value]) { set('settings', 'city', CITIES[cs.value]); save(); wxFetch(true); render(); } };
 }
 function useMyLocation() {

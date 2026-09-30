@@ -796,3 +796,16 @@ a.ef-row:hover { border-color: var(--ink); }
 .ag-mine { background: linear-gradient(160deg, var(--lilac-soft), var(--card)); border-radius: 18px; padding: 12px 14px; margin: 0 0 12px; display: flex; flex-direction: column; gap: 6px; }
 .ag-mine a { color: var(--ink); text-decoration: none; font-weight: 600; }
 .ag-mine small { color: var(--muted); font-weight: 500; }
+
+@media (max-width: 400px) { .hubnav { gap: 2px; padding: 5px; } .hubnav button { min-width: 0; padding: 7px 10px; } }
+
+.nb-lul li { display: flex; align-items: flex-start; gap: 6px; } .nb-lul li label { flex: 1; min-width: 0; }
+.nb-lul a { color: var(--blue); }
+.nb-lact { flex: none; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 9px; color: var(--muted) !important; }
+.nb-lact:hover { background: var(--bg); color: var(--ink) !important; }
+.nb-lact .ico { width: 16px; height: 16px; }
+.nb-lsh { border: 0; background: none; padding: 4px; color: var(--muted); border-radius: 8px; }
+.nb-lsh .ico { width: 16px; height: 16px; }
+.hub-mood { background: linear-gradient(160deg, var(--lilac-soft), var(--card)); border-radius: 20px; padding: 12px 14px 8px; margin-bottom: 12px; }
+.hub-mood > span { font-family: var(--display); font-weight: 700; font-size: 17px; }
+.hub-mood .nb-faces { margin: 8px 0 4px; }

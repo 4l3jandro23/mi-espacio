@@ -53,7 +53,7 @@ function weekSummaryHTML(today) {
 }
 
 // ---------- novedades ----------
-const NOVEDADES_V = 'v21';
+const NOVEDADES_V = 'v22';
 const NOVEDADES = [
   ['sparkles', 'Iconos nuevos', 'Toda la app con iconos de línea, más limpia.'],
   ['notebook-pen', 'Cuaderno con sentido', '«Apunta lo que sea» y va solo a su sitio: pelis, música, tareas, sitios, regalos, notas o el calendario.'],
@@ -62,6 +62,7 @@ const NOVEDADES = [
   ['bookmark', 'Guarda planes de Barcelona', 'Guárdalos en «Sitios y planes» o compártelos con quien quieras.'],
   ['music', 'Tus artistas en la agenda', 'Si alguno toca en Barcelona, sale arriba del todo.'],
   ['calendar-heart', 'Tu semana', 'Domingo por la tarde y lunes: un resumen amable de la semana.'],
+  ['search', 'Del apunte a la acción', 'En tus listas, un toque para buscar el disco en Spotify, dónde ver la peli o el sitio en el mapa. Y puedes compartir cualquier lista.'],
 ];
 function novedadesCheck() {
   let seen = ''; try { seen = localStorage.getItem('miespacio.novedades') || ''; } catch (e) {}

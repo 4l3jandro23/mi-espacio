@@ -238,11 +238,13 @@ function markVacation(days) {
 }
 
 // ---------- apuntar escribiendo ----------
-function bindQuickAdd(inp, hint, after) {
+// smart (el del inicio): lo que no tiene día va al cuaderno, como en «Apunta lo que sea».
+function bindQuickAdd(inp, hint, after, smart) {
   if (!inp) return;
   const def = hint ? hint.textContent : '';
-  inp.oninput = () => { if (!hint) return; const p = parseQuick(inp.value, calSel); hint.textContent = inp.value.trim() ? (p.found ? quickHint(p) : '✨ Sin fecha: lo pongo el ' + dShort(calSel) + ', todo el día') : def; hint.classList.toggle('on', !!inp.value.trim()); };
-  inp.onkeydown = e => { if (e.key === 'Enter' && inp.value.trim()) { e.preventDefault(); const v = inp.value; inp.value = ''; if (after) after(); quickAdd(v, calSel); } if (e.key === 'Escape') inp.blur(); };
+  const dest = v => { if (!smart || typeof nbRoute !== 'function') return null; const r = nbRoute(v); return r.k === 'cal' ? null : Object.assign({}, r, { d: nbDests().find(x => x.k === r.k) }); };
+  inp.oninput = () => { if (!hint) return; const r = dest(inp.value); if (r && r.d) { hint.textContent = `→ ${r.d.i} ${r.d.n}: ${r.text}`; hint.classList.toggle('on', !!inp.value.trim()); return; } const p = parseQuick(inp.value, calSel); hint.textContent = inp.value.trim() ? (p.found ? quickHint(p) : '✨ Sin fecha: lo pongo el ' + dShort(calSel) + ', todo el día') : def; hint.classList.toggle('on', !!inp.value.trim()); };
+  inp.onkeydown = e => { if (e.key === 'Enter' && inp.value.trim()) { e.preventDefault(); const v = inp.value; inp.value = ''; if (hint) { hint.textContent = def; hint.classList.remove('on'); } if (after) after(); if (dest(v)) nbCapSave(v); else quickAdd(v, calSel); } if (e.key === 'Escape') inp.blur(); };
 }
 
 // ---------- interacción ----------

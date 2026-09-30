@@ -3,7 +3,7 @@
 const WD_LONG = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const WORK_PRESET = [0, 1, 2, 3].map(() => ({ on: true, from: '09:00', to: '18:00', l1: '14:00', l2: '15:00' }))
   .concat([{ on: true, from: '09:00', to: '15:00', l1: '', l2: '' }, { on: false }, { on: false }]);
-const DAY_MODES = { oficina: { n: 'Oficina', i: '🏢' }, tele: { n: 'Teletrabajo', i: '🏠' }, libre: { n: 'Libre', i: '🌴' }, vacas: { n: 'Vacaciones', i: '🏖️' }, festivo: { n: 'Festivo', i: '🎉' } };
+const DAY_MODES = { oficina: { n: 'Oficina', i: '🏢' }, tele: { n: 'Teletrabajo', i: '🏠' }, libre: { n: 'Libre', i: '☕' }, vacas: { n: 'Vacaciones', i: '🏖️' }, festivo: { n: 'Festivo', i: '🎉' } };
 const MODE_CHIPS = ['oficina', 'tele', 'libre', 'vacas'];
 
 const workSched = () => Array.isArray(S.settings.work) ? S.settings.work : null;

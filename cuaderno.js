@@ -156,8 +156,20 @@ function nbListEnsure(k) {
   const L = NB_LISTS.find(x => x.k === k) || { n: 'Lista', i: '📋' };
   return nbCreate({ title: L.n, icon: L.i, kind: 'lista:' + k, blocks: [] });
 }
+const nbLinkify = h => h.replace(/(https?:\/\/[^\s<]+)/g, u => `<a href="${u}" target="_blank" rel="noopener noreferrer">${u.replace(/^https?:\/\/(www\.)?/, '').slice(0, 40)}${u.length > 48 ? '…' : ''}</a>`);
+function nbSetMood(iso, v) {
+  const e = nbDiaryEnsure(iso);
+  e.mood = e.mood === +v ? 0 : +v; e.icon = e.mood ? NB_MOODS[e.mood - 1][0] : '📅'; nbTouch(e); nbSaveNow();
+  return e;
+}
+// Buscar lo apuntado donde toca: la música en Spotify, las pelis en JustWatch (dónde verlas) y los sitios en el mapa.
+const NB_LACT = {
+  musica: ['Buscar en Spotify', 'music', q => 'https://open.spotify.com/search/' + encodeURIComponent(q)],
+  pelis: ['Dónde verla', 'tv', q => 'https://www.justwatch.com/es/buscar?q=' + encodeURIComponent(q)],
+  planes: ['Ver en el mapa', 'map', q => 'https://www.google.com/maps/search/' + encodeURIComponent(q + ' Barcelona')],
+};
 function nbListAdd(k, text) {
-  const p = nbListEnsure(k), html = esc(text.charAt(0).toUpperCase() + text.slice(1));
+  const p = nbListEnsure(k), html = nbLinkify(esc(text.charAt(0).toUpperCase() + text.slice(1)));
   const empty = p.blocks.find(b => b.t === 'todo' && !nbPlain(b.html) && !b.checked);
   let b; if (empty) { empty.html = html; b = empty; } else { b = B('todo', html); p.blocks.push(b); }
   nbTouch(p); nbSaveNow();
@@ -166,8 +178,8 @@ function nbListAdd(k, text) {
 function nbListCard(L) {
   const p = nbListPage(L.k), items = nbItems(p), pend = items.filter(b => !b.checked), done = items.length - pend.length;
   return `<div class="nb-list" style="--lc:${L.c}">
-    <div class="nb-lh"><button class="nb-ln" ${p ? `data-open="${p.id}"` : `data-lopen="${L.k}"`}><span class="nb-li">${esc(L.i)}</span><span>${esc(L.n)}</span></button>${pend.length ? `<span class="nb-lc">${pend.length}</span>` : ''}</div>
-    ${pend.length ? `<ul class="nb-lul">${pend.slice(0, 5).map(b => `<li><label><input type="checkbox" data-lchk="${p.id}|${b.id}"><span>${nbClean(b.html)}</span></label></li>`).join('')}</ul>
+    <div class="nb-lh"><button class="nb-ln" ${p ? `data-open="${p.id}"` : `data-lopen="${L.k}"`}><span class="nb-li">${esc(L.i)}</span><span>${esc(L.n)}</span></button>${pend.length ? `<button class="nb-lsh" data-lshare="${p.id}" title="Compartir la lista" aria-label="Compartir la lista">${ico('share-2')}</button><span class="nb-lc">${pend.length}</span>` : ''}</div>
+    ${pend.length ? `<ul class="nb-lul">${pend.slice(0, 5).map(b => { const A = NB_LACT[L.k], q = nbPlain(b.html).split(' · ')[0]; return `<li><label><input type="checkbox" data-lchk="${p.id}|${b.id}"><span>${nbClean(b.html)}</span></label>${A && !/<a /.test(b.html) ? `<a class="nb-lact" href="${esc(A[2](q))}" target="_blank" rel="noopener noreferrer" title="${A[0]}" aria-label="${A[0]}">${ico(A[1])}</a>` : ''}</li>`; }).join('')}</ul>
       ${pend.length > 5 ? `<button class="link small" data-open="${p.id}">y ${pend.length - 5} más</button>` : ''}` : `<p class="nb-lhint">${esc(L.hint)}</p>`}
     <input class="nb-ladd" data-ladd="${L.k}" placeholder="＋ ${esc(L.ph)}" enterkeyhint="done" autocomplete="off" aria-label="Añadir a ${esc(L.n)}">
     ${done ? `<button class="link small nb-ldone" data-lclear="${p.id}">✓ ${done} ${done > 1 ? 'hechas' : 'hecha'} · quitarlas</button>` : ''}
@@ -523,14 +535,14 @@ function bindCuaderno() {
       b.checked = lc.checked; nbTouch(p); nbSaveNow();
       lc.closest('li').classList.add('bye'); clearTimeout(nbChkT); nbChkT = setTimeout(nbRe, 700); return;
     }
+    const sh = t.closest('[data-lshare]'); if (sh) { const p = nbP(sh.dataset.lshare); return sharePlan(nbTitle(p), nbItems(p).filter(b => !b.checked).map(b => '• ' + nbPlain(b.html)).join(String.fromCharCode(10)), ''); }
     const cl = t.closest('[data-lclear]'); if (cl) {
       const p = nbP(cl.dataset.lclear), before = p.blocks.slice();
       p.blocks = p.blocks.filter(b => !(b.t === 'todo' && b.checked)); nbTouch(p); nbSaveNow(); nbRe();
       return toast('Quitadas de la lista', { actions: [{ n: 'Deshacer', fn: () => { p.blocks = before; nbTouch(p); nbSaveNow(); nbRe(); } }] });
     }
     const md = t.closest('[data-mood]'); if (md) {
-      const [iso, v] = md.dataset.mood.split('|'), e = nbDiaryEnsure(iso);
-      e.mood = e.mood === +v ? 0 : +v; e.icon = e.mood ? NB_MOODS[e.mood - 1][0] : '📅'; nbTouch(e); nbSaveNow();
+      const [iso, v] = md.dataset.mood.split('|'), e = nbSetMood(iso, v);
       document.querySelectorAll(`[data-mood^="${iso}|"]`).forEach(x => { const on = +x.dataset.mood.split('|')[1] === e.mood; x.classList.toggle('on', on); x.setAttribute('aria-checked', on); });
       if (!nbCur) { const w = document.querySelector('.nb-week'); if (w) w.outerHTML = nbWeekMoods(); }
       return;
