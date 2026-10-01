@@ -192,16 +192,13 @@ function vInicio() {
 
   return `<div class="hub">
     <section class="sky sky-${phase}">
-      <div class="sky-top"><span class="sky-hi">${hi}${myFirst() ? ', ' + esc(myFirst()) : ''}</span><span class="sky-tools">${cur ? `<span class="sky-wx" title="${wic.t}${wd ? ` · máx ${wd.max}° mín ${wd.min}°` : ''}">${wic.i} <b>${cur.t}°</b>${wd ? `<small>${wd.max}° · ${wd.min}°</small>` : ''}</span>` : ''}<button class="sky-gear" data-palette aria-label="Buscar" title="Buscar (Ctrl+K)">⌕</button><button class="sky-gear" data-hubgo="espacio" aria-label="Ajustes">⚙️</button></span></div>
-      <div class="sky-head">
-        <div class="sky-badge" aria-label="${fmtDay(today)}"><small>${now.toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', '')}</small><b>${now.getDate()}</b><small>${now.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '')}</small></div>
-        <div class="sky-txt"><h1 class="sky-h">${hero[0]}</h1><p class="sky-sub">${hero[1]}</p></div>
-      </div>
+      <div class="sky-top"><span class="sky-hi">${fmtDay(today)}</span><span class="sky-tools">${cur ? `<span class="sky-wx" title="${wic.t}${wd ? ` · máx ${wd.max}° mín ${wd.min}°` : ''}">${wic.i} <b>${cur.t}°</b>${wd ? `<small>${wd.max}° · ${wd.min}°</small>` : ''}</span>` : ''}<button class="sky-gear" data-palette aria-label="Buscar" title="Buscar (Ctrl+K)">⌕</button><button class="sky-gear" data-hubgo="espacio" aria-label="Ajustes">⚙️</button></span></div>
+      <h1 class="sky-h">${hero[0]}</h1><p class="sky-sub">${hero[1]}</p>
       ${dayBar(items, workSpans(today), sun)}
       ${chips ? `<div class="sky-chips">${chips}</div>` : ''}
-      <label class="sky-qa"><span aria-hidden="true">＋</span><input id="hubqa" placeholder="Apunta lo que sea: «dentista el jueves a las 10», «ver Dune»…" autocomplete="off" enterkeyhint="done" aria-label="Apuntar algo escribiendo"></label>
-      <div class="sky-qah" id="hubqah"></div>
     </section>
+      <label class="sky-qa qa-out">${ico('plus')}<input id="hubqa" placeholder="Apunta lo que sea…" autocomplete="off" enterkeyhint="done" aria-label="Apuntar algo escribiendo"></label>
+      <div class="sky-qah" id="hubqah"></div>
 
     ${homeOrder().filter(k => SEC[k]).map(k => SEC[k]()).join('')}
     <div class="home-edit"><button class="link small" data-homeedit>Personalizar el inicio</button>${calmOn() ? '' : '<button class="link small" data-calm="on">Modo calma para hoy</button>'}</div>

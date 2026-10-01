@@ -1377,3 +1377,31 @@ button.fd-it { border: 0; background: none; font: inherit; color: inherit; text-
 .vj-card-b span { color: var(--muted); font-size: 13.5px; }
 .vj-card-go { padding-right: 14px; color: var(--muted); }
 @media (min-width: 900px) { .vj-hero { display: grid; grid-template-columns: 1fr; } }
+
+/* ---------- cabecera limpia, estilo Apple ---------- */
+.sky { padding: 18px 20px 20px; }
+.sky-hi { font-weight: 600; font-size: 15px; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sky-tools { gap: 2px; }
+.sky-wx { background: none; padding: 0 8px 0 0; height: auto; font-size: 16px; }
+.sky-wx small { display: none; }
+.sky-gear { background: none; width: 34px; height: 34px; opacity: .85; }
+.sky-gear:hover { background: rgba(255, 255, 255, .18); }
+.sky .sky-h { margin-top: 18px; font-size: clamp(30px, 5vw, 40px); font-weight: 760; letter-spacing: -.03em; }
+.sky .sky-sub { margin-top: 6px; font-size: 16px; opacity: .85; }
+.dbar { margin-top: 22px; }
+.dbar-track { height: 6px; }
+.dbar-ev { width: 8px; height: 8px; box-shadow: 0 0 0 1.5px #fff; }
+.dbar-now { width: 16px; height: 16px; box-shadow: 0 0 0 2.5px #FFD36E, 0 0 14px 4px rgba(255, 224, 138, .6); }
+.sky-chips { gap: 4px 0; margin-top: 14px; }
+.sky-chip, .sky-chip.ghost { background: none; box-shadow: none; padding: 2px 0; backdrop-filter: none; -webkit-backdrop-filter: none; font-size: 14px; font-weight: 600; opacity: .92; }
+.sky-chips { flex-direction: column; align-items: flex-start; gap: 6px; }
+.sky-chip.ghost { opacity: .75; }
+.sky-chip.sky-live { background: #1B1F3B; color: #fff; padding: 5px 11px; border-radius: 999px; opacity: 1; }
+.sky-chip .ico { width: 15px; height: 15px; }
+.qa-out { display: flex; margin: 12px 0 0; padding: 0 12px; gap: 8px; border: 0; border-radius: 12px; background: color-mix(in srgb, var(--ink) 6%, transparent); color: var(--ink); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.qa-out .ico { width: 18px; height: 18px; color: var(--muted); flex: none; }
+.qa-out input { font-weight: 500; padding: 11px 0; }
+.qa-out input::placeholder { color: var(--muted); opacity: 1; }
+.qa-out:focus-within { background: color-mix(in srgb, var(--ink) 9%, transparent); }
+.sky-qah { color: var(--muted); }
+@media (max-width: 480px) { .sky .sky-h { font-size: 30px; } .sky .sky-sub { font-size: 15px; } }
