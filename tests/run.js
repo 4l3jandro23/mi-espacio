@@ -27,7 +27,7 @@ vm.runInContext(`
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   function eur(n) { return n + ' €'; } function eur0(n) { return n + ' €'; } function debtList() { return []; } function debtLeft() { return 0; }
 `, ctx);
-const FILES = ['iconos-data.js', 'iconos.js', 'engine.js', 'cuaderno.js', 'hub.js', 'trabajo.js', 'festivos.js', 'tiempo.js', 'rapido.js', 'calendario.js', 'apps.js', 'ics.js', 'avisos.js', 'efemerides.js', 'planes.js', 'barcelona.js', 'extras.js', 'tareas.js', 'copias.js', 'mas.js', 'futbol.js', 'apple.js'];
+const FILES = ['iconos-data.js', 'iconos.js', 'engine.js', 'cuaderno.js', 'hub.js', 'trabajo.js', 'festivos.js', 'tiempo.js', 'rapido.js', 'calendario.js', 'apps.js', 'ics.js', 'avisos.js', 'efemerides.js', 'planes.js', 'barcelona.js', 'extras.js', 'tareas.js', 'copias.js', 'mas.js', 'futbol.js', 'noticias.js', 'apple.js'];
 for (const f of FILES) {
   try { vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f }); }
   catch (e) { console.error(`✗ No carga ${f}: ${e.message}`); process.exit(1); }
@@ -92,5 +92,10 @@ T('viajes: 16 de serie y los dudosos no cuentan', () => {
   return v === 16 && d === 'd' && run(`paisState('AD')`) === 'v' || [v, d];
 });
 
+// --- noticias ---
+T('noticias: separa titular y periódico', () => { const l = run(`nwParseJson({ items: [{ title: 'Pedri vuelve a entrenar - Mundo Deportivo', link: 'https://x.es/a', pubDate: '2026-10-01 10:00:00' }] })`); return l.length === 1 && l[0].t === 'Pedri vuelve a entrenar' && l[0].f === 'Mundo Deportivo' || l; });
+T('noticias: el filtro tranquilo oculta sucesos y deja lo normal', () => run(`NW_HARD.test('Muere un motorista en la AP-7') && NW_HARD.test('Dos muertos en un tiroteo') && !NW_HARD.test('El Barça gana al Getafe') && !NW_HARD.test('Nueva línea de metro en Barcelona')`));
+
+T('noticias: junta la misma noticia de varios periódicos', () => run(`nwDedupe([{ t: 'Nico Williams abandona lesionado la concentración de la selección' }, { t: 'Nico Williams causa baja en la concentración de la selección española' }, { t: 'El Betis prepara el partido contra Osasuna' }]).length`) === 2);
 console.log(`${bad ? '✗' : '✓'} ${ok} bien${bad ? `, ${bad} mal` : ''}`);
 process.exit(bad ? 1 : 0);

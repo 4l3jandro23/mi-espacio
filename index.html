@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- Seguridad: la página solo puede conectarse a GitHub (para sincronizar, y lo que sube va cifrado), a Open-Meteo (el tiempo de tu ciudad) al Supabase de la app del piso, a Wikipedia (efemérides) y a la agenda abierta del Ayuntamiento de Barcelona. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file: 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.wikimedia.org https://a.espncdn.com; connect-src 'self' https://api.github.com https://gist.githubusercontent.com https://api.open-meteo.com https://*.supabase.co https://api.wikimedia.org https://ntfy.sh https://site.api.espn.com https://opendata-ajuntament.barcelona.cat; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file: 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://api.github.com https://gist.githubusercontent.com https://api.open-meteo.com https://*.supabase.co https://api.wikimedia.org https://ntfy.sh https://site.api.espn.com https://feeds.elpais.com https://www.elperiodico.com https://api.rss2json.com https://opendata-ajuntament.barcelona.cat; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -247,6 +247,7 @@ body.locked .wrap,body.locked nav{visibility:hidden}
 <script src="copias.js"></script>
 <script src="mas.js"></script>
 <script src="futbol.js"></script>
+<script src="noticias.js"></script>
 <script src="apple.js"></script>
 <script>
 'use strict';
@@ -365,7 +366,7 @@ function render() {
   if (FIN_TABS.includes(tab) && !financeUnlocked) { pendingTab = tab; tab = 'inicio'; if (!lockMode) lock(S.settings.pinHash ? 'enter' : 'create'); }
   const txs = Object.values(S.txs);
   const has = txs.length > 0;
-  const HUB = ['inicio', 'cal', 'tareas', 'cuaderno', 'apple', 'espacio', 'ciudad'];
+  const HUB = ['inicio', 'cal', 'tareas', 'cuaderno', 'apple', 'espacio', 'ciudad', 'noticias'];
   const needsData = !has && !['deudas', 'ajustes', ...HUB].includes(tab);
   const hubMode = HUB.includes(tab);
   document.body.classList.toggle('nbmode', tab === 'cuaderno');
@@ -385,7 +386,7 @@ function render() {
     AN.pendingFixed = AN.pendingFixed.filter(r => !fixedEnd(r) || fixedEnd(r) >= todayISO());
     if (cycleIdx == null || cycleIdx >= AN.cycles.length) cycleIdx = AN.cycles.length - 1;
   }
-  app.innerHTML = needsData ? '' : ({ hoy: vHoy, mes: vMes, hormiga: vHormiga, fijos: vFijos, movs: vMovs, deudas: vDeudas, ajustes: vAjustes, guia: vGuia, prev: vPrev, cuaderno: vCuaderno, inicio: vInicio, cal: vCal, apple: vApple, espacio: vEspacio, ciudad: vCiudad, tareas: vTareas })[tab]();
+  app.innerHTML = needsData ? '' : ({ hoy: vHoy, mes: vMes, hormiga: vHormiga, fijos: vFijos, movs: vMovs, deudas: vDeudas, ajustes: vAjustes, guia: vGuia, prev: vPrev, cuaderno: vCuaderno, inicio: vInicio, cal: vCal, apple: vApple, espacio: vEspacio, ciudad: vCiudad, tareas: vTareas, noticias: vNoticias })[tab]();
   bind();
 }
 const goTab = t => { tab = t; render(); scrollTo(0, 0); };

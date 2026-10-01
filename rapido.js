@@ -145,7 +145,7 @@ const SECTIONS = [
   ['Tareas y listas', 'tareas', '☑'],
   ['Inicio', 'inicio', '☀︎'], ['Calendario', 'cal', '◷'], ['Cuaderno: listas, notas y diario', 'cuaderno', '▤'], ['Mi Dinero', 'hoy', '💰'], ['Previsión del mes', 'prev', '↗'],
   ['Meses', 'mes', '📅'], ['Gastos hormiga', 'hormiga', '🐜'], ['Gastos fijos', 'fijos', '🔁'], ['Movimientos', 'movs', '🧾'], ['Deudas', 'deudas', '🤝'],
-  ['Barcelona: planes, gratis y agenda', 'ciudad', '🏙️'], ['Ajustes de Mi Espacio', 'espacio', '⚙️'], ['Mi Dinero: PIN, copias y sincronización', 'ajustes', '🔒'], ['Calendario de Apple', 'apple', '🍎'],
+  ['Barcelona: planes, gratis y agenda', 'ciudad', '🏙️'], ['Noticias', 'noticias', '📰'], ['Ajustes de Mi Espacio', 'espacio', '⚙️'], ['Mi Dinero: PIN, copias y sincronización', 'ajustes', '🔒'], ['Calendario de Apple', 'apple', '🍎'],
 ];
 const normTxt = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 function nextOcc(ev, from) { for (let i = 0; i < 400; i++) { const d = hAdd(from, i); if (occurs(ev, d)) return d; } return ev.date; }

@@ -152,6 +152,7 @@ function vInicio() {
     calma: () => typeof calmHTML === 'function' ? calmHTML() : '',
     copia: () => (typeof syncGuideHTML === 'function' && syncGuideHTML()) || (typeof backupCardHTML === 'function' ? backupCardHTML() : ''),
     futbol: () => typeof futbolHTML === 'function' ? futbolHTML() : '',
+    noticias: () => typeof noticiasHTML === 'function' ? noticiasHTML() : '',
     semana: () => weekStrip(today),
     seviene: () => comingHTML(today),
     resumen: () => (typeof reviewDue === 'function' && reviewDue() ? `<section class="hub-sec"><div class="bk rvcard"><span class="bk-ic">${ico('calendar-heart')}</span><div class="bk-b"><b>Revisión de la semana</b><small>5 minutos para mirar la semana que viene con calma.</small><div class="bk-acts"><button class="primary" data-review>Empezar</button></div></div></div></section>` : '') + (typeof weekSummaryHTML === 'function' ? weekSummaryHTML(today) : ''),
