@@ -54,13 +54,18 @@ function weekSummaryHTML(today) {
 }
 
 // ---------- novedades ----------
-const NOVEDADES_V = 'v30';
+const NOVEDADES_V = 'v32';
 const NOVEDADES = [
-  ['sun', 'Cabecera nueva', 'Arriba, en grande, lo que importa ahora: cuánto te queda para salir, lo siguiente que tienes y una barra con tu día.'],
-  ['balon', 'Fútbol', 'Barça, Betis y España: próximo partido, resultados, marcador en directo y la clasificación. También en el calendario.'],
-  ['house', 'Teletrabajo, una vez por semana', 'Arriba sale «¿Hoy teletrabajo?». Cuando lo marcas, deja de preguntar hasta la semana que viene.'],
-  ['map', 'Tus viajes, en un mapa', 'En el Cuaderno: Europa en cuadritos. Toca un país para marcar «quiero ir» o «he estado».'],
-  ['layout-grid', 'Inicio más limpio', 'Menos cosas de serie. Lo que quieras, lo vuelves a poner en «Personalizar el inicio».'],
+  ['palette', 'Colores y modo oscuro', 'En Ajustes › Aspecto: 5 paletas (Cielo, Mar, Bosque, Arena, Grafito) y modo oscuro al anochecer.'],
+  ['hourglass', 'Cuenta atrás', 'Para lo que esperas: un viaje, un concierto, el Clásico.'],
+  ['cake', 'Fechas que importan', 'Cumpleaños, documentos que caducan y venta de entradas, con aviso aunque la app esté cerrada.'],
+  ['tree-palm', 'Mejores fechas para vacaciones', 'En Ajustes › Vacaciones: tramos que encadenan puentes y festivos.'],
+  ['wallet', 'Tu dinero en el inicio', 'Con el PIN puesto: lo que llevas gastado frente a lo normal, lo que se cobra esta semana y tus suscripciones.'],
+  ['tv', 'Pelis y series', 'Estrenos de la semana en plataformas y lo de tu lista.'],
+  ['lightbulb', 'Algo nuevo cada día', 'En Descubre, el artículo del día de Wikipedia.'],
+  ['sofa', 'Hoy no puedo', 'Un toque y tus tareas de hoy pasan a mañana.'],
+  ['sparkles', 'Algún día y Mi año', 'Una lista sin prisa para ideas, y tu año en resumen (en el Cuaderno, «Tu año»).'],
+  ['map', 'Tus listas de Google Maps', 'En Ajustes: cómo traerlas una vez con Google Takeout.'],
 ];
 function novedadesCheck() {
   let seen = ''; try { seen = localStorage.getItem('miespacio.novedades') || ''; } catch (e) {}
@@ -165,13 +170,20 @@ function findeHTML(today) {
   const pl = nbListPage('planes'), idea = pl ? nbItems(pl).filter(b => !b.checked) : [];
   const pick = idea.length ? idea[(+today.slice(8)) % idea.length] : null; // una distinta cada día
   const fsun = isFirstSunday(sun);
-  if (!ps.length && !free && !pick && !fsun) return '';
-  return `<section class="hub-sec"><div class="hub-hrow"><h2 class="hub-h">Tu finde</h2><button class="pill-btn" data-findego>Ver planes</button></div>
+  const rainy = days.some(d => { const x = wxDay(d); return x && x.rain >= 50; });
+  const indoor = rainy ? PLANES_BCN.filter(p => days.some(d => planOn(p, d)) && ['cine', 'cultura', 'musica', 'comida'].includes(p.tipo)).slice(0, 2) : [];
+  const IDEAS_LLUVIA = ['Una expo en CaixaForum o el CCCB', 'Cine en versión original (Verdi, Renoir, Phenomena)', 'Bolera o escape room', 'Mercat de Sant Antoni (cubierto) y un vermut', 'Librería con café (La Central del Raval)', 'Museu Nacional (MNAC): vistas incluso con lluvia'];
+  const matches = typeof fbAll === 'function' ? fbAll().filter(m => fbDay(m) >= hAdd(sat, -1) && fbDay(m) <= sun && m.state !== 'post') : [];
+  const friday = w === 4 && new Date().getHours() >= 15;
+  if (!ps.length && !free && !pick && !fsun && !matches.length) return '';
+  return `<section class="hub-sec"><div class="hub-hrow"><h2 class="hub-h">${friday ? 'Tu finde empieza ya' : 'Tu finde'}</h2><button class="pill-btn" data-findego>Ver planes</button></div>
     <div class="fd">${wx.length ? `<div class="fd-row">${wx.join('')}</div>` : ''}
       ${mine.map(x => `<div class="fd-it mine">${emoIco('💿')} Toca <b>${esc(x.n)}</b> · ${dShort(x.s > sat ? x.s : sat)}</div>`).join('')}
       ${ps.map(p => `<div class="fd-it">${(PLAN_TIPOS[p.tipo] || PLAN_TIPOS.ciudad)[1]} <b>${esc(p.n)}</b>${p.gratis ? ' · gratis' : ''}</div>`).join('')}
       ${fsun ? `<div class="fd-it">🏛️ El domingo es primer domingo: <b>museos gratis</b></div>` : ''}
       ${free ? `<div class="fd-it">🎟️ <b>${free} planes gratis</b> en la agenda del Ayuntamiento</div>` : ''}
+      ${matches.map(m => `<button class="fd-it" data-futbol>⚽ <b>${esc(fbTitle(m))}</b> · ${fbWhen(m).toLowerCase()}</button>`).join('')}
+      ${rainy ? `<div class="fd-it fd-rain">☔ <span>Pinta a lluvia. Planes a cubierto: ${indoor.length ? indoor.map(p => `<b>${esc(p.n)}</b>`).join(', ') : `<b>${IDEAS_LLUVIA[(+today.slice(8)) % IDEAS_LLUVIA.length]}</b> o <b>${IDEAS_LLUVIA[(+today.slice(8) + 3) % IDEAS_LLUVIA.length]}</b>`}.</span></div>` : ''}
       ${pick ? `<div class="fd-it fd-idea">📍 De tu lista: <b>${nbClean(pick.html)}</b></div>` : ''}
     </div></section>`;
 }
@@ -200,12 +212,15 @@ function descubreHTML(today) {
   const img = DSC.d === today && DSC.img, names = artistNames(), art = names.length ? names[dayNum(today) % names.length] : '';
   const goods = nbPages().filter(p => /^diario:/.test(p.kind || '') && p.good && p.kind.slice(7) <= hAdd(today, -7));
   const mem = goods.length ? goods[dayNum(today) % goods.length] : null;
-  if (!img && !art && !mem && !myConcerts(today, 120).length) return '';
+  const dato = typeof datoHTML === 'function' ? datoHTML(today) : '', nuevos = typeof concertsNew === 'function' ? concertsNew(today) : [];
+  if (!img && !art && !mem && !dato && !myConcerts(today, 120).length) return '';
   return `<section class="hub-sec"><h2 class="hub-h">Descubre</h2><div class="dsc">
     ${img ? `<a class="dsc-img" href="${esc(img.link || '#')}" target="_blank" rel="noopener noreferrer"><img src="${esc(img.src)}" alt="${esc(img.desc)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.dsc-img').remove()"><span><small>Foto del día</small>${esc(img.desc.slice(0, 140))}${img.desc.length > 140 ? '…' : ''}</span></a>` : ''}
     <div class="dsc-side">
       ${myConcerts(today, 120).slice(0, 2).map(p => `<button class="dsc-it" data-hubgo="ciudad"><span class="dsc-ic" style="--c:#9B7BEA">${ico('mic-vocal')}</span><span><small>Concierto de tus artistas · ${planWhen(p)}</small><b>${esc(p.n)}</b></span></button>`).join('')}
       ${art ? `<a class="dsc-it" href="https://open.spotify.com/search/${encodeURIComponent(art)}" target="_blank" rel="noopener noreferrer"><span class="dsc-ic" style="--c:#1DB954">${ico('headphones')}</span><span><small>Tu artista de hoy</small><b>${esc(art)}</b></span><span class="al-go">↗</span></a>` : ''}
+      ${nuevos.map(p => `<button class="dsc-it" data-hubgo="ciudad"><span class="dsc-ic" style="--c:#EF7F72">${ico('sparkles')}</span><span><small>Nuevo concierto de tus artistas</small><b>${esc(p.n)} · ${planWhen(p)}${p.venta ? ' · entradas ' + dShort(p.venta.slice(0, 10)) : ''}</b></span></button>`).join('')}
+      ${dato}
       ${mem ? `<button class="dsc-it" data-nbopen="${mem.id}"><span class="dsc-ic" style="--c:#9B7BEA">${ico('book-heart')}</span><span><small>Un recuerdo · ${dShort(mem.kind.slice(7))}</small><b>«${esc(mem.good)}»</b></span></button>` : ''}
     </div></div></section>`;
 }

@@ -153,6 +153,11 @@ function vInicio() {
     copia: () => (typeof syncGuideHTML === 'function' && syncGuideHTML()) || (typeof backupCardHTML === 'function' ? backupCardHTML() : ''),
     futbol: () => typeof futbolHTML === 'function' ? futbolHTML() : '',
     noticias: () => typeof noticiasHTML === 'function' ? noticiasHTML() : '',
+    cuenta: () => typeof cuentaHTML === 'function' ? cuentaHTML() : '',
+    fechas: () => typeof fechasHTML === 'function' ? fechasHTML() : '',
+    dinero: () => typeof dineroHTML === 'function' ? dineroHTML() : '',
+    estrenos: () => typeof estrenosHTML === 'function' ? estrenosHTML() : '',
+    miano: () => typeof miAnoCardHTML === 'function' ? miAnoCardHTML() : '',
     semana: () => weekStrip(today),
     seviene: () => comingHTML(today),
     resumen: () => (typeof reviewDue === 'function' && reviewDue() ? `<section class="hub-sec"><div class="bk rvcard"><span class="bk-ic">${ico('calendar-heart')}</span><div class="bk-b"><b>Revisión de la semana</b><small>5 minutos para mirar la semana que viene con calma.</small><div class="bk-acts"><button class="primary" data-review>Empezar</button></div></div></div></section>` : '') + (typeof weekSummaryHTML === 'function' ? weekSummaryHTML(today) : ''),
@@ -160,7 +165,7 @@ function vInicio() {
     finde: () => typeof findeHTML === 'function' ? findeHTML(today) : '',
     hoy: () => `    ${workSched() ? '' : workSetupCard()}
     <section class="hub-sec">
-      <h2 class="hub-h">Hoy</h2>
+      <div class="hub-hrow"><h2 class="hub-h">Hoy</h2>${typeof tkCount === 'function' && tkAll().some(x => !x.b.checked && x.b.due && x.b.due <= today) ? '<button class="pill-btn" data-hoynopuedo>Hoy no puedo</button>' : ''}</div>
       ${tip ? `<div class="hub-tip">${tip}</div>` : ''}
       ${h >= 19 && !moodToday ? `<div class="hub-mood"><span>¿Qué tal hoy?</span><div class="nb-faces">${NB_MOODS.map(([f, n], i) => `<button data-hmood="${i + 1}" title="${n}"><span>${f}</span><small>${n}</small></button>`).join('')}</div></div>` : ''}
       ${appsDayHTML(today, true)}
@@ -221,11 +226,14 @@ function remsHTML() {
 function vEspacio() {
   return `<div class="hub">
     <header class="cal-head"><div><div class="cal-year">Mi Espacio</div><h1 class="cal-month">Ajustes</h1></div></header>
+    ${typeof aspectoHTML === 'function' ? aspectoHTML() : ''}
     ${workSettingsHTML()}
     ${avisosHTML()}
     ${typeof ntfyHTML === 'function' ? ntfyHTML() : ''}
     ${typeof backupSettingsHTML === 'function' ? backupSettingsHTML() : ''}
     ${appsSettingsHTML()}
+    ${typeof docsHTML === 'function' ? docsHTML() : ''}
+    ${typeof mapsHTML === 'function' ? mapsHTML() : ''}
     <div class="card"><h2>📍 Dónde estás</h2>
       <p class="small muted" style="margin-top:0">Para los festivos, la salida y la puesta del sol y el tiempo. Al servicio del tiempo (Open-Meteo) solo le llegan las coordenadas de la ciudad, nada tuyo.</p>
       <div class="grid2"><label class="f"><span>Festivos</span><select data-set="region">${Object.entries(REGIONS).map(([k, n]) => `<option value="${k}" ${region() === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
@@ -233,6 +241,7 @@ function vEspacio() {
       <div class="toolbar" style="margin-top:8px"><button data-geo>📍 Usar mi ubicación</button></div></div>
     <div class="card"><h2>🏖️ Vacaciones</h2>
       ${vacHTML()}
+      ${typeof vacPlannerHTML === 'function' ? vacPlannerHTML() : ''}
       <div class="grid2" style="margin-top:12px"><label class="f"><span>Días de vacaciones al año</span><input type="text" inputmode="numeric" data-set="vacDays" value="${esc(S.settings.vacDays || '')}" placeholder="22"></label>
       <label class="f"><span>¿Cuántos te quedan hoy este año? <small class="muted">(contando los ya marcados)</small></span><input type="text" inputmode="numeric" data-vacleft value="${vacSummary(+todayISO().slice(0, 4)) ? vacSummary(+todayISO().slice(0, 4)).left : ''}"></label></div>
       <div class="vac-mark"><span class="small muted">Marcar vacaciones</span><label>Del<input type="date" id="vacfrom"></label><label>al<input type="date" id="vacto"></label><button data-vacmark>Marcar</button></div>

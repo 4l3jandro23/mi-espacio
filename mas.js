@@ -3,7 +3,7 @@
 'use strict';
 
 // ---------- inicio a tu gusto ----------
-const HOME_SECS = [['resumen', 'Tu semana (domingo y lunes)'], ['hoy', 'Hoy'], ['futbol', 'Fútbol'], ['noticias', 'Noticias'], ['semana', 'Tira de la semana'], ['seviene', 'Se viene'], ['finde', 'Tu finde (jueves a sábado)'], ['ciudad', 'Esta semana en Barcelona'], ['apps', 'Tus otras apps'], ['descubre', 'Descubre'], ['copia', 'Copia del mes y copia en la nube'], ['apartados', 'Tus apartados'], ['recordatorios', 'Recordatorios de Apple'], ['proximos', 'Próximos días'], ['efemerides', 'Tal día como hoy'], ['cuaderno', 'Del cuaderno']];
+const HOME_SECS = [['miano', 'Tu año (en diciembre)'], ['resumen', 'Tu semana (domingo y lunes)'], ['hoy', 'Hoy'], ['cuenta', 'Cuenta atrás'], ['fechas', 'Cumpleaños, documentos y entradas'], ['futbol', 'Fútbol'], ['noticias', 'Noticias'], ['dinero', 'Tu dinero (con el PIN puesto)'], ['semana', 'Tira de la semana'], ['seviene', 'Se viene'], ['finde', 'Tu finde (jueves a sábado)'], ['ciudad', 'Esta semana en Barcelona'], ['apps', 'Tus otras apps'], ['estrenos', 'Pelis y series'], ['descubre', 'Descubre'], ['copia', 'Copia del mes y copia en la nube'], ['apartados', 'Tus apartados'], ['recordatorios', 'Recordatorios de Apple'], ['proximos', 'Próximos días'], ['efemerides', 'Tal día como hoy'], ['cuaderno', 'Del cuaderno']];
 // Lo que viene apagado de serie (se enciende en «Personalizar el inicio»): así el inicio se lee de un vistazo.
 const HOME_OFF = ['apartados', 'proximos', 'efemerides', 'cuaderno'];
 const calmOn = () => S.settings.calm === todayISO();
@@ -15,7 +15,10 @@ function homeCfg() {
 }
 function homeOrder() {
   if (calmOn()) return ['calma', 'hoy'];
-  const c = homeCfg(); return c.order.filter(k => !c.off.includes(k));
+  const c = homeCfg(); let o = c.order.filter(k => !c.off.includes(k));
+  // El viernes por la tarde, lo primero es el finde.
+  const n = new Date(); if (n.getDay() === 5 && n.getHours() >= 15 && o.includes('finde')) o = ['finde'].concat(o.filter(k => k !== 'finde'));
+  return o;
 }
 function openHomeEdit() {
   const box = document.createElement('div'); box.className = 'sheet-veil'; box.id = 'homeedit';

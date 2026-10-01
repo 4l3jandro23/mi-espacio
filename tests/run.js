@@ -10,7 +10,7 @@ const ctx = {
   console, setTimeout: noop, clearTimeout: noop, setInterval: noop, Date, Math, JSON, Intl, URL, Blob: function () {}, File: function () {},
   navigator: { onLine: false, userAgent: 'node', serviceWorker: { ready: Promise.resolve() } },
   localStorage: { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } },
-  document: { addEventListener: noop, querySelector: () => null, querySelectorAll: () => [], getElementById: () => el(), createElement: el, createTreeWalker: () => ({ nextNode: () => false }), body: el(), head: el(), visibilityState: 'visible' },
+  document: { addEventListener: noop, querySelector: () => null, querySelectorAll: () => [], getElementById: () => el(), createElement: el, createTreeWalker: () => ({ nextNode: () => false }), body: el(), documentElement: el(), head: el(), visibilityState: 'visible' },
   MutationObserver: function () { this.observe = noop; }, NodeFilter: { SHOW_TEXT: 4 }, addEventListener: noop, scrollTo: noop, fetch: () => Promise.reject(new Error('sin red')),
   crypto: require('crypto').webcrypto, indexedDB: {}, innerWidth: 1200, innerHeight: 800, matchMedia: () => ({ matches: false, addEventListener: noop }), location: { origin: 'http://x', pathname: '/', href: 'http://x/' },
 };
@@ -27,7 +27,7 @@ vm.runInContext(`
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   function eur(n) { return n + ' €'; } function eur0(n) { return n + ' €'; } function debtList() { return []; } function debtLeft() { return 0; }
 `, ctx);
-const FILES = ['iconos-data.js', 'iconos.js', 'engine.js', 'cuaderno.js', 'hub.js', 'trabajo.js', 'festivos.js', 'tiempo.js', 'rapido.js', 'calendario.js', 'apps.js', 'ics.js', 'avisos.js', 'efemerides.js', 'planes.js', 'barcelona.js', 'extras.js', 'tareas.js', 'copias.js', 'mas.js', 'futbol.js', 'noticias.js', 'apple.js'];
+const FILES = ['iconos-data.js', 'iconos.js', 'engine.js', 'cuaderno.js', 'hub.js', 'trabajo.js', 'festivos.js', 'tiempo.js', 'rapido.js', 'calendario.js', 'apps.js', 'ics.js', 'avisos.js', 'efemerides.js', 'planes.js', 'barcelona.js', 'extras.js', 'tareas.js', 'copias.js', 'mas.js', 'futbol.js', 'noticias.js', 'mejoras.js', 'apple.js'];
 for (const f of FILES) {
   try { vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f }); }
   catch (e) { console.error(`✗ No carga ${f}: ${e.message}`); process.exit(1); }
@@ -97,5 +97,25 @@ T('noticias: separa titular y periódico', () => { const l = run(`nwParseJson({ 
 T('noticias: el filtro tranquilo oculta sucesos y deja lo normal', () => run(`NW_HARD.test('Muere un motorista en la AP-7') && NW_HARD.test('Dos muertos en un tiroteo') && !NW_HARD.test('El Barça gana al Getafe') && !NW_HARD.test('Nueva línea de metro en Barcelona')`));
 
 T('noticias: junta la misma noticia de varios periódicos', () => run(`nwDedupe([{ t: 'Nico Williams abandona lesionado la concentración de la selección' }, { t: 'Nico Williams causa baja en la concentración de la selección española' }, { t: 'El Betis prepara el partido contra Osasuna' }]).length`) === 2);
+// --- mejoras de octubre ---
+T('vacaciones: sugiere tramos que encadenan festivos', () => {
+  run(`S.days = {}; S.settings = { work: WORK_PRESET.map(d => Object.assign({}, d)) }`);
+  const l = run(`vacPlans(5)`);
+  return l.length > 0 && l.every(c => c.cost >= 1 && c.len >= 4 && c.len / c.cost >= 1.5) && l.some(c => c.a <= '2026-12-08' && c.b >= '2026-12-06') || l.map(c => [c.a, c.b, c.cost]);
+});
+T('Google Maps: lee el CSV de Takeout con comillas', () => {
+  const l = run(`mapsParse('Title,Note,URL,Tags,Comment\\n"Bar Pepe, Gracia",Las bravas,https://www.google.com/maps/place/x,,\\nMercat,,,,"muy ""bueno"" sitio"\\n')`);
+  return l.length === 2 && l[0].t === 'Bar Pepe, Gracia' && l[0].n === 'Las bravas' && l[1].n === 'muy "bueno" sitio' || l;
+});
+T('cumpleaños: el próximo y la edad', () => {
+  run(`S.events = { c1: { id: 'c1', title: 'Cumple de Ana', cat: 'cumple', date: '1990-10-04', repeat: 'year', year: 1990 } }`);
+  const c = run(`cumplesNext(21)`);
+  return c.length === 1 && c[0].d === '2026-10-04' && c[0].age === 36 && run(`cumpleName(S.events.c1)`) === 'Ana' || c;
+});
+T('hoy no puedo: pasa las tareas de hoy a mañana', () => {
+  run(`S.pages = {}; var h1 = nbListAdd('tareas', 'Llamar'); h1.b.due = '2026-09-30'; var h2 = nbListAdd('tareas', 'Otra'); h2.b.due = '2026-10-09'; hoyNoPuedo();`);
+  const d = run(`tkAll().map(x => x.b.due).sort().join(',')`);
+  return d === '2026-10-01,2026-10-09' || d;
+});
 console.log(`${bad ? '✗' : '✓'} ${ok} bien${bad ? `, ${bad} mal` : ''}`);
 process.exit(bad ? 1 : 0);

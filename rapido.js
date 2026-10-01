@@ -184,6 +184,11 @@ function openPalette(q0) {
     const acts = [
       { i: '🙂', t: 'Diario: ¿qué tal hoy?', s: 'Acción', fn: () => { tab = 'cuaderno'; nbToday(); } },
       { i: '📝', t: 'Nota rápida', s: 'En tu cuaderno', fn: () => { tab = 'cuaderno'; nbCur = null; render(); scrollTo(0, 0); const i = document.getElementById('nbcap'); if (i) i.focus(); } },
+      { i: '⏳', t: 'Nueva cuenta atrás', s: 'Algo que esperas', fn: () => cdAdd() },
+      { i: '🛋️', t: 'Hoy no puedo', s: 'Pasar las tareas de hoy a mañana', fn: () => hoyNoPuedo() },
+      { i: '🏖️', t: 'Mejores fechas para vacaciones', s: 'Encadenando puentes y festivos', fn: () => openVacPlanner() },
+      { i: '✨', t: 'Mi año', s: 'Tu año en resumen', fn: () => openMiAno() },
+      { i: '🎨', t: 'Cambiar colores y modo oscuro', s: 'Aspecto', fn: () => goTab('espacio') },
       { i: '⚽', t: 'Fútbol: Barça, Betis y España', s: 'Partidos, resultados y clasificación', fn: () => openFutbol() },
       { i: '🌍', t: 'Tus viajes', s: 'El mapa de los países', fn: () => { tab = 'cuaderno'; nbCur = null; render(); setTimeout(() => { const m = document.querySelector('.pp'); if (m) m.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 200); } },
       { i: '🌙', t: 'Modo calma para hoy', s: 'Inicio solo con lo de hoy', fn: () => setCalm(true) },
