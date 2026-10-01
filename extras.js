@@ -250,32 +250,3 @@ function paisState(c) {
   if (PAISES_DUDA[c]) return ex[c === 'AD' ? 'andorra' : 'belgica'] ? 'v' : 'd';
   return '';
 }
-function paisCycle(c) {
-  const st = paisState(c), o = Object.assign({}, S.settings.paises || {});
-  const duda = !!PAISES_DUDA[c], nx = duda ? (st === 'v' ? 'd' : 'v') : st === '' ? 'w' : st === 'w' ? 'v' : '';
-  if (duda) { const ex = Object.assign({}, S.settings.paisesExtra || {}); ex[c === 'AD' ? 'andorra' : 'belgica'] = nx === 'v'; set('settings', 'paisesExtra', ex); delete o[c]; } else o[c] = nx || 'x';
-  set('settings', 'paises', o); save();
-  toast(`${flagOf(c)} ${paisName(c)}: ${nx === 'v' ? 'has estado' : nx === 'w' ? 'en tu lista de «quiero ir»' : nx === 'd' ? 'dudoso, no cuenta' : 'quitado'}`);
-  softRender();
-}
-function paisesHTML() {
-  const st = Object.fromEntries(EU_GRID.map(g => [g.c, paisState(g.c)]));
-  const extra = Object.entries(S.settings.paises || {}).filter(([c, v]) => v === 'v' && !EU_GRID.some(g => g.c === c)).map(([c]) => c);
-  const been = EU_GRID.filter(g => st[g.c] === 'v').map(g => g.c).concat(extra), want = EU_GRID.filter(g => st[g.c] === 'w').map(g => g.c);
-  const pct = Math.round(EU_GRID.filter(g => st[g.c] === 'v').length / EU_GRID.length * 100);
-  const free = typeof vacSummary === 'function' && vacSummary(+todayISO().slice(0, 4));
-  const W = 10, H = 9;
-  return `<section class="nb-sec2 pp">
-    <div class="nb-h"><h2>Tus viajes</h2></div>
-    <div class="pp-card">
-      <div class="pp-stats"><div><b>${been.length}</b><small>países</small></div><div><b>${pct}%</b><small>de Europa</small></div><div><b>${want.length}</b><small>quiero ir</small></div></div>
-      <div class="pp-map" style="--w:${W};--h:${H}" role="group" aria-label="Mapa de Europa: toca un país para marcarlo">
-        ${EU_GRID.map(g => `<button class="pp-t ${st[g.c] ? 'is-' + st[g.c] : ''}" style="grid-column:${g.x + 1};grid-row:${g.y + 1}" data-pais="${g.c}" title="${esc(paisName(g.c))}${PAISES_DUDA[g.c] ? ' (' + PAISES_DUDA[g.c] + ')' : ''}" aria-label="${esc(paisName(g.c))}">${g.c}</button>`).join('')}
-      </div>
-      <div class="pp-legend"><span><i class="is-v"></i>He estado</span><span><i class="is-w"></i>Quiero ir</span><span><i class="is-d"></i>Dudoso</span><span class="muted">Toca un país para cambiarlo</span></div>
-      <div class="pp-flags">${been.map(c => `<span title="${esc(paisName(c))}">${flagOf(c)}<small>${esc(paisName(c))}</small></span>`).join('')}</div>
-      ${want.length ? `<div class="pp-want">${ico('plane')}<span>${free && free.free > 0 ? `Te quedan <b>${free.free} días</b> de vacaciones por gastar. ` : ''}Tu lista: ${want.map(c => flagOf(c) + ' ' + esc(paisName(c))).join(', ')}.</span></div>` : ''}
-    </div>
-  </section>`;
-}
-document.addEventListener('click', e => { const t = e.target.closest && e.target.closest('[data-pais]'); if (t) { e.stopPropagation(); paisCycle(t.dataset.pais); } }, true);

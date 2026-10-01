@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- Seguridad: la página solo puede conectarse a GitHub (para sincronizar, y lo que sube va cifrado), a Open-Meteo (el tiempo de tu ciudad) al Supabase de la app del piso, a Wikipedia (efemérides) y a la agenda abierta del Ayuntamiento de Barcelona. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file: 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://api.github.com https://gist.githubusercontent.com https://api.open-meteo.com https://*.supabase.co https://api.wikimedia.org https://ntfy.sh https://site.api.espn.com https://feeds.elpais.com https://www.elperiodico.com https://api.rss2json.com https://api.tvmaze.com https://es.wikipedia.org https://opendata-ajuntament.barcelona.cat; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file: 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://api.github.com https://gist.githubusercontent.com https://api.open-meteo.com https://geocoding-api.open-meteo.com https://*.supabase.co https://api.wikimedia.org https://ntfy.sh https://site.api.espn.com https://feeds.elpais.com https://www.elperiodico.com https://api.rss2json.com https://api.tvmaze.com https://es.wikipedia.org https://opendata-ajuntament.barcelona.cat; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -249,6 +249,7 @@ body.locked .wrap,body.locked nav{visibility:hidden}
 <script src="futbol.js"></script>
 <script src="noticias.js"></script>
 <script src="mejoras.js"></script>
+<script src="viajes.js"></script>
 <script src="apple.js"></script>
 <script>
 'use strict';
@@ -367,7 +368,7 @@ function render() {
   if (FIN_TABS.includes(tab) && !financeUnlocked) { pendingTab = tab; tab = 'inicio'; if (!lockMode) lock(S.settings.pinHash ? 'enter' : 'create'); }
   const txs = Object.values(S.txs);
   const has = txs.length > 0;
-  const HUB = ['inicio', 'cal', 'tareas', 'cuaderno', 'apple', 'espacio', 'ciudad', 'noticias'];
+  const HUB = ['inicio', 'cal', 'tareas', 'cuaderno', 'apple', 'espacio', 'ciudad', 'noticias', 'viajes'];
   const needsData = !has && !['deudas', 'ajustes', ...HUB].includes(tab);
   const hubMode = HUB.includes(tab);
   document.body.classList.toggle('nbmode', tab === 'cuaderno');
@@ -387,7 +388,7 @@ function render() {
     AN.pendingFixed = AN.pendingFixed.filter(r => !fixedEnd(r) || fixedEnd(r) >= todayISO());
     if (cycleIdx == null || cycleIdx >= AN.cycles.length) cycleIdx = AN.cycles.length - 1;
   }
-  app.innerHTML = needsData ? '' : ({ hoy: vHoy, mes: vMes, hormiga: vHormiga, fijos: vFijos, movs: vMovs, deudas: vDeudas, ajustes: vAjustes, guia: vGuia, prev: vPrev, cuaderno: vCuaderno, inicio: vInicio, cal: vCal, apple: vApple, espacio: vEspacio, ciudad: vCiudad, tareas: vTareas, noticias: vNoticias })[tab]();
+  app.innerHTML = needsData ? '' : ({ hoy: vHoy, mes: vMes, hormiga: vHormiga, fijos: vFijos, movs: vMovs, deudas: vDeudas, ajustes: vAjustes, guia: vGuia, prev: vPrev, cuaderno: vCuaderno, inicio: vInicio, cal: vCal, apple: vApple, espacio: vEspacio, ciudad: vCiudad, tareas: vTareas, noticias: vNoticias, viajes: vViajes })[tab]();
   bind();
 }
 const goTab = t => { tab = t; render(); scrollTo(0, 0); };
@@ -1038,7 +1039,7 @@ function bind() {
   document.querySelectorAll('[data-vacleft]').forEach(el => el.onchange = () => { const n = parseInt(el.value, 10); if (isNaN(n)) return; const t = todayISO(); set('settings', 'vacLeft', { y: +t.slice(0, 4), n, at: t }); save(); render(); });
   document.querySelectorAll('[data-bal]').forEach(el => el.onchange = () => { set('balances', el.dataset.bal, { amount: +el.value, date: todayISO() }); save(); render(); });
   document.querySelectorAll('[data-end]').forEach(el => el.onchange = () => { set('fixedEnds', el.dataset.end, el.value || null); save(); render(); });
-  bindDeudas(); bindSync(); bindPrev(); bindCuaderno(); bindHub(); bindWork(); bindCiudad(); bindTareas(); if (tab === 'apple' || tab === 'cal' || tab === 'inicio') bindApple();
+  bindDeudas(); bindSync(); bindPrev(); bindCuaderno(); bindHub(); bindWork(); bindCiudad(); bindTareas(); if (tab === 'viajes') bindViajes(); if (tab === 'apple' || tab === 'cal' || tab === 'inicio') bindApple();
   if ($('exp')) $('exp').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = 'midinero-copia-' + new Date().toISOString().slice(0, 10) + '.json'; a.click(); };
   if ($('impb')) { $('impb').onclick = () => $('bfile').click(); $('bfile').onchange = async e => { try { const d = JSON.parse(await e.target.files[0].text()); if (!d.txs) throw 0; const now = Date.now(); d._t = d._t || {}; for (const M of Sync.MAPS) for (const k of Object.keys(d[M] || {})) d._t[M + '/' + k] = now; S = normalize(d); save(); render(); toast('Copia restaurada.'); } catch (_) { toast('Ese archivo no es una copia válida.'); } }; }
   if ($('wipe')) $('wipe').onclick = () => { if (confirm('¿Borrar todos los datos de ESTE dispositivo? Si tienes la sincronización activa, se desconecta; tus otros dispositivos no se tocan.')) { setSyncCfg({}); S = fresh(); save(); render(); } };

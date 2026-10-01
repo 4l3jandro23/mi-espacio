@@ -27,7 +27,7 @@ vm.runInContext(`
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   function eur(n) { return n + ' €'; } function eur0(n) { return n + ' €'; } function debtList() { return []; } function debtLeft() { return 0; }
 `, ctx);
-const FILES = ['iconos-data.js', 'iconos.js', 'engine.js', 'cuaderno.js', 'hub.js', 'trabajo.js', 'festivos.js', 'tiempo.js', 'rapido.js', 'calendario.js', 'apps.js', 'ics.js', 'avisos.js', 'efemerides.js', 'planes.js', 'barcelona.js', 'extras.js', 'tareas.js', 'copias.js', 'mas.js', 'futbol.js', 'noticias.js', 'mejoras.js', 'apple.js'];
+const FILES = ['iconos-data.js', 'iconos.js', 'engine.js', 'cuaderno.js', 'hub.js', 'trabajo.js', 'festivos.js', 'tiempo.js', 'rapido.js', 'calendario.js', 'apps.js', 'ics.js', 'avisos.js', 'efemerides.js', 'planes.js', 'barcelona.js', 'extras.js', 'tareas.js', 'copias.js', 'mas.js', 'futbol.js', 'noticias.js', 'mejoras.js', 'viajes.js', 'apple.js'];
 for (const f of FILES) {
   try { vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f }); }
   catch (e) { console.error(`✗ No carga ${f}: ${e.message}`); process.exit(1); }
@@ -116,6 +116,10 @@ T('hoy no puedo: pasa las tareas de hoy a mañana', () => {
   run(`S.pages = {}; var h1 = nbListAdd('tareas', 'Llamar'); h1.b.due = '2026-09-30'; var h2 = nbListAdd('tareas', 'Otra'); h2.b.due = '2026-10-09'; hoyNoPuedo();`);
   const d = run(`tkAll().map(x => x.b.due).sort().join(',')`);
   return d === '2026-10-01,2026-10-09' || d;
+});
+T('viajes: añadir una ciudad marca su país', () => {
+  run(`S.settings.ciudades = []; S.settings.paises = {}; vjAddCity({ name: 'Lisboa', country_code: 'PT', latitude: 38.72, longitude: -9.14 })`);
+  return run(`S.settings.ciudades.length === 1 && paisState('PT') === 'v' && vjStats().been.length === 17`);
 });
 console.log(`${bad ? '✗' : '✓'} ${ok} bien${bad ? `, ${bad} mal` : ''}`);
 process.exit(bad ? 1 : 0);

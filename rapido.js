@@ -190,7 +190,7 @@ function openPalette(q0) {
       { i: '✨', t: 'Mi año', s: 'Tu año en resumen', fn: () => openMiAno() },
       { i: '🎨', t: 'Cambiar colores y modo oscuro', s: 'Aspecto', fn: () => goTab('espacio') },
       { i: '⚽', t: 'Fútbol: Barça, Betis y España', s: 'Partidos, resultados y clasificación', fn: () => openFutbol() },
-      { i: '🌍', t: 'Tus viajes', s: 'El mapa de los países', fn: () => { tab = 'cuaderno'; nbCur = null; render(); setTimeout(() => { const m = document.querySelector('.pp'); if (m) m.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 200); } },
+      { i: '🌍', t: 'Tus viajes', s: 'El mapa de los países', fn: () => goTab('viajes') },
       { i: '🌙', t: 'Modo calma para hoy', s: 'Inicio solo con lo de hoy', fn: () => setCalm(true) },
       { i: '📋', t: 'Revisión de la semana', s: '5 minutos', fn: () => openReview() },
       { i: '🎧', t: 'Abrir mi mando de Spotify', s: 'Música', fn: () => window.open('../mi-musica/mando.html', '_blank', 'noopener') },
