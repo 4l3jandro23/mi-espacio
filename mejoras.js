@@ -2,6 +2,7 @@
 // (documentos que caducan, venta de entradas), planificador de vacaciones, tu dinero en el inicio, pelis y series,
 // artículo del día, «hoy no puedo», importar listas de Google Maps y «Mi año».
 'use strict';
+ICONS.play = '<polygon points="6 3 20 12 6 21 6 3"/>';
 ICONS['id-card'] = '<path d="M16 10h2"/><path d="M16 14h2"/><path d="M6.17 15a3 3 0 0 1 5.66 0"/><circle cx="9" cy="11" r="2"/><rect x="2" y="5" width="20" height="14" rx="2"/>';
 
 // ===================== aspecto =====================
@@ -299,7 +300,7 @@ function miAnoData(y) {
   const evs = evAll().filter(e => !e.repeat && e.date.startsWith(ys) && e.date <= todayISO()).length;
   const notes = nbPages().filter(p => p.kind === 'nota' && new Date(p.created).getFullYear() === y).length;
   const tele = Object.entries(S.days || {}).filter(([d, v]) => d.startsWith(ys) && v && v.mode === 'tele').length;
-  const fb = {}; for (const t of FB_TEAMS) { const ev = ((fbLoad().teams[t.k] || {}).events || []).filter(m => m.state === 'post' && m.at.startsWith(ys)); const r = { g: 0, e: 0, p: 0 }; ev.forEach(m => r[fbRes(m, t.id).r]++); fb[t.k] = r; }
+  const fb = {}; for (const t of FB_TEAMS) { const ev = ((fbLoad().teams[t.k] || {}).events || []).filter(m => m.state === 'post' && m.at.startsWith(ys) && m.comp !== 'Amistoso'); const r = { g: 0, e: 0, p: 0 }; ev.forEach(m => r[fbRes(m, t.id).r]++); fb[t.k] = r; }
   const been = EU_GRID.filter(g => paisState(g.c) === 'v').length;
   return { moods, goods, tasks, evs, notes, tele, vac: typeof vacUsed === 'function' ? vacUsed(y) : 0, fb, been, days: di.filter(p => p.mood).length };
 }
@@ -353,3 +354,57 @@ document.addEventListener('change', e => { if (e.target.matches && e.target.matc
 document.addEventListener('DOMContentLoaded', applyTheme);
 setInterval(applyTheme, 60e3);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') applyTheme(); });
+
+// ===================== «Apunta lo que sea» del inicio =====================
+// Adivina adónde va, enseña el destino y deja cambiarlo con un toque. Botón «Guardar» (en el iPhone, «Listo» no guarda).
+const QA_DESTS = [['cal', 'Calendario', 'calendar'], ['tareas', 'Tareas', 'list-checks'], ['nota', 'Nota', 'notebook-pen'], ['pelis', 'Pelis', 'tv'], ['planes', 'Sitios', 'map-pin'], ['algundia', 'Algún día', 'sparkles']];
+function homeCapSave(v, k) {
+  const r = nbRoute(v); k = k || r.k; const text = k === r.k ? r.text : v;
+  if (k === 'cal') { quickAdd(v, todayISO()); return; }
+  if (k === 'nota') { const p = nbAddNote(text); render(); return toast('📝 Guardado en tus notas', { actions: [{ n: 'Abrir', fn: () => { tab = 'cuaderno'; render(); nbGo(p.id); } }, { n: 'Deshacer', fn: () => { nbDelete(p.id); render(); } }] }); }
+  const L = nbListDefs().find(x => x.k === k), { p, b } = nbListAdd(k, text); render();
+  toast(`${L.i} Añadido a ${L.n}`, { actions: [{ n: 'Deshacer', fn: () => { p.blocks = p.blocks.filter(x => x.id !== b.id); nbTouch(p); nbSaveNow(); render(); } }] });
+}
+function bindHomeCap() {
+  const inp = document.getElementById('hubqa'), to = document.getElementById('hubqah'), go = document.getElementById('hubqago'); if (!inp || !to || !go) return;
+  let pick = null;
+  const paint = () => {
+    const v = inp.value.trim(); go.hidden = !v; to.classList.toggle('on', !!v);
+    if (!v) { to.innerHTML = ''; pick = null; return; }
+    const k = pick || nbRoute(v).k, q = parseQuick(v, todayISO());
+    const when = q.date || q.start ? `${q.date ? dShort(q.date) : 'hoy'}${q.start ? ' ' + q.start : ''}` : 'hoy';
+    to.innerHTML = `<span class="qa-lbl">Va a</span>${QA_DESTS.map(([d, n, i]) => `<button type="button" class="qa-d ${d === k ? 'on' : ''}" data-qad="${d}">${ico(i)}${n}${d === 'cal' && k === 'cal' ? ` · ${esc(when)}` : ''}</button>`).join('')}`;
+  };
+  const submit = () => { const v = inp.value.trim(); if (!v) return; const k = pick || nbRoute(v).k; inp.value = ''; pick = null; paint(); homeCapSave(v, k); };
+  inp.oninput = paint;
+  inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } else if (e.key === 'Escape') inp.blur(); };
+  go.onclick = e => { e.preventDefault(); submit(); };
+  to.onclick = e => { const b = e.target.closest('[data-qad]'); if (!b) return; e.preventDefault(); pick = b.dataset.qad; paint(); inp.focus(); };
+}
+
+// ===================== tu artista de hoy (con foto y quién es) =====================
+const ART_KEY = 'miespacio.artistas';
+const artCache = () => { try { return JSON.parse(localStorage.getItem(ART_KEY) || '{}'); } catch (e) { return {}; } };
+async function artFetch(name) {
+  const c = artCache(); if (c[name] || artFetch._b) return; artFetch._b = true;
+  const ok = d => /cantante|músic|music|singer|band|grupo|rapper|rapero|compositor|songwriter|DJ|productor|dúo|duo|orquesta/i.test(d || '');
+  let r = { at: Date.now() };
+  try {
+    for (const lang of ['es', 'en']) {
+      const j = await fetch(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(name.replace(/ /g, '_'))}`).then(x => x.ok ? x.json() : null).catch(() => null);
+      if (j && j.type !== 'disambiguation' && ok(j.description + ' ' + j.extract)) { r = { at: Date.now(), img: (j.thumbnail || {}).source || '', d: j.description || '' }; break; }
+    }
+  } finally { artFetch._b = false; }
+  const c2 = artCache(); c2[name] = r; const ks = Object.keys(c2); if (ks.length > 120) delete c2[ks[0]];
+  try { localStorage.setItem(ART_KEY, JSON.stringify(c2)); } catch (e) {}
+  if (r.img || r.d) softRender();
+}
+function artHTML(name) {
+  const c = artCache()[name]; if (!c) artFetch(name);
+  const d = c && c.d ? c.d.charAt(0).toUpperCase() + c.d.slice(1) : 'De tu lista de Spotify';
+  return `<a class="dsc-it art-it" href="https://open.spotify.com/search/${encodeURIComponent(name)}" target="_blank" rel="noopener noreferrer">
+    ${c && c.img ? `<img class="art-img" src="${esc(c.img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : `<span class="dsc-ic" style="--c:#1DB954">${ico('headphones')}</span>`}
+    <span class="art-b"><small>Tu artista de hoy</small><b>${esc(name)}</b><em>${esc(d)}</em></span><span class="art-play">${ico('play')}<span>Escuchar</span></span></a>`;
+}
+
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-nbseg]'); if (!b) return; nbSeg = b.dataset.nbseg; try { localStorage.setItem('miespacio.nbseg', nbSeg); } catch (x) {} render(); });

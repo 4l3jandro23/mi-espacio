@@ -27,7 +27,7 @@ vm.runInContext(`
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   function eur(n) { return n + ' €'; } function eur0(n) { return n + ' €'; } function debtList() { return []; } function debtLeft() { return 0; }
 `, ctx);
-const FILES = ['iconos-data.js', 'iconos.js', 'engine.js', 'cuaderno.js', 'hub.js', 'trabajo.js', 'festivos.js', 'tiempo.js', 'rapido.js', 'calendario.js', 'apps.js', 'ics.js', 'avisos.js', 'efemerides.js', 'planes.js', 'barcelona.js', 'extras.js', 'tareas.js', 'copias.js', 'mas.js', 'futbol.js', 'noticias.js', 'mejoras.js', 'viajes.js', 'apple.js'];
+const FILES = ['iconos-data.js', 'iconos.js', 'engine.js', 'cuaderno.js', 'hub.js', 'trabajo.js', 'festivos.js', 'tiempo.js', 'rapido.js', 'calendario.js', 'apps.js', 'ics.js', 'avisos.js', 'efemerides.js', 'planes.js', 'barcelona.js', 'extras.js', 'tareas.js', 'copias.js', 'mas.js', 'futbol.js', 'noticias.js', 'mejoras.js', 'viajes.js', 'mas2.js', 'apple.js'];
 for (const f of FILES) {
   try { vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f }); }
   catch (e) { console.error(`✗ No carga ${f}: ${e.message}`); process.exit(1); }
@@ -121,5 +121,12 @@ T('viajes: añadir una ciudad marca su país', () => {
   run(`S.settings.ciudades = []; S.settings.paises = {}; vjAddCity({ name: 'Lisboa', country_code: 'PT', latitude: 38.72, longitude: -9.14 })`);
   return run(`S.settings.ciudades.length === 1 && paisState('PT') === 'v' && vjStats().been.length === 17`);
 });
+T('cartas al futuro: solo sale en el inicio cuando toca', () => {
+  run(`S.settings.cartas = [{ id: 'k1', d: '2026-10-05', w: '2026-09-01', x: 'hola' }]`);
+  const no = run(`cartaHomeHTML()`); run(`S.settings.cartas[0].d = '2026-09-30'`); const si = run(`cartaHomeHTML()`);
+  return no === '' && si.includes('data-ctopen="k1"') || [no, si];
+});
+T('hoy, por ti: siempre hay una idea para hoy', () => typeof run(`PORTI[portiIdx(todayISO())][1]`) === 'string');
+T('fútbol: amistosos y cancelados no salen', () => run(`fbOk({ id: 'a', state: 'pre', comp: 'Amistoso', at: '2026-10-09T18:00Z' }, new Set())`) === false && run(`fbOk({ id: 'b', state: 'cancel', comp: 'LaLiga', at: '2026-10-09T18:00Z' }, new Set())`) === false);
 console.log(`${bad ? '✗' : '✓'} ${ok} bien${bad ? `, ${bad} mal` : ''}`);
 process.exit(bad ? 1 : 0);

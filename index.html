@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- Seguridad: la página solo puede conectarse a GitHub (para sincronizar, y lo que sube va cifrado), a Open-Meteo (el tiempo de tu ciudad) al Supabase de la app del piso, a Wikipedia (efemérides) y a la agenda abierta del Ayuntamiento de Barcelona. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file: 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://api.github.com https://gist.githubusercontent.com https://api.open-meteo.com https://geocoding-api.open-meteo.com https://*.supabase.co https://api.wikimedia.org https://ntfy.sh https://site.api.espn.com https://feeds.elpais.com https://www.elperiodico.com https://api.rss2json.com https://api.tvmaze.com https://es.wikipedia.org https://opendata-ajuntament.barcelona.cat; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file: 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://api.github.com https://gist.githubusercontent.com https://api.open-meteo.com https://geocoding-api.open-meteo.com https://*.supabase.co https://api.wikimedia.org https://ntfy.sh https://site.api.espn.com https://feeds.elpais.com https://www.elperiodico.com https://api.rss2json.com https://api.tvmaze.com https://es.wikipedia.org https://en.wikipedia.org https://opendata-ajuntament.barcelona.cat; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -212,8 +212,7 @@ body.locked .wrap,body.locked nav{visibility:hidden}
   <button data-hub="cal"><b>◷</b>Calendario</button>
   <button data-hub="tareas"><b>☑</b>Tareas</button>
   <button data-hub="cuaderno"><b>▤</b>Cuaderno</button>
-  <button data-hub="hoy"><b>💰</b>Dinero</button>
-  <button data-palette class="hubnav-s" aria-label="Buscar o apuntar (Ctrl+K)"><b>⌕</b>Buscar</button>
+  <button data-hub="mas"><b class="ms-dots">•••</b>Más</button>
 </nav>
 <nav id="nav" class="hidden"><div class="in">
   <button data-tab="hoy" class="on"><span>☀️</span>Hoy</button>
@@ -250,6 +249,7 @@ body.locked .wrap,body.locked nav{visibility:hidden}
 <script src="noticias.js"></script>
 <script src="mejoras.js"></script>
 <script src="viajes.js"></script>
+<script src="mas2.js"></script>
 <script src="apple.js"></script>
 <script>
 'use strict';
@@ -368,7 +368,7 @@ function render() {
   if (FIN_TABS.includes(tab) && !financeUnlocked) { pendingTab = tab; tab = 'inicio'; if (!lockMode) lock(S.settings.pinHash ? 'enter' : 'create'); }
   const txs = Object.values(S.txs);
   const has = txs.length > 0;
-  const HUB = ['inicio', 'cal', 'tareas', 'cuaderno', 'apple', 'espacio', 'ciudad', 'noticias', 'viajes'];
+  const HUB = ['inicio', 'cal', 'tareas', 'cuaderno', 'apple', 'espacio', 'ciudad', 'noticias', 'viajes', 'mas'];
   const needsData = !has && !['deudas', 'ajustes', ...HUB].includes(tab);
   const hubMode = HUB.includes(tab);
   document.body.classList.toggle('nbmode', tab === 'cuaderno');
@@ -388,7 +388,7 @@ function render() {
     AN.pendingFixed = AN.pendingFixed.filter(r => !fixedEnd(r) || fixedEnd(r) >= todayISO());
     if (cycleIdx == null || cycleIdx >= AN.cycles.length) cycleIdx = AN.cycles.length - 1;
   }
-  app.innerHTML = needsData ? '' : ({ hoy: vHoy, mes: vMes, hormiga: vHormiga, fijos: vFijos, movs: vMovs, deudas: vDeudas, ajustes: vAjustes, guia: vGuia, prev: vPrev, cuaderno: vCuaderno, inicio: vInicio, cal: vCal, apple: vApple, espacio: vEspacio, ciudad: vCiudad, tareas: vTareas, noticias: vNoticias, viajes: vViajes })[tab]();
+  app.innerHTML = needsData ? '' : ({ hoy: vHoy, mes: vMes, hormiga: vHormiga, fijos: vFijos, movs: vMovs, deudas: vDeudas, ajustes: vAjustes, guia: vGuia, prev: vPrev, cuaderno: vCuaderno, inicio: vInicio, cal: vCal, apple: vApple, espacio: vEspacio, ciudad: vCiudad, tareas: vTareas, noticias: vNoticias, viajes: vViajes, mas: vMas })[tab]();
   bind();
 }
 const goTab = t => { tab = t; render(); scrollTo(0, 0); };
@@ -396,7 +396,7 @@ document.querySelectorAll('#nav button').forEach(b => b.onclick = () => goTab(b.
 document.getElementById('btnCfg').onclick = () => goTab('ajustes');
 document.getElementById('btnHome').onclick = () => goTab('inicio');
 document.querySelectorAll('#hubnav [data-hub]').forEach(b => b.onclick = () => goTab(b.dataset.hub));
-document.querySelector('#hubnav [data-palette]').onclick = () => openPalette();
+document.querySelectorAll('#hubnav [data-palette]').forEach(b => b.onclick = () => openPalette());
 document.getElementById('goSync').onclick = () => goTab('ajustes');
 
 function lastDataDate() { return AN.list[AN.list.length - 1].date; }
@@ -911,8 +911,13 @@ function vDeudas() {
     </div>`;
   };
   const group = (dir, title) => { const l = open.filter(d => d.dir === dir); return l.length ? `<h3>${title}</h3>${l.map(item).join('')}` : ''; };
+  const byWho = {};
+  for (const d of open) { const k = d.who.trim(); const p = byWho[normTxt(k)] = byWho[normTxt(k)] || { who: k, items: [], net: 0, dirs: new Set() }; p.items.push(d); p.net += (d.dir === 'meDeben' ? 1 : -1) * debtLeft(d); p.dirs.add(d.dir); }
+  const people = Object.values(byWho).map(p => Object.assign(p, { net: Fin.round2(p.net), both: p.dirs.size > 1, h: [...p.who].reduce((a, c) => a + c.charCodeAt(0), 0) % 360 })).sort((a, b) => Math.abs(b.net) - Math.abs(a.net));
+  const net = Fin.round2(sum('meDeben') - sum('debo'));
   return `<div class="card"><h2>🤝 Deudas</h2>
-    <div class="grid2"><div class="kpi"><span class="small muted">Te deben</span><b class="pos">${eur(sum('meDeben'))}</b></div><div class="kpi"><span class="small muted">Debes</span><b>${eur(sum('debo'))}</b></div></div>
+    <div class="grid2 dp-kpis"><div class="kpi"><span class="small muted">Te deben</span><b class="pos">${eur(sum('meDeben'))}</b></div><div class="kpi"><span class="small muted">Debes</span><b>${eur(sum('debo'))}</b></div></div>
+    ${open.length ? `<p class="dp-total">${net > 0 ? `En total, a tu favor: <b class="pos">${eur(net)}</b>` : net < 0 ? `En total, debes <b>${eur(-net)}</b>` : 'En total, estás en paz'} · ${people.length} ${people.length === 1 ? 'persona' : 'personas'}</p>` : ''}
     ${why('Apunta aquí lo que te deben (cenas que adelantaste, préstamos a amigos) y lo que debes tú (a familia, facturas del piso…). Así no se te olvida nada y el número de “Hoy” cuenta con ello.')}
     <p class="small muted">Lo que debes y vence antes del próximo cobro (o no tiene fecha) lo resto del número de “Hoy”. Lo que te deben no lo cuento hasta que te lo paguen.</p>
   </div>
@@ -925,7 +930,11 @@ function vDeudas() {
     <label class="f"><span>Para cuándo (opcional)</span><input id="ddue" type="date"></label></div>
     <button id="dadd" class="primary">Apuntar</button>
   </div>
-  ${open.length ? `<div class="card">${group('meDeben', 'Te deben')}${group('debo', 'Debes')}</div>` : ''}
+  ${open.length ? `<div class="dp-list">${people.map(p => `<details class="dp" ${people.length <= 3 ? 'open' : ''}>
+      <summary><span class="dp-av" style="--h:${p.h}">${esc(p.who.slice(0, 1).toUpperCase())}</span><span class="dp-n"><b>${esc(p.who)}</b><small>${p.items.length} ${p.items.length === 1 ? 'cosa' : 'cosas'} pendiente${p.items.length === 1 ? '' : 's'}${p.both ? ' · os debéis los dos' : ''}</small></span>
+        <span class="dp-net ${p.net > 0 ? 'pos' : p.net < 0 ? 'neg' : ''}"><small>${p.net > 0 ? 'Te debe' : p.net < 0 ? 'Le debes' : 'En paz'}</small>${p.net ? eur(Math.abs(p.net)) : ''}</span></summary>
+      <div class="dp-body">${p.items.map(item).join('')}
+        <div class="toolbar" style="margin-top:10px"><button data-dsettle="${esc(p.who)}">✓ Saldar todo con ${esc(p.who)}</button></div></div></details>`).join('')}</div>` : ''}
   ${closed.length ? `<div class="card"><details><summary>Ya saldadas (${closed.length})</summary>${closed.map(item).join('')}</details></div>` : ''}`;
 }
 function bindDeudas() {
@@ -940,6 +949,12 @@ function bindDeudas() {
   };
   const upd = (id, f) => { const d = JSON.parse(JSON.stringify(S.debts[id])); f(d); set('debts', id, d); save(); render(); };
   document.querySelectorAll('[data-dpay]').forEach(el => el.onclick = () => upd(el.dataset.dpay, d => d.payments.push({ amount: debtLeft(d), date: todayISO() })));
+  document.querySelectorAll('[data-dsettle]').forEach(el => el.onclick = () => {
+    const who = normTxt(el.dataset.dsettle), ids = debtList().filter(d => normTxt(d.who.trim()) === who && debtLeft(d) > 0).map(d => d.id);
+    if (!ids.length || !confirm(`¿Marcar como saldado todo lo pendiente con ${el.dataset.dsettle}?`)) return;
+    ids.forEach(id => { const d = JSON.parse(JSON.stringify(S.debts[id])); d.payments.push({ amount: debtLeft(d), date: todayISO() }); set('debts', id, d); });
+    save(); render(); toast(`En paz con ${el.dataset.dsettle}`);
+  });
   document.querySelectorAll('[data-dpart]').forEach(el => el.onclick = () => {
     const d = S.debts[el.dataset.dpart];
     const v = Fin.round2(parseFloat(String(prompt(`¿Cuánto se ha pagado? (quedan ${eur(debtLeft(d))})`) || '').replace(',', '.')));

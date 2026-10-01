@@ -121,9 +121,9 @@ function monthGrid() {
     const cls = ['mc', out && 'out', iso === today && 'is-today', iso === calSel && 'is-sel', hDow(iso) >= 5 && 'we', hol && 'is-hol'].filter(Boolean).join(' ');
     const n = +iso.slice(8);
     return `<div class="${cls}" data-mday="${iso}" role="gridcell" aria-label="${fmtDay(iso)}${its.length ? ', ' + its.length + ' cosas' : ''}">
-      <div class="mc-top"><button class="mc-n" data-goday="${iso}" data-goview="dia" tabindex="-1">${n === 1 ? n + ' ' + MO_S[+iso.slice(5, 7) - 1] : n}</button>${md}${wxChip(iso, 'mc-wx')}</div>
+      <div class="mc-top"><button class="mc-n" data-goday="${iso}" data-goview="dia" tabindex="-1">${n === 1 && !narrow() ? n + ' ' + MO_S[+iso.slice(5, 7) - 1] : n}</button>${md}${wxChip(iso, 'mc-wx')}</div>
       <div class="mc-evs">${its.slice(0, 4).map(i => i.time && i.kind !== 'pay' ? `<button class="mc-it t" ${itemAttr(i)} style="--c:${i.color}"><i></i><span class="mc-tm">${hm(i.time)}</span>${esc(i.title)}</button>` : chipHTML(i, 'mc-it')).join('')}${its.length > 4 ? `<span class="mc-more">+${its.length - 4} más</span>` : ''}</div>
-      <div class="mc-dots">${its.filter(i => i.kind !== 'pay').slice(0, 3).map(i => `<span class="mc-bar k-${i.kind}" style="--c:${i.color}">${esc(String(i.title).replace(/^\p{Extended_Pictographic}\S*\s*/u, ''))}</span>`).join('')}${its.filter(i => i.kind !== 'pay').length > 3 ? `<span class="mc-bmore">+${its.filter(i => i.kind !== 'pay').length - 3}</span>` : ''}</div>
+      <div class="mc-dots">${its.filter(i => i.kind !== 'pay').slice(0, 2).map(i => `<span class="mc-bar k-${i.kind}" style="--c:${i.color}">${esc(String(i.title).replace(/^\p{Extended_Pictographic}\S*\s*/u, ''))}</span>`).join('')}${its.filter(i => i.kind !== 'pay').length > 2 ? `<span class="mc-bmore">+${its.filter(i => i.kind !== 'pay').length - 2}</span>` : ''}</div>
     </div>`;
   }).join('');
   return `<div class="mg-wrap"><div class="mg-wd">${WD_S.map(d => `<span>${d}</span>`).join('')}</div><div class="mg" style="--rows:${rows}" role="grid">${cells}</div></div>`;

@@ -23,7 +23,7 @@ function fbEvent(e, teamId) {
   const side = x => ({ id: +x.team.id, n: x.team.shortDisplayName || x.team.displayName, logo: ((x.team.logos || [])[0] || {}).href || x.team.logo || '', score: x.score == null ? null : typeof x.score === 'object' ? x.score.displayValue : String(x.score), win: x.winner });
   const cs = (c.competitors || []).map(side), home = cs.find((x, i) => (c.competitors[i].homeAway === 'home')) || cs[0], away = cs.find(x => x !== home) || cs[1];
   const lg = e.league || {};
-  return { id: e.id, at: e.date, comp: FB_COMP[lg.abbreviation] || FB_COMP[lg.name] || lg.shortName || lg.name || '', state: st.state || 'pre', detail: st.shortDetail || '', clock: (c.status || {}).displayClock || '',
+  return { id: e.id, at: e.date, comp: FB_COMP[lg.abbreviation] || FB_COMP[lg.name] || lg.shortName || lg.name || '', state: /CANCEL|POSTPON|SUSPEND|ABANDON|FORFEIT/.test(st.name || '') ? 'cancel' : st.state || 'pre', detail: st.shortDetail || '', clock: (c.status || {}).displayClock || '',
     home, away, me: teamId, venue: (c.venue || {}).fullName || '', tv: (c.broadcasts || []).map(b => (b.media || {}).shortName).filter(Boolean).join(', ') };
 }
 async function fbFetch(force) {
@@ -56,9 +56,16 @@ async function fbFetch(force) {
   } finally { fbBusy = false; }
 }
 const fbTeam = id => FB_TEAMS.find(t => t.id === id);
-function fbAll() {
-  const d = fbLoad(), out = {};
-  for (const t of FB_TEAMS) for (const m of ((d.teams[t.k] || {}).events || [])) if (!out[m.id]) out[m.id] = m;
+// Lo que se enseña en el inicio y el calendario: sin amistosos (ESPN no los actualiza bien), sin cancelados,
+// sin los que ocultas tú y sin partidos «programados» que deberían haber acabado hace horas (dato viejo).
+const FB_HIDE = 'miespacio.futbolOcultos';
+const fbHidden = () => { try { return new Set(JSON.parse(localStorage.getItem(FB_HIDE) || '[]')); } catch (e) { return new Set(); } };
+function fbHide(id) { const s = [...fbHidden(), id]; try { localStorage.setItem(FB_HIDE, JSON.stringify(s.slice(-200))); } catch (e) {} }
+const fbStale = m => m.state === 'pre' && Date.now() - new Date(m.at) > 3 * 36e5;
+const fbOk = (m, h) => m.state !== 'cancel' && m.comp !== 'Amistoso' && !fbStale(m) && !(h || fbHidden()).has(m.id);
+function fbAll(raw) {
+  const d = fbLoad(), out = {}, h = fbHidden();
+  for (const t of FB_TEAMS) for (const m of ((d.teams[t.k] || {}).events || [])) if (!out[m.id] && (raw || fbOk(m, h))) out[m.id] = m;
   return Object.values(out).sort((a, b) => a.at.localeCompare(b.at));
 }
 const fbName = s => (fbTeam(s.id) || {}).n || s.n;
@@ -69,8 +76,8 @@ const fbBoth = m => fbTeam(m.home.id) && fbTeam(m.away.id);
 const fbMine = m => fbTeam(m.home.id) || fbTeam(m.away.id);
 function fbLive() { return fbAll().filter(m => m.state === 'in'); }
 function fbToday(iso) { return fbAll().filter(m => fbDay(m) === (iso || todayISO())); }
-function fbNext(t) { const ev = ((fbLoad().teams[t.k] || {}).events || []); return ev.find(m => m.state !== 'post'); }
-function fbLast(t) { const ev = ((fbLoad().teams[t.k] || {}).events || []).filter(m => m.state === 'post'); return ev[ev.length - 1]; }
+function fbNext(t) { const h = fbHidden(), ev = ((fbLoad().teams[t.k] || {}).events || []); return ev.find(m => m.state !== 'post' && fbOk(m, h)); }
+function fbLast(t) { const ev = ((fbLoad().teams[t.k] || {}).events || []).filter(m => m.state === 'post' && m.comp !== 'Amistoso'); return ev[ev.length - 1]; }
 // Resultado visto desde tu equipo: g (ganado), e (empate), p (perdido). Sin rojos: perder ya fastidia bastante.
 function fbRes(m, teamId) {
   const mine = m.home.id === teamId ? m.home : m.away, other = mine === m.home ? m.away : m.home;
@@ -139,12 +146,12 @@ function openFutbol(k) {
   const box = document.createElement('div'); box.className = 'sheet-veil'; box.id = 'fbsheet';
   const paint = () => {
     const d = fbLoad(), t = FB_TEAMS.find(x => x.k === fbSheetTeam), ev = (d.teams[t.k] || {}).events || [];
-    const next = ev.filter(m => m.state !== 'post').slice(0, 6), past = ev.filter(m => m.state === 'post').slice(-5).reverse();
+    const hid = fbHidden(), next = ev.filter(m => m.state !== 'post' && !hid.has(m.id) && !fbStale(m)).slice(0, 6), past = ev.filter(m => m.state === 'post').slice(-5).reverse();
     const mrow = m => {
       const r = m.state === 'post' && fbRes(m, t.id);
       return `<div class="fb-m ${m.state === 'in' ? 'live' : ''}"><span class="fb-mwhen">${m.state === 'in' ? `<b class="fb-livedot">${esc(m.clock || 'En juego')}</b>` : m.state === 'post' ? fmtDay(fbDay(m), { day: 'numeric', month: 'short' }) : fbWhen(m)}<small>${esc(m.comp)}</small></span>
         <span class="fb-mteams"><span>${fbCrest(m.home, 'sm')}${esc(fbName(m.home))}</span><span>${fbCrest(m.away, 'sm')}${esc(fbName(m.away))}</span></span>
-        ${m.state === 'pre' ? `<span class="fb-mtv">${m.tv ? esc(m.tv.split(',')[0]) : ''}</span>` : `<span class="fb-msc ${r ? 'fb-' + r.r : ''}"><b>${esc(m.home.score)}</b><b>${esc(m.away.score)}</b></span>`}</div>`;
+        ${m.state === 'cancel' ? '<span class="fb-mtv">Cancelado</span>' : m.state === 'pre' ? `<span class="fb-mtv">${m.comp === 'Amistoso' ? 'Amistoso<br>' : ''}${m.tv ? esc(m.tv.split(',')[0]) : ''}<button class="fb-hide" data-fbhide="${m.id}" title="No se juega: ocultarlo">${ico('x')}</button></span>` : `<span class="fb-msc ${r ? 'fb-' + r.r : ''}"><b>${esc(m.home.score)}</b><b>${esc(m.away.score)}</b></span>`}</div>`;
     };
     const showTable = t.k !== 'esp' && d.table.length;
     box.innerHTML = `<div class="sheet fb-sheet" role="dialog" aria-label="Fútbol"><div class="sheet-grab"></div>
@@ -163,6 +170,7 @@ function openFutbol(k) {
     const tt = e.target;
     if (tt === box || tt.closest('[data-close]')) return box.remove();
     const b = tt.closest('[data-fbteam]'); if (b) { fbSheetTeam = b.dataset.fbteam; return paint(); }
+    const hd = tt.closest('[data-fbhide]'); if (hd) { fbHide(hd.dataset.fbhide); paint(); if (typeof softRender === 'function') softRender(); return toast('Partido oculto'); }
   };
   box.onchange = e => { if (e.target.matches('[data-fblayer]')) { const o = Object.assign({}, S.settings.calOff || {}); if (e.target.checked) delete o.futbol; else o.futbol = 1; set('settings', 'calOff', o); save(); } };
 }

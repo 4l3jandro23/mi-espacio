@@ -132,3 +132,4 @@ document.addEventListener('click', e => {
   const c = e.target.closest('[data-vjc]'); if (c) return vjCountry(c.dataset.vjc);
   const d = e.target.closest('.vj [data-vjcdel]'); if (d) { vjDelCity(d.dataset.vjcdel); return render(); }
 });
+document.addEventListener('click', e => { const g = e.target.closest && e.target.closest('[data-hubgo]'); if (g && !g.closest('.hub')) { e.preventDefault(); goTab(g.dataset.hubgo); } });

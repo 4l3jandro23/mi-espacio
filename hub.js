@@ -154,6 +154,8 @@ function vInicio() {
     futbol: () => typeof futbolHTML === 'function' ? futbolHTML() : '',
     noticias: () => typeof noticiasHTML === 'function' ? noticiasHTML() : '',
     cuenta: () => typeof cuentaHTML === 'function' ? cuentaHTML() : '',
+    porti: () => typeof portiHTML === 'function' ? portiHTML() : '',
+    carta: () => typeof cartaHomeHTML === 'function' ? cartaHomeHTML() : '',
     fechas: () => typeof fechasHTML === 'function' ? fechasHTML() : '',
     dinero: () => typeof dineroHTML === 'function' ? dineroHTML() : '',
     estrenos: () => typeof estrenosHTML === 'function' ? estrenosHTML() : '',
@@ -197,7 +199,7 @@ function vInicio() {
       ${dayBar(items, workSpans(today), sun)}
       ${chips ? `<div class="sky-chips">${chips}</div>` : ''}
     </section>
-      <label class="sky-qa qa-out">${ico('plus')}<input id="hubqa" placeholder="Apunta lo que sea…" autocomplete="off" enterkeyhint="done" aria-label="Apuntar algo escribiendo"></label>
+      <label class="sky-qa qa-out">${ico('plus')}<input id="hubqa" placeholder="Apunta lo que sea…" autocomplete="off" enterkeyhint="done" aria-label="Apuntar algo escribiendo"><button type="button" class="qa-go" id="hubqago" hidden>Guardar</button></label>
       <div class="sky-qah" id="hubqah"></div>
 
     ${homeOrder().filter(k => SEC[k]).map(k => SEC[k]()).join('')}
@@ -290,7 +292,7 @@ function bindHub() {
     const cv = t.closest('[data-calview]'); if (cv) return setCalView(cv.dataset.calview);
   };
   bindCal(); bindApps(); bindAvisos();
-  bindQuickAdd(document.getElementById('hubqa'), document.getElementById('hubqah'), null, true);
+  if (typeof bindHomeCap === 'function') bindHomeCap(); else bindQuickAdd(document.getElementById('hubqa'), document.getElementById('hubqah'), null, true);
   const cs = root.querySelector('[data-city]'); if (cs) cs.onchange = () => { if (CITIES[cs.value]) { set('settings', 'city', CITIES[cs.value]); save(); wxFetch(true); render(); } };
 }
 function useMyLocation() {

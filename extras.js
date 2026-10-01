@@ -54,18 +54,16 @@ function weekSummaryHTML(today) {
 }
 
 // ---------- novedades ----------
-const NOVEDADES_V = 'v32';
+const NOVEDADES_V = 'v35';
 const NOVEDADES = [
-  ['palette', 'Colores y modo oscuro', 'En Ajustes › Aspecto: 5 paletas (Cielo, Mar, Bosque, Arena, Grafito) y modo oscuro al anochecer.'],
-  ['hourglass', 'Cuenta atrás', 'Para lo que esperas: un viaje, un concierto, el Clásico.'],
-  ['cake', 'Fechas que importan', 'Cumpleaños, documentos que caducan y venta de entradas, con aviso aunque la app esté cerrada.'],
-  ['tree-palm', 'Mejores fechas para vacaciones', 'En Ajustes › Vacaciones: tramos que encadenan puentes y festivos.'],
-  ['wallet', 'Tu dinero en el inicio', 'Con el PIN puesto: lo que llevas gastado frente a lo normal, lo que se cobra esta semana y tus suscripciones.'],
-  ['tv', 'Pelis y series', 'Estrenos de la semana en plataformas y lo de tu lista.'],
-  ['lightbulb', 'Algo nuevo cada día', 'En Descubre, el artículo del día de Wikipedia.'],
-  ['sofa', 'Hoy no puedo', 'Un toque y tus tareas de hoy pasan a mañana.'],
-  ['sparkles', 'Algún día y Mi año', 'Una lista sin prisa para ideas, y tu año en resumen (en el Cuaderno, «Tu año»).'],
-  ['map', 'Tus listas de Google Maps', 'En Ajustes: cómo traerlas una vez con Google Takeout.'],
+  ['layout-grid', 'Todo más ordenado', 'Abajo: Inicio, Calendario, Tareas, Cuaderno y «Más», con todo lo demás agrupado como los Ajustes del iPhone.'],
+  ['mail', 'Cartas al futuro', 'Escríbele a tu yo de dentro de un mes o un año. Se queda cerrada hasta ese día. En «Más».'],
+  ['heart', 'Hoy, por ti', 'En el inicio, un gesto pequeño al día: cuidarte, gente, confianza… Sin rachas ni culpa.'],
+  ['notebook-pen', 'Cuaderno nuevo', 'Dos pestañas, como en el iPhone: Diario (tus días) y Notas.'],
+  ['calendar', 'Calendario más limpio', 'En el móvil, como el Calendario del iPhone; en el ordenador, más espacio para el mes.'],
+  ['users', 'Deudas por persona', 'Cuánto te debe o le debes a cada uno, en neto, y «saldar todo» de un toque.'],
+  ['map-pin', 'Planes de Barcelona más fáciles', '«Me apunto» y eliges el día. Y puedes apuntar planes tuyos.'],
+  ['plus', 'Apunta lo que sea, mejor', 'Con botón «Guardar» y eligiendo adónde va (calendario, tareas, nota, pelis, sitios…).'],
 ];
 function novedadesCheck() {
   let seen = ''; try { seen = localStorage.getItem('miespacio.novedades') || ''; } catch (e) {}
@@ -218,7 +216,7 @@ function descubreHTML(today) {
     ${img ? `<a class="dsc-img" href="${esc(img.link || '#')}" target="_blank" rel="noopener noreferrer"><img src="${esc(img.src)}" alt="${esc(img.desc)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.dsc-img').remove()"><span><small>Foto del día</small>${esc(img.desc.slice(0, 140))}${img.desc.length > 140 ? '…' : ''}</span></a>` : ''}
     <div class="dsc-side">
       ${myConcerts(today, 120).slice(0, 2).map(p => `<button class="dsc-it" data-hubgo="ciudad"><span class="dsc-ic" style="--c:#9B7BEA">${ico('mic-vocal')}</span><span><small>Concierto de tus artistas · ${planWhen(p)}</small><b>${esc(p.n)}</b></span></button>`).join('')}
-      ${art ? `<a class="dsc-it" href="https://open.spotify.com/search/${encodeURIComponent(art)}" target="_blank" rel="noopener noreferrer"><span class="dsc-ic" style="--c:#1DB954">${ico('headphones')}</span><span><small>Tu artista de hoy</small><b>${esc(art)}</b></span><span class="al-go">↗</span></a>` : ''}
+      ${art ? artHTML(art) : ''}
       ${nuevos.map(p => `<button class="dsc-it" data-hubgo="ciudad"><span class="dsc-ic" style="--c:#EF7F72">${ico('sparkles')}</span><span><small>Nuevo concierto de tus artistas</small><b>${esc(p.n)} · ${planWhen(p)}${p.venta ? ' · entradas ' + dShort(p.venta.slice(0, 10)) : ''}</b></span></button>`).join('')}
       ${dato}
       ${mem ? `<button class="dsc-it" data-nbopen="${mem.id}"><span class="dsc-ic" style="--c:#9B7BEA">${ico('book-heart')}</span><span><small>Un recuerdo · ${dShort(mem.kind.slice(7))}</small><b>«${esc(mem.good)}»</b></span></button>` : ''}

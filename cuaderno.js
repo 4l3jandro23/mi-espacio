@@ -300,33 +300,42 @@ function nbNewNote(title) {
   p.order = -Date.now(); nbSaveNow(); nbGo(p.id);
   const el = document.getElementById('nbtitle'); if (el) el.focus();
 }
+// Inicio del cuaderno: dos pestañas, como Diario y Notas del iPhone.
+let nbSeg = (() => { try { return localStorage.getItem('miespacio.nbseg') || 'diario'; } catch (e) { return 'diario'; } })();
+function nbDiaryFeed() {
+  const today = todayISO();
+  const l = nbPages().filter(p => /^diario:/.test(p.kind || '') && p.kind.slice(7) < today && (p.mood || p.good || nbText(p).trim())).sort((x, y) => y.kind.localeCompare(x.kind)).slice(0, 40);
+  if (!l.length) return '<p class="nb-empty">Aquí irán apareciendo tus días: la carita, lo bueno y lo que escribas.</p>';
+  let lastM = '';
+  return l.map(p => {
+    const d = p.kind.slice(7), m = d.slice(0, 7), md = p.mood && NB_MOODS[p.mood - 1], txt = nbText(p).trim().slice(0, 140);
+    const head = m !== lastM ? `<h3 class="nbf-m">${cap(new Date(d + 'T12:00:00').toLocaleDateString('es-ES', d.slice(0, 4) === today.slice(0, 4) ? { month: 'long' } : { month: 'long', year: 'numeric' }))}</h3>` : '';
+    lastM = m;
+    return head + `<button class="nbf" data-open="${p.id}"><span class="nbf-d"><small>${WD_L[hDow(d)].slice(0, 3)}</small><b>${+d.slice(8)}</b></span><span class="nbf-b">${md ? `<span class="nbf-mood">${md[0]} ${md[1]}</span>` : ''}${p.good ? `<b>${esc(p.good)}</b>` : ''}${txt ? `<small>${esc(txt)}</small>` : ''}</span></button>`;
+  }).join('');
+}
 function nbHome() {
   nbAdopt();
-  const today = todayISO();
+  const today = todayISO(), n = nbWritings().length;
+  const tabs = `<div class="seg2 nb-seg">${[['diario', 'Diario'], ['notas', `Notas${n ? ' · ' + n : ''}`]].map(([k, l]) => `<button data-nbseg="${k}" class="${nbSeg === k ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+  const diario = `
+    <section class="nb-today">
+      <div class="nb-today-h"><span>Hoy</span><small>${fmtDay(today, { weekday: 'long', day: 'numeric', month: 'long' })}</small></div>
+      ${nbMoodHTML(today)}
+      <div class="nb-diary-foot">${nbWeekMoods()}<span class="nb-dlinks"><button class="link small" data-diarymore="${today}">Escribir más</button><button class="link small" data-miano>Tu año</button></span></div>
+    </section>
+    ${nbMemory()}
+    <section class="nb-feed">${nbDiaryFeed()}</section>`;
+  const notas = `
+    <label class="nbh-q nbh-q2">${ico('search')}<input id="nbhq" placeholder="Buscar en tus notas" value="${esc(nbHomeQ)}" autocomplete="off" aria-label="Buscar en tus notas"></label>
+    <div id="nbnotes">${nbNotesHTML()}</div>
+    <details class="nb-tpl-d"><summary>${ico('plus')} Empezar desde una plantilla</summary>
+      <div class="nb-tpls">${['viaje', 'cita', 'objetivos', 'ideas', 'blank'].map(k => `<button class="nb-tpl" data-tplnew="${k}">${NB_TEMPLATES[k].i} ${esc(k === 'blank' ? 'Página en blanco' : NB_TEMPLATES[k].n)}</button>`).join('')}</div></details>
+    <p class="nb-empty" style="margin-top:14px">Las listas (tareas, pelis, sitios, regalos, algún día) están en <button class="link small" data-hubtk="home">Tareas</button>.</p>`;
   return `<div class="nb-page nb-home">
     <div class="nbh-top"><h1 class="nb-hello">Cuaderno</h1><button class="primary nbh-new" data-newnote>＋ Nota</button></div>
-
-    <div class="nb-cap"><input id="nbcap" placeholder="Apunta algo rápido y pulsa Intro…" autocomplete="off" enterkeyhint="done" aria-label="Apuntar algo"><button id="nbcapgo" aria-label="Guardar">↵</button></div>
-    <div class="nb-capto" id="nbcapto"></div>
-
-    <section class="nb-diary">
-      ${nbMoodHTML(today)}
-      <div class="nb-diary-foot">${nbWeekMoods()}<span class="nb-dlinks"><button class="link small" data-miano>Tu año</button><button class="link small" data-diarymore="${today}">Escribir más ›</button></span></div>
-      ${nbMemory()}
-    </section>
-
-    ${typeof viajesCardHTML === 'function' ? viajesCardHTML() : ''}
-
-    <section class="nb-sec2">
-      <div class="nb-h"><h2>Notas</h2><label class="nbh-q">${ico('search')}<input id="nbhq" placeholder="Buscar" value="${esc(nbHomeQ)}" autocomplete="off" aria-label="Buscar en tus notas"></label></div>
-      <div id="nbnotes">${nbNotesHTML()}</div>
-    </section>
-
-    <section class="nb-sec2">
-      <div class="nb-h"><h2>Empezar desde una plantilla</h2></div>
-      <div class="nb-tpls">${['viaje', 'cita', 'objetivos', 'ideas', 'blank'].map(k => `<button class="nb-tpl" data-tplnew="${k}">${NB_TEMPLATES[k].i} ${esc(k === 'blank' ? 'Página en blanco' : NB_TEMPLATES[k].n)}</button>`).join('')}</div>
-      <p class="nb-empty" style="margin-top:10px">Tus listas (pelis, sitios, regalos…) están en <button class="link" data-hubtk="home">Tareas</button>.</p>
-    </section>
+    ${tabs}
+    ${nbSeg === 'notas' ? notas : diario}
   </div>`;
 }
 function nbNumber(blocks, i) { let n = 1; for (let j = i - 1; j >= 0 && blocks[j].t === 'number'; j--) n++; return n; }
@@ -354,7 +363,7 @@ function vCuaderno() {
   const p = nbCur && nbP(nbCur);
   if (nbCur && !p) nbCur = null;
   return `<div class="nb">
-    <div class="nb-top"><button class="homebtn" data-nbhome aria-label="Volver a Mi Espacio" title="Volver a Mi Espacio">‹</button><button id="nbmenu" class="nb-burger" aria-label="Páginas">☰</button><b style="flex:1">Cuaderno</b><button data-nbset aria-label="Ajustes">⚙️</button></div>
+    <div class="nb-top"><button class="homebtn" data-nbhome aria-label="Volver a Mi Espacio" title="Volver a Mi Espacio">‹</button><button id="nbmenu" class="nb-burger" aria-label="Páginas">☰</button><b style="flex:1">${p ? 'Cuaderno' : ''}</b><button data-nbset aria-label="Ajustes">⚙️</button></div>
     <div class="nb-body">${nbSideHTML()}<main class="nb-main">${p ? nbPageHTML(p) : nbHome()}</main></div>
     ${nbSide ? '<div class="nb-veil" id="nbveil"></div>' : ''}
   </div>`;

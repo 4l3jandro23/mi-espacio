@@ -123,9 +123,10 @@ function vCiudad() {
       <h3>${esc(p.n)}</h3><div class="pl-when">${planWhen(p)}${p.aprox ? ' · <i>fechas por confirmar</i>' : ''}</div>
       <div class="pl-where">📍 ${esc(p.lugar)} · ${esc(p.precio)}</div>${p.nota ? `<p>${esc(p.nota)}</p>` : ''}
       ${p.tipo === 'cine' || /cine/i.test(p.n) ? (pelisPend() ? `<p class="pl-hint">🎬 Tienes ${pelisPend() === 1 ? '1 peli' : pelisPend() + ' pelis'} en tu lista para ver</p>` : '') : ''}
-      <div class="pl-acts">${p.url ? `<a class="pill-btn" href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">Más info</a>` : ''}<button class="pill-btn" data-plancal="${p.id}" title="Añadir a mi calendario">＋ Calendario</button><button class="icon-btn sm" data-plansave="${p.id}" aria-label="Guardar en Sitios y planes" title="Guardar en Sitios y planes">${ico('bookmark')}</button><button class="icon-btn sm" data-planshare="${p.id}" aria-label="Compartir" title="Compartir">${ico('share-2')}</button></div></article>`; };
+      <div class="pl-acts">${p.url ? `<a class="pill-btn" href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">Más info</a>` : ''}${planInCal(p) ? `<button class="pill-btn pl-incal" data-plancal="${p.id}">✓ En tu calendario</button>` : `<button class="pill-btn pl-add" data-plancal="${p.id}">＋ Me apunto</button>`}<button class="icon-btn sm" data-plansave="${p.id}" aria-label="Guardar en Sitios y planes" title="Guardar en Sitios y planes">${ico('bookmark')}</button><button class="icon-btn sm" data-planshare="${p.id}" aria-label="Compartir" title="Compartir">${ico('share-2')}</button></div></article>`; };
   return `<div class="hub city">
-    <header class="cal-head"><div><div class="cal-year">Tu ciudad</div><h1 class="cal-month">Barcelona</h1></div><div class="muted small">Planes revisados el ${dShort(PLANES_ACTUALIZADO)} · se actualizan cada mes</div></header>
+    <header class="cal-head"><div><div class="cal-year">Tu ciudad</div><h1 class="cal-month">Barcelona</h1></div><button class="primary pill-btn" data-planmine>＋ Un plan tuyo</button></header>
+    <p class="muted small" style="margin:-6px 2px 0">Planes revisados el ${dShort(PLANES_ACTUALIZADO)} · se actualizan solos cada mes. Toca «Me apunto» y elige el día.</p>
     <section class="hub-sec"><div class="hub-hrow"><h2 class="hub-h">Planes destacados</h2>${dest.length > 6 ? `<button class="pill-btn" data-planesall>${planesAll ? 'Ver menos' : `Ver los ${dest.length}`}</button>` : ''}</div><div class="pl-row">${dest.slice(0, planesAll ? 99 : 6).map(card).join('') || '<div class="empty-day">Ahora mismo no tengo planes destacados apuntados.</div>'}</div></section>
     <section class="hub-sec"><div class="hub-hrow"><h2 class="hub-h">Qué hay</h2><div class="seg2">${[['hoy', 'Hoy'], ['manana', 'Mañana'], ['finde', 'Finde'], ['semana', '7 días']].map(([k, n]) => `<button data-agrango="${k}" class="${agRango === k ? 'on' : ''}">${n}</button>`).join('')}</div></div>
       ${fixed.length ? `<div class="fx">${fixed.map(f => `<div class="fx-it" style="--c:${(PLAN_TIPOS[f.tipo] || PLAN_TIPOS.ciudad)[2]}"><span>${f.i}</span><div><b>${esc(f.t)}</b>${a !== b ? ` <small>${dShort(f.d)}</small>` : ''}<small>${esc(f.s)}</small></div></div>`).join('')}</div>` : ''}
@@ -171,7 +172,8 @@ function bindCiudad() {
     if (t.closest('[data-planesall]')) { planesAll = !planesAll; return render(); }
     const r = t.closest('[data-agrango]'); if (r) { agRango = r.dataset.agrango; return render(); }
     const f = t.closest('[data-agf]'); if (f) { agFiltro = f.dataset.agf; return render(); }
-    const pc = t.closest('[data-plancal]'); if (pc) { const p = PLANES_BCN.find(x => x.id === pc.dataset.plancal); return p && planToCal(p); }
+    const pc = t.closest('[data-plancal]'); if (pc) { const p = PLANES_BCN.find(x => x.id === pc.dataset.plancal); return p && openPlanAdd(p); }
+    if (t.closest('[data-planmine]')) return openMyPlan();
     const ps = t.closest('[data-plansave]'); if (ps) { const p = PLANES_BCN.find(x => x.id === ps.dataset.plansave); return p && saveToPlaces(p.n, planWhen(p), p.url); }
     const psh = t.closest('[data-planshare]'); if (psh) { const p = PLANES_BCN.find(x => x.id === psh.dataset.planshare); return p && sharePlan(p.n, `${planWhen(p)} · ${p.lugar}${p.gratis ? ' · gratis' : ''}`, p.url); }
     const as = t.closest('[data-agsave]'); if (as) { const [a, b] = agRangeDates(), l = (AGC[a + '|' + b] || {}).list || [], x = l.find(y => y.id === as.dataset.agsave); return x && saveToPlaces(x.n, dShort(x.s > a ? x.s : a) + (x.time ? ' ' + x.time : ''), 'https://guia.barcelona.cat/es/detall/x_' + x.id + '.html'); }
@@ -204,3 +206,56 @@ document.addEventListener('DOMContentLoaded', () => setTimeout(() => {
   }
   if (ch) { save(); if (typeof softRender === 'function') softRender(); }
 }, 800));
+
+// ---------- apuntarse a un plan: eliges el día (y la hora si quieres) ----------
+const planInCal = p => Object.keys(S.events || {}).some(k => S.events[k] && (k === 'p' + p.id || k.startsWith('p' + p.id + '2')));
+function openPlanAdd(p) {
+  const t = todayISO(), days = planDays(p).filter(d => d >= t).slice(0, 21), mine = Object.values(S.events || {}).filter(e => e && (e.id === 'p' + p.id || e.id.startsWith('p' + p.id + '2')));
+  const short = days.length > 1 && hDays(days[0], days[days.length - 1]) <= 6 && days.length === hDays(days[0], days[days.length - 1]) + 1;
+  const box = document.createElement('div'); box.className = 'sheet-veil';
+  let pick = mine.length ? null : days.length === 1 ? days[0] : null;
+  const paint = () => {
+    box.innerHTML = `<div class="sheet pa" role="dialog" aria-label="Apuntarme a ${esc(p.n)}"><div class="sheet-grab"></div>
+      <div class="di-when">${esc((PLAN_TIPOS[p.tipo] || PLAN_TIPOS.ciudad)[0])} · ${esc(p.lugar)}</div><h2 class="di-h">${esc(p.n)}</h2>
+      ${mine.length ? `<div class="pa-in">${ico('check')} Ya lo tienes: ${mine.map(e => dShort(e.date) + (e.end ? '–' + dShort(e.end) : '') + (e.start ? ' ' + e.start : '')).join(', ')} <button class="link small" data-paundo>Quitar</button></div>` : ''}
+      ${days.length ? `<p class="small muted" style="margin:12px 0 8px">¿Qué día vas?</p>
+      <div class="pa-days">${short ? `<button class="pa-d ${pick === 'all' ? 'on' : ''}" data-pad="all"><b>Todos</b><small>${dShort(days[0])}–${dShort(days[days.length - 1])}</small></button>` : ''}${days.map(d => `<button class="pa-d ${pick === d ? 'on' : ''}" data-pad="${d}"><b>${cap(WD_L[hDow(d)].slice(0, 3))}</b><small>${+d.slice(8)} ${new Date(d + 'T12:00:00').toLocaleDateString('es-ES', { month: 'short' }).replace('.', '')}</small></button>`).join('')}</div>
+      <label class="f" style="margin-top:12px"><span>Hora (si la sabes)</span><input type="time" id="pat"></label>` : '<p class="muted">Ya no quedan días de este plan.</p>'}
+      <div class="sheet-acts"><button data-close>Cancelar</button><span style="flex:1"></span>${days.length ? `<button class="primary" data-pago ${pick ? '' : 'disabled'}>Apuntarme</button>` : ''}</div></div>`;
+  };
+  paint(); document.body.appendChild(box);
+  box.onclick = e => {
+    const tg = e.target;
+    if (tg === box || tg.closest('[data-close]')) return box.remove();
+    const d = tg.closest('[data-pad]'); if (d) { const tm = (box.querySelector('#pat') || {}).value || ''; pick = d.dataset.pad; paint(); if (tm) box.querySelector('#pat').value = tm; return; }
+    if (tg.closest('[data-paundo]')) { mine.forEach(ev => set('events', ev.id, null)); save(); box.remove(); render(); return toast('Quitado de tu calendario'); }
+    if (tg.closest('[data-pago]') && pick) {
+      const tm = (box.querySelector('#pat') || {}).value || '', d0 = pick === 'all' ? days[0] : pick, id = 'p' + p.id + d0.replace(/-/g, '');
+      const ev = { id, title: p.n, date: d0, allDay: !tm, start: tm, end2: tm ? hhmmOf(Math.min(toMin(tm) + 120, 1439)) : '', cat: 'amigos', repeat: '', notes: [p.precio, p.nota, p.url].filter(Boolean).join('\n'), loc: p.lugar };
+      if (pick === 'all' && days[days.length - 1] > d0) ev.end = days[days.length - 1];
+      set('events', id, ev); save(); box.remove(); render();
+      toast(`Apuntado: ${p.n} · ${dShort(d0)}${tm ? ' ' + tm : ''}`, { actions: [{ n: 'Deshacer', fn: () => { set('events', id, null); save(); render(); } }] });
+    }
+  };
+}
+// Un plan tuyo: qué, cuándo y dónde. Va al calendario (y, si quieres, a Sitios y planes).
+function openMyPlan() {
+  const box = document.createElement('div'); box.className = 'sheet-veil';
+  box.innerHTML = `<div class="sheet" role="dialog" aria-label="Un plan tuyo"><div class="sheet-grab"></div><h2 class="di-h">Un plan tuyo</h2>
+    <label class="f"><span>¿Qué?</span><input id="mpn" placeholder="Vermut en el Mercat de Sant Antoni" autocomplete="off"></label>
+    <div class="grid2"><label class="f"><span>Día</span><input id="mpd" type="date" value="${todayISO()}"></label><label class="f"><span>Hora (opcional)</span><input id="mpt" type="time"></label></div>
+    <label class="f"><span>¿Dónde? (opcional)</span><input id="mpl" placeholder="Barrio o sitio" autocomplete="off"></label>
+    <label class="fb-layer" style="margin-top:6px"><input type="checkbox" id="mps"> Guardarlo también en «Sitios y planes»</label>
+    <div class="sheet-acts"><button data-close>Cancelar</button><span style="flex:1"></span><button class="primary" data-mpok>Guardar</button></div></div>`;
+  document.body.appendChild(box); setTimeout(() => box.querySelector('#mpn').focus(), 50);
+  box.onclick = e => {
+    if (e.target === box || e.target.closest('[data-close]')) return box.remove();
+    if (!e.target.closest('[data-mpok]')) return;
+    const n = box.querySelector('#mpn').value.trim(), d = box.querySelector('#mpd').value, tm = box.querySelector('#mpt').value, l = box.querySelector('#mpl').value.trim();
+    if (!n || !d) return toast('Pon qué y qué día');
+    const id = 'e' + Date.now().toString(36);
+    set('events', id, { id, title: n, date: d, allDay: !tm, start: tm, end2: tm ? hhmmOf(Math.min(toMin(tm) + 120, 1439)) : '', cat: 'amigos', repeat: '', loc: l });
+    if (box.querySelector('#mps').checked) nbListAdd('planes', n + (l ? ' · ' + l : ''));
+    save(); box.remove(); render(); toast(`Apuntado: ${n} · ${dShort(d)}${tm ? ' ' + tm : ''}`);
+  };
+}
