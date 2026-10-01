@@ -54,21 +54,21 @@ function weekSummaryHTML(today) {
 }
 
 // ---------- novedades ----------
-const NOVEDADES_V = 'v27';
+const NOVEDADES_V = 'v30';
 const NOVEDADES = [
-  ['notebook', 'Cuaderno limpio', 'Sin portadas: tus notas en una lista, con buscador, fijadas arriba y agrupadas por fecha.'],
-  ['layout-grid', 'Tu inicio, a tu gusto', 'Abajo del todo, «Personalizar el inicio»: quita y ordena lo que quieras.'],
-  ['moon', 'Modo calma', 'Para los días malos: el inicio solo con lo de hoy. Se quita solo al día siguiente.'],
-  ['bell', 'Avisos con la app cerrada', 'En Ajustes › Avisos con la app cerrada, con la app gratuita ntfy.'],
-  ['calendar-heart', 'Revisión del domingo', '5 minutos para mirar la semana que viene, lo pendiente y el dinero.'],
-  ['camera', 'Foto del día', 'En el diario, una foto por día (se guarda en este dispositivo).'],
-  ['download', 'Copia del mes y exportar', 'Cada mes, el inicio te recuerda guardar una copia. Y puedes sacar tus notas en texto.'],
-  ['mic-vocal', 'Conciertos de tus artistas', 'Cada mes busco conciertos en Barcelona y te marco los de tus artistas.'],
-  ['headphones', 'Tu mando de Spotify', 'En «Tus otras apps», junto a Alimentación y Ejercicio.'],
+  ['sun', 'Cabecera nueva', 'Arriba, en grande, lo que importa ahora: cuánto te queda para salir, lo siguiente que tienes y una barra con tu día.'],
+  ['balon', 'Fútbol', 'Barça, Betis y España: próximo partido, resultados, marcador en directo y la clasificación. También en el calendario.'],
+  ['house', 'Teletrabajo, una vez por semana', 'Arriba sale «¿Hoy teletrabajo?». Cuando lo marcas, deja de preguntar hasta la semana que viene.'],
+  ['map', 'Tus viajes, en un mapa', 'En el Cuaderno: Europa en cuadritos. Toca un país para marcar «quiero ir» o «he estado».'],
+  ['layout-grid', 'Inicio más limpio', 'Menos cosas de serie. Lo que quieras, lo vuelves a poner en «Personalizar el inicio».'],
 ];
 function novedadesCheck() {
   let seen = ''; try { seen = localStorage.getItem('miespacio.novedades') || ''; } catch (e) {}
   if (seen === NOVEDADES_V || lockMode || document.querySelector('.sheet-veil')) return;
+  try { localStorage.setItem('miespacio.novedades', NOVEDADES_V); } catch (e) {}
+  toast('Hay novedades en Mi Espacio', { actions: [{ n: 'Ver', fn: novedadesOpen }] });
+}
+function novedadesOpen() {
   const box = document.createElement('div'); box.className = 'sheet-veil'; box.id = 'novsheet';
   box.innerHTML = `<div class="sheet" role="dialog" aria-label="Novedades"><div class="sheet-grab"></div>
     <div class="di-when">Novedades</div><h2 class="di-h">Lo nuevo en Mi Espacio</h2>
@@ -217,28 +217,50 @@ function myConcerts(from, days) {
 }
 
 // ---------- países visitados ----------
-// Lista fija tuya. Andorra y Bélgica son dudosos (uno de pequeño, el otro solo el aeropuerto), así que
-// se guardan aparte con un interruptor: tú decides si cuentan.
-const PAISES = [
-  ['🇪🇸', 'España'], ['🇫🇷', 'Francia'], ['🇨🇿', 'República Checa'], ['🇩🇪', 'Alemania'], ['🇨🇭', 'Suiza'],
-  ['🇦🇹', 'Austria'], ['🇭🇷', 'Croacia'], ['🇲🇪', 'Montenegro'], ['🇬🇷', 'Grecia'], ['🇲🇨', 'Mónaco'],
-  ['🇮🇹', 'Italia'], ['🇻🇦', 'Vaticano'], ['🇵🇱', 'Polonia'], ['🇸🇰', 'Eslovaquia'], ['🇭🇺', 'Hungría'], ['🇳🇱', 'Países Bajos'],
-];
-const PAISES_DUDOSOS = [['🇦🇩', 'Andorra', 'de pequeño'], ['🇧🇪', 'Bélgica', 'solo el aeropuerto']];
-const paisesExtra = () => Object.assign({ andorra: false, belgica: false }, S.settings.paisesExtra || {});
+// Mapa de Europa en cuadritos (cada país, una casilla más o menos donde cae). Los tuyos vienen de serie;
+// Andorra y Bélgica son dudosos (uno de pequeño, el otro solo el aeropuerto): cuentan solo si tú quieres.
+// Tocando una casilla: nada → quiero ir → he estado → nada. Se guarda en S.settings.paises.
+const EU_GRID = 'IS0,0 NO5,0 SE6,0 FI7,0 IE0,1 GB1,1 DK5,1 EE7,1 BE3,2 NL4,2 DE5,2 PL6,2 LV7,2 FR3,3 LU4,3 CZ5,3 SK6,3 LT7,3 BY8,3 PT1,4 ES2,4 AD3,4 CH4,4 LI5,4 AT6,4 HU7,4 UA8,4 MC3,5 IT4,5 SM5,5 SI6,5 HR7,5 RO8,5 MD9,5 VA4,6 BA7,6 RS8,6 BG9,6 MT4,7 ME6,7 AL7,7 MK8,7 TR9,7 GR8,8 CY9,8'
+  .split(' ').map(x => { const [c, p] = [x.slice(0, 2), x.slice(2).split(',')]; return { c, x: +p[0], y: +p[1] }; });
+const PAISES_BASE = ['ES', 'FR', 'CZ', 'DE', 'CH', 'AT', 'HR', 'ME', 'GR', 'MC', 'IT', 'VA', 'PL', 'SK', 'HU', 'NL'];
+const PAISES_DUDA = { AD: 'fui de pequeño', BE: 'solo el aeropuerto' };
+const flagOf = c => String.fromCodePoint(...[...c].map(ch => 0x1F1A5 + ch.charCodeAt(0)));
+let paisNames = null;
+const paisName = c => { try { paisNames = paisNames || new Intl.DisplayNames(['es'], { type: 'region' }); return paisNames.of(c); } catch (e) { return c; } };
+// estado de cada país: 'v' visitado, 'w' quiero ir, 'd' dudoso sin contar, '' nada
+function paisState(c) {
+  const u = (S.settings.paises || {})[c], ex = S.settings.paisesExtra || {};
+  if (u === 'v' || u === 'w' || u === 'x') return u === 'x' ? '' : u;
+  if (PAISES_BASE.includes(c)) return 'v';
+  if (PAISES_DUDA[c]) return ex[c === 'AD' ? 'andorra' : 'belgica'] ? 'v' : 'd';
+  return '';
+}
+function paisCycle(c) {
+  const st = paisState(c), o = Object.assign({}, S.settings.paises || {});
+  const duda = !!PAISES_DUDA[c], nx = duda ? (st === 'v' ? 'd' : 'v') : st === '' ? 'w' : st === 'w' ? 'v' : '';
+  if (duda) { const ex = Object.assign({}, S.settings.paisesExtra || {}); ex[c === 'AD' ? 'andorra' : 'belgica'] = nx === 'v'; set('settings', 'paisesExtra', ex); delete o[c]; } else o[c] = nx || 'x';
+  set('settings', 'paises', o); save();
+  toast(`${flagOf(c)} ${paisName(c)}: ${nx === 'v' ? 'has estado' : nx === 'w' ? 'en tu lista de «quiero ir»' : nx === 'd' ? 'dudoso, no cuenta' : 'quitado'}`);
+  softRender();
+}
 function paisesHTML() {
-  const ex = paisesExtra(), extraOn = [PAISES_DUDOSOS[0][1].toLowerCase() === 'andorra' && ex.andorra, ex.belgica].filter(Boolean).length;
-  const n = PAISES.length + extraOn;
-  return `<section class="nb-sec2 nb-pasaporte">
-    <div class="nb-h"><h2>Tu pasaporte</h2><span class="pp-count">${n}<small>países</small></span></div>
-    <div class="pp-stamps">${PAISES.map(([f, n2], i) => `<span class="pp-stamp" style="--r:${(i % 5 - 2) * 2.2}deg"><span class="pp-flag">${f}</span>${esc(n2)}</span>`).join('')}</div>
-    <div class="pp-dud">
-      <span class="small muted">¿Cuentan estos?</span>
-      ${PAISES_DUDOSOS.map(([f, n2, why]) => { const k = n2.toLowerCase() === 'andorra' ? 'andorra' : 'belgica'; return `<label class="pp-stamp pp-tg${ex[k] ? '' : ' off'}"><input type="checkbox" data-paisex="${k}" ${ex[k] ? 'checked' : ''}><span class="pp-flag">${f}</span>${esc(n2)}<small>${esc(why)}</small></label>`; }).join('')}
+  const st = Object.fromEntries(EU_GRID.map(g => [g.c, paisState(g.c)]));
+  const extra = Object.entries(S.settings.paises || {}).filter(([c, v]) => v === 'v' && !EU_GRID.some(g => g.c === c)).map(([c]) => c);
+  const been = EU_GRID.filter(g => st[g.c] === 'v').map(g => g.c).concat(extra), want = EU_GRID.filter(g => st[g.c] === 'w').map(g => g.c);
+  const pct = Math.round(EU_GRID.filter(g => st[g.c] === 'v').length / EU_GRID.length * 100);
+  const free = typeof vacSummary === 'function' && vacSummary(+todayISO().slice(0, 4));
+  const W = 10, H = 9;
+  return `<section class="nb-sec2 pp">
+    <div class="nb-h"><h2>Tus viajes</h2></div>
+    <div class="pp-card">
+      <div class="pp-stats"><div><b>${been.length}</b><small>países</small></div><div><b>${pct}%</b><small>de Europa</small></div><div><b>${want.length}</b><small>quiero ir</small></div></div>
+      <div class="pp-map" style="--w:${W};--h:${H}" role="group" aria-label="Mapa de Europa: toca un país para marcarlo">
+        ${EU_GRID.map(g => `<button class="pp-t ${st[g.c] ? 'is-' + st[g.c] : ''}" style="grid-column:${g.x + 1};grid-row:${g.y + 1}" data-pais="${g.c}" title="${esc(paisName(g.c))}${PAISES_DUDA[g.c] ? ' (' + PAISES_DUDA[g.c] + ')' : ''}" aria-label="${esc(paisName(g.c))}">${g.c}</button>`).join('')}
+      </div>
+      <div class="pp-legend"><span><i class="is-v"></i>He estado</span><span><i class="is-w"></i>Quiero ir</span><span><i class="is-d"></i>Dudoso</span><span class="muted">Toca un país para cambiarlo</span></div>
+      <div class="pp-flags">${been.map(c => `<span title="${esc(paisName(c))}">${flagOf(c)}<small>${esc(paisName(c))}</small></span>`).join('')}</div>
+      ${want.length ? `<div class="pp-want">${ico('plane')}<span>${free && free.free > 0 ? `Te quedan <b>${free.free} días</b> de vacaciones por gastar. ` : ''}Tu lista: ${want.map(c => flagOf(c) + ' ' + esc(paisName(c))).join(', ')}.</span></div>` : ''}
     </div>
   </section>`;
 }
-document.addEventListener('change', e => {
-  const t = e.target.closest && e.target.closest('[data-paisex]'); if (!t) return;
-  const ex = paisesExtra(); ex[t.dataset.paisex] = t.checked; set('settings', 'paisesExtra', ex); save(); softRender();
-});
+document.addEventListener('click', e => { const t = e.target.closest && e.target.closest('[data-pais]'); if (t) { e.stopPropagation(); paisCycle(t.dataset.pais); } }, true);

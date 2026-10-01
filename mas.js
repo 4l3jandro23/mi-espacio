@@ -3,13 +3,15 @@
 'use strict';
 
 // ---------- inicio a tu gusto ----------
-const HOME_SECS = [['copia', 'Copia del mes y copia en la nube'], ['semana', 'Tira de la semana'], ['hoy', 'Hoy'], ['seviene', 'Se viene'], ['resumen', 'Tu semana (domingo y lunes)'], ['finde', 'Tu finde (jueves a sábado)'], ['ciudad', 'Esta semana en Barcelona'], ['apartados', 'Tus apartados'], ['apps', 'Tus otras apps'], ['descubre', 'Descubre'], ['efemerides', 'Tal día como hoy'], ['recordatorios', 'Recordatorios de Apple'], ['proximos', 'Próximos días'], ['cuaderno', 'Del cuaderno']];
+const HOME_SECS = [['resumen', 'Tu semana (domingo y lunes)'], ['hoy', 'Hoy'], ['futbol', 'Fútbol'], ['semana', 'Tira de la semana'], ['seviene', 'Se viene'], ['finde', 'Tu finde (jueves a sábado)'], ['ciudad', 'Esta semana en Barcelona'], ['apps', 'Tus otras apps'], ['descubre', 'Descubre'], ['copia', 'Copia del mes y copia en la nube'], ['apartados', 'Tus apartados'], ['recordatorios', 'Recordatorios de Apple'], ['proximos', 'Próximos días'], ['efemerides', 'Tal día como hoy'], ['cuaderno', 'Del cuaderno']];
+// Lo que viene apagado de serie (se enciende en «Personalizar el inicio»): así el inicio se lee de un vistazo.
+const HOME_OFF = ['apartados', 'proximos', 'efemerides', 'cuaderno'];
 const calmOn = () => S.settings.calm === todayISO();
 function homeCfg() {
   const h = S.settings.home || {}, keys = HOME_SECS.map(s => s[0]);
   const order = (h.order || []).filter(k => keys.includes(k));
   keys.forEach((k, i) => { if (!order.includes(k)) order.splice(Math.min(i, order.length), 0, k); });
-  return { order, off: (h.off || []).filter(k => keys.includes(k)) };
+  return { order, off: (h.off || HOME_OFF).filter(k => keys.includes(k)) };
 }
 function homeOrder() {
   if (calmOn()) return ['calma', 'hoy'];

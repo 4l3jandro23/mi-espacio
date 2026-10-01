@@ -4,7 +4,7 @@
 const HH = 48; // píxeles por hora
 const LAYERS = {
   festivos: ['Festivos y puentes', '#EF5B4C'], senalados: ['Días señalados', '#F2A93B'], trabajo: ['Horario de trabajo', '#5B8DEF'],
-  tiempo: ['El tiempo', '#6FA8F5'], planes: ['Planes en Barcelona', '#D9822B'], efemerides: ['Efemérides y música', '#9B7BEA'], ejercicio: ['Plan de Ejercicio', '#EF7F72'], comida: ['Plan de Alimentación', '#2FA98C'], piso: ['Tareas del piso', '#F2A93B'],
+  tiempo: ['El tiempo', '#6FA8F5'], planes: ['Planes en Barcelona', '#D9822B'], efemerides: ['Efemérides y música', '#9B7BEA'], ejercicio: ['Plan de Ejercicio', '#EF7F72'], comida: ['Plan de Alimentación', '#2FA98C'], piso: ['Tareas del piso', '#F2A93B'], futbol: ['Fútbol: Barça, Betis y España', '#A50044'],
   apple: ['Apple', '#A2845E'], dinero: ['Mi Dinero', '#2FA98C'],
 };
 const layerOn = k => !((S.settings.calOff || {})[k]);
@@ -40,6 +40,7 @@ function itemAttr(i) {
   if (i.kind === 'apple' || i.kind === 'rem') return `data-appleitem="${i.kind}:${i.id}"`;
   if (i.kind === 'hol' || i.kind === 'sen') return `data-dayinfo="${i.occ}"`;
   if (i.kind === 'plan') return 'data-hubgo="ciudad"';
+  if (i.kind === 'futbol') return `data-futbol`;
   if (i.kind === 'app') return `data-appopen="${i.app}" data-occ="${i.occ}"`;
   return 'data-hubgo="fijos"';
 }

@@ -74,6 +74,7 @@ function itemsOn(iso, withPay) {
   if (typeof appItemsOn === 'function') out.push(...appItemsOn(iso));
   if (typeof planItemsOn === 'function') out.push(...planItemsOn(iso));
   if (typeof taskItemsOn === 'function') out.push(...taskItemsOn(iso));
+  if (typeof futbolItemsOn === 'function') out.push(...futbolItemsOn(iso));
   const di = nbPages().find(p => p.kind === 'diario:' + iso);
   if (di && (di.mood || di.good || nbText(di).trim())) { const md = di.mood && NB_MOODS[di.mood - 1]; out.push({ kind: 'diary', id: di.id, title: md ? `Diario: ${md[1].toLowerCase()}${di.good ? ' · ' + di.good : ''}` : di.good || 'Entrada del diario', icon: md ? md[0] : '📔', color: '#9B7BEA', sort: 2000 }); }
   return out.sort((a, b) => a.sort - b.sort);
@@ -81,30 +82,42 @@ function itemsOn(iso, withPay) {
 
 // ---------- el arco del día ----------
 function skyPhase(h) { return h >= 6 && h < 10 ? 'dawn' : h >= 10 && h < 18 ? 'day' : h >= 18 && h < 21.5 ? 'dusk' : 'night'; }
-function dayArc(items, spans, sun) {
-  const W = 340, H = 180, cx = W / 2, cy = 168, r = 150, H0 = 7, H1 = 24;
-  const now = new Date(), h = now.getHours() + now.getMinutes() / 60;
-  const pt = hh => { const t = Math.max(0, Math.min(1, (hh - H0) / (H1 - H0))); const a = Math.PI - t * Math.PI; return [cx + r * Math.cos(a), cy - r * Math.sin(a)]; };
-  const [sx, sy] = pt(h), [x0, y0] = pt(H0), [x1, y1] = pt(H1);
-  const up = h >= H0 && h < H1;
-  const t = Math.max(0, Math.min(1, (h - H0) / (H1 - H0)));
-  const ticks = [9, 12, 15, 18, 21].map(hh => { const [x, y] = pt(hh); const [xi, yi] = [cx + (r - 10) * Math.cos(Math.PI - (hh - H0) / (H1 - H0) * Math.PI), cy - (r - 10) * Math.sin(Math.PI - (hh - H0) / (H1 - H0) * Math.PI)]; return `<line x1="${x}" y1="${y}" x2="${xi}" y2="${yi}" class="arc-tick"/><text x="${cx + (r - 24) * Math.cos(Math.PI - (hh - H0) / (H1 - H0) * Math.PI)}" y="${cy - (r - 24) * Math.sin(Math.PI - (hh - H0) / (H1 - H0) * Math.PI) + 4}" class="arc-lbl">${hh}</text>`; }).join('');
-  const seg = (a, b) => { const [ax, ay] = pt(a), [bx, by] = pt(b); return `<path d="M ${ax} ${ay} A ${r} ${r} 0 0 1 ${bx} ${by}" class="arc-work"/>`; };
-  const work = (spans || []).map(([a, b]) => seg(Math.max(H0, a), Math.min(H1, b))).join('');
-  const sr = sun ? toMin(sun.rise) / 60 : 0, ss = sun ? toMin(sun.set) / 60 : 0;
-  const night = sun && ss > H0 && ss < H1 ? `<path d="M ${pt(ss)[0]} ${pt(ss)[1]} A ${r} ${r} 0 0 1 ${x1} ${y1}" class="arc-night"/>` : '';
-  const sunMk = sun ? [[sr, '🌅'], [ss, '🌇']].filter(([hh]) => hh > H0 && hh < H1).map(([hh, ic]) => { const [x, y] = pt(hh); return `<circle cx="${x}" cy="${y}" r="3.5" class="arc-sunmk"/><svg x="${x - 8}" y="${y - 26}" width="16" height="16" viewBox="0 0 24 24" class="arc-sunic ico">${ICONS[ic === '🌅' ? 'sunrise' : 'sunset']}</svg>`; }).join('') : '';
-  const dots = items.filter(i => i.time).map(i => { const [x, y] = pt(toMin(i.time) / 60); return `<circle cx="${x}" cy="${y}" r="6" class="arc-ev" style="fill:${i.color}"><title>${esc(hm(i.time) + ' ' + i.title)}</title></circle>`; }).join('');
-  return `<svg class="arc" viewBox="0 0 ${W} ${H}" role="img" aria-label="Tu día, de 7:00 a 24:00${up ? ', ahora son las ' + now.toTimeString().slice(0, 5) : ''}">
-    <defs><filter id="glow" x="-2" y="-2" width="5" height="5"><feGaussianBlur stdDeviation="6"/></filter></defs>
-    <path d="M ${x0} ${y0} A ${r} ${r} 0 0 1 ${x1} ${y1}" class="arc-track"/>
-    ${up ? `<path d="M ${x0} ${y0} A ${r} ${r} 0 0 1 ${sx} ${sy}" class="arc-done"/>` : ''}
-    ${night}${work}${ticks}${sunMk}${dots}
-    ${up && !(sun && (h < sr || h >= ss)) ? `<circle cx="${sx}" cy="${sy}" r="16" class="sun-glow" filter="url(#glow)"/><circle cx="${sx}" cy="${sy}" r="10" class="sun"/>`
-      : up ? `<mask id="cres"><circle cx="${sx}" cy="${sy}" r="10" fill="#fff"/><circle cx="${sx + 5}" cy="${sy - 4}" r="8.5" fill="#000"/></mask><circle cx="${sx}" cy="${sy}" r="15" class="moon-glow" filter="url(#glow)"/><circle cx="${sx}" cy="${sy}" r="10" class="moon" mask="url(#cres)"/>`
-      : `<text x="${cx}" y="${cy - 40}" class="arc-moon" text-anchor="middle">☾</text>`}
-    <line x1="${x0 - 8}" y1="${cy}" x2="${x1 + 8}" y2="${cy}" class="arc-horizon"/>
-  </svg>`;
+// Barra del día (7:00 → 24:00): lo que ya pasó, el trabajo, la noche, tus cosas y el ahora.
+function dayBar(items, spans, sun) {
+  const H0 = 7, H1 = 24, pc = hh => Math.max(0, Math.min(100, (hh - H0) / (H1 - H0) * 100)).toFixed(2);
+  const now = new Date(), h = now.getHours() + now.getMinutes() / 60, up = h >= H0 && h < H1;
+  const ss = sun ? toMin(sun.set) / 60 : 0, sr = sun ? toMin(sun.rise) / 60 : 0;
+  const night = sun && h >= ss || sun && h < sr;
+  const dots = items.filter(i => i.time).map(i => `<i class="dbar-ev" style="left:${pc(toMin(i.time) / 60)}%;--c:${i.color}" title="${esc(hm(i.time) + ' ' + i.title)}"></i>`).join('');
+  return `<div class="dbar" role="img" aria-label="Tu día de 7:00 a 24:00${up ? ', ahora son las ' + now.toTimeString().slice(0, 5) : ''}">
+    <div class="dbar-track">
+      ${sun && ss > H0 ? `<span class="dbar-night" style="left:${pc(ss)}%"></span>` : ''}
+      ${(spans || []).map(([x, y]) => `<span class="dbar-work" style="left:${pc(x)}%;width:${(pc(y) - pc(x)).toFixed(2)}%"></span>`).join('')}
+      ${up ? `<span class="dbar-done" style="width:${pc(h)}%"></span>` : ''}
+      ${dots}
+      ${up ? `<span class="dbar-now ${night ? 'moon' : ''}" style="left:${pc(h)}%"></span>` : ''}
+    </div>
+    <div class="dbar-lbl">${[9, 12, 15, 18, 21].filter(x => !(sun && Math.abs(x - ss) < 1.6)).map(x => `<span style="left:${pc(x)}%">${x}</span>`).join('')}${sun && ss > H0 && ss < H1 ? `<span class="dbar-sun" style="left:${pc(ss)}%">${ico('sunset')}${sun.set}</span>` : ''}</div>
+  </div>`;
+}
+// La frase grande de arriba: lo que más importa ahora mismo, y una segunda línea con lo siguiente.
+function heroText(today, items, next, nowMin, hol) {
+  const lft = d => { const h = Math.floor(d / 60), m = d % 60; return h ? `${h} h${m ? ' ' + m + ' min' : ''}` : `${m} min`; };
+  const rest = next ? `Luego: <b>${esc(next.title)}</b> a las ${hm(next.time)}` : items.some(i => i.kind === 'ev') ? 'No te queda nada más apuntado hoy.' : 'Hoy no tienes nada apuntado.';
+  if (next && toMin(next.time) - nowMin <= 120) { const d = toMin(next.time) - nowMin; return [esc(next.title), `A las ${hm(next.time)} · ${d <= 0 ? 'ahora' : 'en ' + lft(d)}${next.loc ? ' · ' + esc(next.loc) : ''}`]; }
+  if (hol) return [`Festivo: ${esc(hol.name)}`, rest];
+  const w = workOn(today);
+  if (w && w.off) return [w.mode === 'vacas' ? 'De vacaciones' : 'Día libre', rest];
+  if (w) {
+    const where = w.mode === 'tele' ? ' desde casa' : '';
+    if (nowMin < toMin(w.from)) return [`Hoy trabajas${where}`, `De ${w.from} a ${w.to}${w.l1 ? ` · comida ${w.l1}–${w.l2}` : ''}`];
+    if (w.l1 && nowMin < toMin(w.l1)) return [`A comer en ${lft(toMin(w.l1) - nowMin)}`, `Trabajando${where} · sales a las ${w.to}`];
+    if (w.l1 && nowMin < toMin(w.l2)) return ['Hora de comer', `Vuelves a las ${w.l2}`];
+    if (nowMin < toMin(w.to)) return [`Sales en ${lft(toMin(w.to) - nowMin)}`, `A las ${w.to}${where ? ' · trabajando' + where : ''}`];
+    return ['El resto del día es tuyo', rest];
+  }
+  if (hDow(today) >= 5) return [nowMin < 21 * 60 ? 'Fin de semana' : 'Buenas noches', rest];
+  return [nowMin < 13 * 60 ? 'Buen día' : nowMin < 21 * 60 ? 'Buena tarde' : 'Buenas noches', rest];
 }
 
 // ---------- INICIO ----------
@@ -127,12 +140,18 @@ function vInicio() {
   const hol = layerOn('festivos') && holidayOn(today), sun = sunToday(today), cur = wxNow(), wd = wxDay(today), tip = wxTip();
   const wic = cur && wxIcon(cur.code, cur.night);
   const recent = nbPages().filter(p => !/^(diario|notas-root|lista:)/.test(p.kind || '')).sort((a, b) => b.updated - a.updated).slice(0, 6);
-  const nextTxt = next ? `Siguiente: <b>${esc(next.title)}</b> a las ${hm(next.time)}${toMin(next.time) - nowMin < 90 ? ` · en ${toMin(next.time) - nowMin} min` : ''}` : items.some(i => i.kind === 'ev') ? 'Ya no te queda nada más hoy.' : 'Hoy no tienes nada apuntado.';
   const tile = (go, cls, icon, label, body, extra) => `<button class="tile ${cls}" ${go} style="--i:${tile.n = (tile.n || 0) + 1}"><span class="tile-ic">${icon}</span><span class="tile-lb">${label}</span><span class="tile-bd">${body}</span>${extra || ''}</button>`;
   tile.n = 0;
+  const hero = heroText(today, items, next, nowMin, hol);
+  const tkHoy = typeof tkCount === 'function' ? tkCount('hoy') : 0, vacT = typeof vacCountdown === 'function' ? vacCountdown(today) : '';
+  const chips = [typeof fbHeroChip === 'function' ? fbHeroChip() : '',
+    tkHoy ? `<button class="sky-chip" data-hubgo="tareas">${ico('list-checks')}<span><b>${tkHoy}</b> ${tkHoy === 1 ? 'tarea' : 'tareas'} para hoy</span></button>` : '',
+    vacT ? `<span class="sky-chip">${ico('tree-palm')}<span>${vacT}</span></span>` : '',
+    typeof telePill === 'function' ? telePill(today) : ''].join('');
   const SEC = {
     calma: () => typeof calmHTML === 'function' ? calmHTML() : '',
-    copia: () => (typeof syncGuideHTML === 'function' ? syncGuideHTML() : '') + (typeof backupCardHTML === 'function' ? backupCardHTML() : ''),
+    copia: () => (typeof syncGuideHTML === 'function' && syncGuideHTML()) || (typeof backupCardHTML === 'function' ? backupCardHTML() : ''),
+    futbol: () => typeof futbolHTML === 'function' ? futbolHTML() : '',
     semana: () => weekStrip(today),
     seviene: () => comingHTML(today),
     resumen: () => (typeof reviewDue === 'function' && reviewDue() ? `<section class="hub-sec"><div class="bk rvcard"><span class="bk-ic">${ico('calendar-heart')}</span><div class="bk-b"><b>Revisión de la semana</b><small>5 minutos para mirar la semana que viene con calma.</small><div class="bk-acts"><button class="primary" data-review>Empezar</button></div></div></div></section>` : '') + (typeof weekSummaryHTML === 'function' ? weekSummaryHTML(today) : ''),
@@ -168,16 +187,13 @@ function vInicio() {
   return `<div class="hub">
     <section class="sky sky-${phase}">
       <div class="sky-top"><span class="sky-hi">${hi}${myFirst() ? ', ' + esc(myFirst()) : ''}</span><span class="sky-tools">${cur ? `<span class="sky-wx" title="${wic.t}${wd ? ` · máx ${wd.max}° mín ${wd.min}°` : ''}">${wic.i} <b>${cur.t}°</b>${wd ? `<small>${wd.max}° · ${wd.min}°</small>` : ''}</span>` : ''}<button class="sky-gear" data-palette aria-label="Buscar" title="Buscar (Ctrl+K)">⌕</button><button class="sky-gear" data-hubgo="espacio" aria-label="Ajustes">⚙️</button></span></div>
-      <div class="sky-grid">
-        <div class="sky-date">
-          <div class="sky-wd">${cap(now.toLocaleDateString('es-ES', { weekday: 'long' }))}</div>
-          <div class="sky-num">${now.getDate()}</div>
-          <div class="sky-mo">${now.toLocaleDateString('es-ES', { month: 'long' })} · ${now.toTimeString().slice(0, 5)}</div>
-          ${hol ? `<div class="sky-hol">🎉 Festivo: ${esc(hol.name)}</div>` : typeof vacCountdown === 'function' && vacCountdown(today) ? `<div class="sky-hol">🏖️ ${vacCountdown(today)}</div>` : ''}
-        </div>
-        <div class="sky-arc">${dayArc(items, workSpans(today), sun)}${workNow(today) ? `<div class="sky-work">${workNow(today)}</div>` : ''}<div class="sky-next">${nextTxt}</div>${modeChips(today)}</div>
+      <div class="sky-head">
+        <div class="sky-badge" aria-label="${fmtDay(today)}"><small>${now.toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', '')}</small><b>${now.getDate()}</b><small>${now.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '')}</small></div>
+        <div class="sky-txt"><h1 class="sky-h">${hero[0]}</h1><p class="sky-sub">${hero[1]}</p></div>
       </div>
-      <div class="sky-acts"><label class="sky-qa"><span aria-hidden="true">＋</span><input id="hubqa" placeholder="Apunta lo que sea: «dentista el jueves a las 10», «ver Dune»…" autocomplete="off" enterkeyhint="done" aria-label="Apuntar un evento escribiendo"></label><button data-hubtoday>${moodToday ? moodToday[0] : '📔'} Diario</button><button data-hubnote>✎ Nota</button></div>
+      ${dayBar(items, workSpans(today), sun)}
+      ${chips ? `<div class="sky-chips">${chips}</div>` : ''}
+      <label class="sky-qa"><span aria-hidden="true">＋</span><input id="hubqa" placeholder="Apunta lo que sea: «dentista el jueves a las 10», «ver Dune»…" autocomplete="off" enterkeyhint="done" aria-label="Apuntar algo escribiendo"></label>
       <div class="sky-qah" id="hubqah"></div>
     </section>
 

@@ -184,6 +184,8 @@ function openPalette(q0) {
     const acts = [
       { i: '🙂', t: 'Diario: ¿qué tal hoy?', s: 'Acción', fn: () => { tab = 'cuaderno'; nbToday(); } },
       { i: '📝', t: 'Nota rápida', s: 'En tu cuaderno', fn: () => { tab = 'cuaderno'; nbCur = null; render(); scrollTo(0, 0); const i = document.getElementById('nbcap'); if (i) i.focus(); } },
+      { i: '⚽', t: 'Fútbol: Barça, Betis y España', s: 'Partidos, resultados y clasificación', fn: () => openFutbol() },
+      { i: '🌍', t: 'Tus viajes', s: 'El mapa de los países', fn: () => { tab = 'cuaderno'; nbCur = null; render(); setTimeout(() => { const m = document.querySelector('.pp'); if (m) m.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 200); } },
       { i: '🌙', t: 'Modo calma para hoy', s: 'Inicio solo con lo de hoy', fn: () => setCalm(true) },
       { i: '📋', t: 'Revisión de la semana', s: '5 minutos', fn: () => openReview() },
       { i: '🎧', t: 'Abrir mi mando de Spotify', s: 'Música', fn: () => window.open('../mi-musica/mando.html', '_blank', 'noopener') },

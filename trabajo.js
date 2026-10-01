@@ -42,6 +42,15 @@ function modeChips(iso, compact) {
   const cur = dayMode(iso);
   return `<div class="mode-chips ${compact ? 'compact' : ''}" role="group" aria-label="Cómo es este día">${MODE_CHIPS.map(k => `<button data-daymode="${k}" data-dayiso="${iso}" class="${cur === k ? 'on' : ''}" aria-pressed="${cur === k}" title="${DAY_MODES[k].n}">${DAY_MODES[k].i}<span> ${DAY_MODES[k].n}</span></button>`).join('')}</div>`;
 }
+// Teletrabajo: un día a la semana. Arriba solo sale una pregunta discreta, y solo si esta semana aún no lo has usado.
+function teleWeekDay(iso) { const mon = hAdd(iso, -hDow(iso)); for (let i = 0; i < 5; i++) { const d = hAdd(mon, i); if (dayMode(d) === 'tele') return d; } return ''; }
+function telePill(iso) {
+  const w = workOn(iso); if (!w || w.off) return '';
+  const now = new Date(); if (now.getHours() * 60 + now.getMinutes() >= toMin(w.to)) return '';
+  if (w.mode === 'tele') return `<button class="sky-chip" data-daymode="oficina" data-dayiso="${iso}" title="Quitar el teletrabajo de hoy">${ico('house')}<span>Hoy teletrabajo</span><small class="sky-chip-x">${ico('x')}</small></button>`;
+  const other = teleWeekDay(iso); if (other) return '';
+  return `<button class="sky-chip ghost" data-daymode="tele" data-dayiso="${iso}">${ico('house')}<span>¿Hoy teletrabajo?</span></button>`;
+}
 function workLine(iso) {
   const w = workOn(iso); if (!w) return '';
   if (w.off) return `<div class="work-line off">${w.mode === 'festivo' ? '🎉 Festivo · no se trabaja' : w.mode === 'vacas' ? '🏖️ De vacaciones' : '🌴 Día libre'}</div>`;
@@ -64,7 +73,7 @@ function workSetupCard() {
 function workSettingsHTML() {
   const s = workSched() || WORK_PRESET.map(d => Object.assign({}, d, { on: false }));
   return `<div class="card"><h2>💼 Horario de trabajo</h2>
-    <p class="small muted" style="margin-top:0">Lo uso para el arco del día, el calendario y para avisarte si pones algo en horas de trabajo. El teletrabajo lo marcas cada día en el inicio o en el calendario.</p>
+    <p class="small muted" style="margin-top:0">Lo uso para el arco del día, el calendario y para avisarte si pones algo en horas de trabajo. El día de teletrabajo (uno a la semana) lo marcas arriba en el inicio, con «¿Hoy teletrabajo?»; vacaciones y días libres, en el calendario.</p>
     <div class="work-grid">${WD_LONG.map((n, i) => { const d = s[i] || {}; return `<div class="wg-row">
       <label class="wg-day"><input type="checkbox" data-wk="${i}:on" ${d.on ? 'checked' : ''}> ${n}</label>
       <span class="wg-t ${d.on ? '' : 'dim'}"><input type="time" data-wk="${i}:from" value="${esc(d.from || '')}"> – <input type="time" data-wk="${i}:to" value="${esc(d.to || '')}"></span>

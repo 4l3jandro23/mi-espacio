@@ -1,6 +1,6 @@
 // Guarda la app para que funcione sin conexión. Nunca ve tus movimientos: solo cachea estos archivos.
-const CACHE_VERSION = 'midinero-v29';
-const FILES = ['./', 'index.html', 'iconos-data.js', 'iconos.js', 'engine.js', 'sync.js', 'cuaderno.js', 'hub.js', 'trabajo.js', 'festivos.js', 'tiempo.js', 'rapido.js', 'calendario.js', 'apps.js', 'ics.js', 'avisos.js', 'efemerides.js', 'planes.js', 'barcelona.js', 'extras.js', 'tareas.js', 'copias.js', 'mas.js', 'apple.js', 'hub.css', 'fonts/bricolage.woff2', 'fonts/figtree.woff2', 'fonts/figtree-italic.woff2', 'vendor/xlsx.full.min.js', 'vendor/qrcode.min.js', 'vendor/jsQR.min.js', 'manifest.json', 'icons/icon-192.png', 'icons/icon-180.png'];
+const CACHE_VERSION = 'midinero-v30';
+const FILES = ['./', 'index.html', 'iconos-data.js', 'iconos.js', 'engine.js', 'sync.js', 'cuaderno.js', 'hub.js', 'trabajo.js', 'festivos.js', 'tiempo.js', 'rapido.js', 'calendario.js', 'apps.js', 'ics.js', 'avisos.js', 'efemerides.js', 'planes.js', 'barcelona.js', 'extras.js', 'tareas.js', 'copias.js', 'mas.js', 'futbol.js', 'apple.js', 'hub.css', 'fonts/bricolage.woff2', 'fonts/figtree.woff2', 'fonts/figtree-italic.woff2', 'vendor/xlsx.full.min.js', 'vendor/qrcode.min.js', 'vendor/jsQR.min.js', 'manifest.json', 'icons/icon-192.png', 'icons/icon-180.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE_VERSION).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' }))))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE_VERSION).map(k => caches.delete(k))))); self.clients.claim(); });
 self.addEventListener('fetch', e => {

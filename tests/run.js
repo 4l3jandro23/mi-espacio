@@ -27,7 +27,7 @@ vm.runInContext(`
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   function eur(n) { return n + ' €'; } function eur0(n) { return n + ' €'; } function debtList() { return []; } function debtLeft() { return 0; }
 `, ctx);
-const FILES = ['iconos-data.js', 'iconos.js', 'engine.js', 'cuaderno.js', 'hub.js', 'trabajo.js', 'festivos.js', 'tiempo.js', 'rapido.js', 'calendario.js', 'apps.js', 'ics.js', 'avisos.js', 'efemerides.js', 'planes.js', 'barcelona.js', 'extras.js', 'tareas.js', 'copias.js', 'mas.js', 'apple.js'];
+const FILES = ['iconos-data.js', 'iconos.js', 'engine.js', 'cuaderno.js', 'hub.js', 'trabajo.js', 'festivos.js', 'tiempo.js', 'rapido.js', 'calendario.js', 'apps.js', 'ics.js', 'avisos.js', 'efemerides.js', 'planes.js', 'barcelona.js', 'extras.js', 'tareas.js', 'copias.js', 'mas.js', 'futbol.js', 'apple.js'];
 for (const f of FILES) {
   try { vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f }); }
   catch (e) { console.error(`✗ No carga ${f}: ${e.message}`); process.exit(1); }
@@ -70,6 +70,27 @@ T('las listas no salen como notas', () => run(`nbWritings().some(p => /^lista:/.
 T('Markdown: casillas y enlaces', () => { const md = run(`blocksToMd([{ t: 'todo', html: 'Ver <a href="https://x.es">esto</a>', checked: true }, { t: 'h2', html: 'Título' }])`); return md.includes('- [x] Ver [esto](https://x.es)') && md.includes('### Título') || md; });
 // --- iconos ---
 T('cada emoji del código tiene icono o se deja', () => typeof run(`emoIco('🎉')`) === 'string' && run(`emoIco('🎉')`).includes('<svg'));
+
+// --- fútbol ---
+T('fútbol: lee un partido de ESPN', () => {
+  const m = run(`fbEvent({ id: '1', date: '2026-10-10T16:30Z', league: { abbreviation: 'LALIGA' }, competitions: [{ status: { type: { state: 'post', shortDetail: 'FT' } }, competitors: [
+    { homeAway: 'home', team: { id: '83', displayName: 'Barcelona', logos: [{ href: 'x.png' }] }, score: { displayValue: '3' } },
+    { homeAway: 'away', team: { id: '244', displayName: 'Real Betis' }, score: { displayValue: '1' } }] }] }, 83)`);
+  const r = run(`fbRes(${JSON.stringify(m)}, 244)`);
+  return m.comp === 'LaLiga' && m.home.id === 83 && run(`fbTitle(${JSON.stringify(m)})`) === 'Barça – Betis' && run(`!!fbBoth(${JSON.stringify(m)})`) && r.r === 'p' && r.txt === '1–3' || [m, r];
+});
+// --- teletrabajo una vez por semana ---
+T('teletrabajo: si ya hay uno esta semana, no pregunta', () => {
+  run(`S.settings.work = WORK_PRESET.map(d => Object.assign({}, d)); S.days = { '2026-09-29': { mode: 'tele' } }`);
+  return run(`teleWeekDay('2026-10-01')`) === '2026-09-29' && run(`teleWeekDay('2026-10-05')`) === '';
+});
+// --- viajes ---
+T('viajes: 16 de serie y los dudosos no cuentan', () => {
+  run(`S.settings.paises = {}; S.settings.paisesExtra = {}`);
+  const v = run(`EU_GRID.filter(g => paisState(g.c) === 'v').length`), d = run(`paisState('BE')`);
+  run(`S.settings.paisesExtra = { andorra: true }`);
+  return v === 16 && d === 'd' && run(`paisState('AD')`) === 'v' || [v, d];
+});
 
 console.log(`${bad ? '✗' : '✓'} ${ok} bien${bad ? `, ${bad} mal` : ''}`);
 process.exit(bad ? 1 : 0);
