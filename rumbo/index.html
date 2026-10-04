@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Seguridad: Rumbo solo puede conectarse a GitHub, y solo si activas la sincronización (lo que sube va cifrado). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file: 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com https://gist.githubusercontent.com; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-32.png">
+<meta name="theme-color" content="#173F38">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Rumbo">
+<title>Rumbo</title>
+<link rel="stylesheet" href="../base.css">
+<link rel="stylesheet" href="../hub.css">
+<link rel="stylesheet" href="../rumbo.css">
+<script>window.APP = 'rumbo'; window.APP_ROOT = '../';</script>
+</head>
+<body class="rumbo">
+<div class="wrap">
+  <header class="r-head" id="rhead">
+    <div class="r-tt"><button id="rback" class="r-back hidden">‹ Más</button><h1 id="rtitle">Hoy</h1></div>
+    <div class="r-tools"><span id="syncst" class="small muted"></span><button id="btnImport" class="r-ib" aria-label="Cargar extractos" title="Cargar extractos">＋</button></div>
+    <input id="file" type="file" multiple accept=".xlsx,.xls,.csv" class="hidden">
+  </header>
+  <main id="app"></main>
+</div>
+
+<div id="lock" class="lock hidden" role="dialog" aria-label="Bloqueo con PIN"><div class="lockbox">
+  <img class="lock-ic" src="icons/icon-180.png" alt="" width="64" height="64"><h2 id="locktitle" style="margin-top:12px">Introduce tu PIN</h2>
+  <div class="dots" id="dots"><i></i><i></i><i></i><i></i></div>
+  <div class="small muted" id="lockmsg" style="min-height:20px"></div>
+  <div class="pad" id="pad"><button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><span></span><button data-k="0">0</button><button data-k="del" aria-label="Borrar">⌫</button></div>
+  <button id="lockforgot" class="small" style="border:0;background:none;color:var(--muted)">He olvidado el PIN</button>
+  <button id="lockcancel" class="small hidden" style="border:0;background:none;color:var(--muted)">Cancelar</button>
+</div></div>
+<div id="scan" class="scan hidden"><video id="scanvideo" playsinline muted></video><div id="scanmsg"></div><button id="scanclose">Cerrar</button></div>
+
+<nav id="rnav" class="hubnav hidden" aria-label="Apartados">
+  <button data-tab="hoy"><b data-ic="circle-dot">◉</b>Hoy</button>
+  <button data-tab="prev"><b data-ic="trending-up">↗</b>Previsión</button>
+  <button data-tab="deudas"><b data-ic="users">⇄</b>Deudas</button>
+  <button data-tab="movs"><b data-ic="receipt">≡</b>Movimientos</button>
+  <button data-tab="mas"><b class="ms-dots">•••</b>Más</button>
+</nav>
+
+<script src="../iconos-data.js"></script>
+<script src="../iconos.js"></script>
+<script src="../engine.js"></script>
+<script src="../sync.js"></script>
+<script src="../ui.js"></script>
+<script src="../core.js"></script>
+<script src="../deudas.js"></script>
+<script src="../rumbo.js"></script>
+</body>
+</html>

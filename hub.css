@@ -1538,3 +1538,17 @@ button.fd-it { border: 0; background: none; font: inherit; color: inherit; text-
 .ct-home { display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px; border-radius: 22px; border: 1px solid color-mix(in srgb, var(--peach) 45%, var(--line)); background: color-mix(in srgb, var(--peach) 12%, var(--card)); color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .ct-home > span:nth-child(2) { flex: 1; } .ct-home small { display: block; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: #D0644F; } .ct-home b { font-size: 16px; }
 .ct-open { padding: 8px 14px; border-radius: 999px; background: #EF7F72; color: #fff; font-weight: 700; }
+
+/* ---------- Rumbo (tus cuentas, app aparte) desde Mi Espacio ---------- */
+.ms-app { flex: none; border-radius: 8px; }
+.rm-hero { display: flex; align-items: center; gap: 14px; margin: 4px 0 18px; }
+.rm-hero img { border-radius: 22%; box-shadow: 0 8px 24px rgba(14, 41, 37, .25); }
+.rm-hero b { display: block; font-family: var(--display); font-size: 24px; font-weight: 800; letter-spacing: -.02em; }
+.rm-hero small { color: var(--muted); }
+.rm-steps { margin: 0; padding: 0; list-style: none; counter-reset: s; display: flex; flex-direction: column; gap: 14px; }
+.rm-steps li { counter-increment: s; position: relative; padding: 2px 0 0 38px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.rm-steps li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: var(--bg); font-weight: 800; font-size: 13px; }
+.rm-steps span { color: var(--muted); font-size: 14px; }
+.rm-steps .btn, .rm-steps button { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+.tk-snz { flex: none; align-self: center; border: 0; background: color-mix(in srgb, var(--ink) 7%, transparent); color: var(--muted); font-size: 12.5px; font-weight: 700; padding: 5px 10px; border-radius: 999px; }
+.tk-snz:hover { color: var(--ink); }

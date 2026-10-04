@@ -54,16 +54,12 @@ function weekSummaryHTML(today) {
 }
 
 // ---------- novedades ----------
-const NOVEDADES_V = 'v35';
+const NOVEDADES_V = 'v36';
 const NOVEDADES = [
-  ['layout-grid', 'Todo más ordenado', 'Abajo: Inicio, Calendario, Tareas, Cuaderno y «Más», con todo lo demás agrupado como los Ajustes del iPhone.'],
-  ['mail', 'Cartas al futuro', 'Escríbele a tu yo de dentro de un mes o un año. Se queda cerrada hasta ese día. En «Más».'],
-  ['heart', 'Hoy, por ti', 'En el inicio, un gesto pequeño al día: cuidarte, gente, confianza… Sin rachas ni culpa.'],
-  ['notebook-pen', 'Cuaderno nuevo', 'Dos pestañas, como en el iPhone: Diario (tus días) y Notas.'],
-  ['calendar', 'Calendario más limpio', 'En el móvil, como el Calendario del iPhone; en el ordenador, más espacio para el mes.'],
-  ['users', 'Deudas por persona', 'Cuánto te debe o le debes a cada uno, en neto, y «saldar todo» de un toque.'],
-  ['map-pin', 'Planes de Barcelona más fáciles', '«Me apunto» y eliges el día. Y puedes apuntar planes tuyos.'],
-  ['plus', 'Apunta lo que sea, mejor', 'Con botón «Guardar» y eligiendo adónde va (calendario, tareas, nota, pelis, sitios…).'],
+  ['compass', 'Tus cuentas ahora son Rumbo', 'Una app aparte, con su PIN y su icono. En Más › Rumbo puedes abrirla e instalarla en el iPhone.'],
+  ['users', 'Deudas en una línea', 'En Rumbo escribe «Ana 12 cena» y listo. Ficha por persona, dividir cuentas y recordárselo por WhatsApp.'],
+  ['check', 'Tareas: «Mañana»', 'Lo que tenías para hoy o se te pasó, a mañana de un toque y sin culpa.'],
+  ['cloud', 'Sincronizar, en Ajustes', 'La sincronización y las copias están ahora en Ajustes de Mi Espacio.'],
 ];
 function novedadesCheck() {
   let seen = ''; try { seen = localStorage.getItem('miespacio.novedades') || ''; } catch (e) {}

@@ -125,29 +125,12 @@ function quickAdd(text, base) {
 }
 const quickHint = p => p.found ? '✨ ' + [p.hits.join(' · '), p.cat && p.cat !== 'personal' ? CAL_CATS[p.cat].n : ''].filter(Boolean).join(' · ') : '';
 
-// ---------- avisos ----------
-function toast(t, o) {
-  o = o || {};
-  let box = document.getElementById('toasts');
-  if (!box) { box = document.createElement('div'); box.id = 'toasts'; box.setAttribute('role', 'status'); box.setAttribute('aria-live', 'polite'); document.body.appendChild(box); }
-  const el = document.createElement('div'); el.className = 'toast';
-  const tx = document.createElement('span'); tx.className = 'toast-t'; tx.textContent = t; el.appendChild(tx);
-  const kill = () => { el.classList.add('out'); setTimeout(() => el.remove(), 250); };
-  for (const a of o.actions || []) { const b = document.createElement('button'); b.textContent = a.n; b.onclick = e => { e.stopPropagation(); kill(); a.fn(); }; el.appendChild(b); }
-  el.onclick = kill;
-  box.appendChild(el);
-  while (box.children.length > 3) box.firstChild.remove();
-  setTimeout(kill, o.ms || ((o.actions || []).length ? 7000 : 4500));
-}
-
 // ---------- buscador y acciones (Ctrl+K) ----------
 const SECTIONS = [
   ['Tareas y listas', 'tareas', '☑'],
-  ['Inicio', 'inicio', '☀︎'], ['Calendario', 'cal', '◷'], ['Cuaderno: listas, notas y diario', 'cuaderno', '▤'], ['Mi Dinero', 'hoy', '💰'], ['Previsión del mes', 'prev', '↗'],
-  ['Meses', 'mes', '📅'], ['Gastos hormiga', 'hormiga', '🐜'], ['Gastos fijos', 'fijos', '🔁'], ['Movimientos', 'movs', '🧾'], ['Deudas', 'deudas', '🤝'],
-  ['Barcelona: planes, gratis y agenda', 'ciudad', '🏙️'], ['Noticias', 'noticias', '📰'], ['Ajustes de Mi Espacio', 'espacio', '⚙️'], ['Mi Dinero: PIN, copias y sincronización', 'ajustes', '🔒'], ['Calendario de Apple', 'apple', '🍎'],
+  ['Inicio', 'inicio', '☀︎'], ['Calendario', 'cal', '◷'], ['Cuaderno: listas, notas y diario', 'cuaderno', '▤'], ['Rumbo (con PIN)', 'hoy', '🧭'], ['Rumbo: deudas', 'deudas', '🤝'],
+  ['Barcelona: planes, gratis y agenda', 'ciudad', '🏙️'], ['Noticias', 'noticias', '📰'], ['Ajustes de Mi Espacio', 'espacio', '⚙️'], ['Sincronizar y copias', 'espacio', '☁️'], ['Calendario de Apple', 'apple', '🍎'],
 ];
-const normTxt = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 function nextOcc(ev, from) { for (let i = 0; i < 400; i++) { const d = hAdd(from, i); if (occurs(ev, d)) return d; } return ev.date; }
 function openPalette(q0) {
   if (document.getElementById('palette')) return;
@@ -160,7 +143,7 @@ function openPalette(q0) {
   const go = r => { close(); r.fn(); };
   box.querySelector('#palx').onclick = close;
   // Sin escribir nada: accesos, acciones y lo próximo, en vez de una lista larga.
-  const QUICK = [['tareas', 'square-check', 'Tareas', '#5B8DEF'], ['cal', 'calendar', 'Calendario', '#EF7F72'], ['cuaderno', 'notebook', 'Cuaderno', '#9B7BEA'], ['ciudad', 'map-pin', 'Barcelona', '#D9822B'], ['hoy', 'wallet', 'Mi Dinero', '#2FA98C'], ['espacio', 'settings', 'Ajustes', '#6B7090']];
+  const QUICK = [['tareas', 'square-check', 'Tareas', '#5B8DEF'], ['cal', 'calendar', 'Calendario', '#EF7F72'], ['cuaderno', 'notebook', 'Cuaderno', '#9B7BEA'], ['ciudad', 'map-pin', 'Barcelona', '#D9822B'], ['hoy', 'compass', 'Rumbo', '#1E4D45'], ['espacio', 'settings', 'Ajustes', '#6B7090']];
   const homeHTML = acts => {
     const t = todayISO(), nx = [];
     for (let i = 0; i < 14 && nx.length < 4; i++) { const d = hAdd(t, i); for (const it of itemsOn(d)) if (['ev', 'task', 'apple', 'rem'].includes(it.kind) && nx.length < 4) nx.push({ d, it }); }

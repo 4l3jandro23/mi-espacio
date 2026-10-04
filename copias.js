@@ -16,9 +16,12 @@ async function saveFile(name, text, type) {
 }
 function backupDone() { set('settings', 'lastBackup', todayISO()); save(); }
 async function backupFull() {
-  // Lleva también Mi Dinero: si tiene PIN, primero se pide.
-  if (S.settings.pinHash && !financeUnlocked) { goTab('ajustes'); return toast('La copia completa incluye Mi Dinero: pon el PIN y pulsa «Descargar copia».'); }
-  if (await saveFile(fname('mi-espacio-copia', 'json'), JSON.stringify(S), 'application/json')) { backupDone(); toast('Copia guardada. Para recuperarla: Mi Dinero › Ajustes › Restaurar copia.'); softRender(); }
+  // Sin tus cuentas: esas tienen su propia copia en Rumbo, detrás del PIN.
+  const c = JSON.parse(JSON.stringify(S));
+  for (const M of MONEY_MAPS) c[M] = {};
+  for (const k of MONEY_SET) delete c.settings[k];
+  for (const k of Object.keys(c._t || {})) if (MONEY_MAPS.includes(k.split('/')[0]) || MONEY_SET.includes(k.replace('settings/', ''))) delete c._t[k];
+  if (await saveFile(fname('mi-espacio-copia', 'json'), JSON.stringify(c), 'application/json')) { backupDone(); toast('Copia guardada. Para recuperarla: Ajustes › Copias › Restaurar copia.'); softRender(); }
 }
 
 // ---------- Markdown ----------

@@ -5,16 +5,15 @@
 
 // ===================== Más =====================
 function vMas() {
-  const m = typeof moneyCtx === 'function' && moneyCtx();
   const row = (attr, icon, color, label, sub) => `<button class="ms-row" ${attr}><span class="ms-ic" style="--c:${color}">${ico(icon)}</span><span class="ms-l"><b>${label}</b>${sub ? `<small>${sub}</small>` : ''}</span><span class="ms-go">${ico('chevron-right')}</span></button>`;
   const cartas = cartasList(), pend = cartas.filter(c => c.d > todayISO()).length;
   const s = typeof vjStats === 'function' ? vjStats() : null;
   return `<div class="hub mas">
     <header class="cal-head"><div><div class="cal-year">Mi Espacio</div><h1 class="cal-month">Más</h1></div></header>
     <button class="ms-search" data-palette>${ico('search')}<span>Buscar o hacer algo…</span></button>
-    <h2 class="ms-h">Tu dinero</h2><div class="ms-g">
-      ${row('data-hubgo="hoy"', 'wallet', '#2FA98C', 'Mi Dinero', m ? `${eur(Math.max(0, m.A.perDay))} al día hasta el cobro` : 'Con tu PIN')}
-      ${row('data-hubgo="deudas"', 'users', '#F2A93B', 'Deudas', 'Quién te debe y a quién debes')}
+    <h2 class="ms-h">Rumbo</h2><div class="ms-g">
+      <button class="ms-row" data-rumbo=""><img class="ms-app" src="rumbo/icons/icon-180.png" alt="" width="32" height="32"><span class="ms-l"><b>Rumbo</b><small>Tus cuentas y deudas, con PIN</small></span><span class="ms-go">${ico('arrow-up-right')}</span></button>
+      ${hasMoney() ? row('data-rumbocopy', 'smartphone', '#1E4D45', 'Instalar Rumbo como app aparte', 'Y pasarle tus datos') : ''}
     </div>
     <h2 class="ms-h">Tu ciudad y lo que pasa</h2><div class="ms-g">
       ${row('data-hubgo="ciudad"', 'map-pin', '#D9822B', 'Barcelona', 'Planes, gratis y agenda')}
@@ -31,7 +30,7 @@ function vMas() {
     <h2 class="ms-h">Ajustes</h2><div class="ms-g">
       ${row('data-hubgo="espacio"', 'settings', '#8A90AE', 'Ajustes de Mi Espacio', 'Colores, horario, avisos, vacaciones…')}
       ${row('data-hubgo="apple"', 'calendar', '#A2845E', 'Calendario y Recordatorios de Apple', '')}
-      ${row('data-hubgo="ajustes"', 'lock', '#1B1F3B', 'Mi Dinero: PIN y sincronización', '')}
+      ${row('data-sync', 'cloud', '#5B8DEF', 'Sincronizar y copias', syncCfg().token ? 'Activada' : 'PC y móvil')}
     </div>
   </div>`;
 }

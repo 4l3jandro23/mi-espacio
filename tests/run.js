@@ -27,7 +27,7 @@ vm.runInContext(`
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   function eur(n) { return n + ' €'; } function eur0(n) { return n + ' €'; } function debtList() { return []; } function debtLeft() { return 0; }
 `, ctx);
-const FILES = ['iconos-data.js', 'iconos.js', 'engine.js', 'cuaderno.js', 'hub.js', 'trabajo.js', 'festivos.js', 'tiempo.js', 'rapido.js', 'calendario.js', 'apps.js', 'ics.js', 'avisos.js', 'efemerides.js', 'planes.js', 'barcelona.js', 'extras.js', 'tareas.js', 'copias.js', 'mas.js', 'futbol.js', 'noticias.js', 'mejoras.js', 'viajes.js', 'mas2.js', 'apple.js'];
+const FILES = ['iconos-data.js', 'iconos.js', 'engine.js', 'ui.js', 'deudas.js', 'cuaderno.js', 'hub.js', 'trabajo.js', 'festivos.js', 'tiempo.js', 'rapido.js', 'calendario.js', 'apps.js', 'ics.js', 'avisos.js', 'efemerides.js', 'planes.js', 'barcelona.js', 'extras.js', 'tareas.js', 'copias.js', 'mas.js', 'futbol.js', 'noticias.js', 'mejoras.js', 'viajes.js', 'mas2.js', 'apple.js'];
 for (const f of FILES) {
   try { vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f }); }
   catch (e) { console.error(`✗ No carga ${f}: ${e.message}`); process.exit(1); }
@@ -128,5 +128,12 @@ T('cartas al futuro: solo sale en el inicio cuando toca', () => {
 });
 T('hoy, por ti: siempre hay una idea para hoy', () => typeof run(`PORTI[portiIdx(todayISO())][1]`) === 'string');
 T('fútbol: amistosos y cancelados no salen', () => run(`fbOk({ id: 'a', state: 'pre', comp: 'Amistoso', at: '2026-10-09T18:00Z' }, new Set())`) === false && run(`fbOk({ id: 'b', state: 'cancel', comp: 'LaLiga', at: '2026-10-09T18:00Z' }, new Set())`) === false);
+T('deudas: «Ana me debe 12 de la cena»', () => { const p = run(`parseDebt('Ana me debe 12 de la cena', 'debo', [])`); return p.who === 'Ana' && p.amount === 12 && p.dir === 'meDeben' && p.concept === 'cena' || p; });
+T('deudas: «debo 20,50 a Pablo por las entradas»', () => { const p = run(`parseDebt('debo 20,50 a Pablo por las entradas', 'meDeben', [])`); return p.who === 'Pablo' && p.amount === 20.5 && p.dir === 'debo' && p.concept === 'entradas' || p; });
+T('deudas: «Pablo 15 pizza» usa el botón elegido', () => { const p = run(`parseDebt('Pablo 15 pizza', 'meDeben', [])`); return p.who === 'Pablo' && p.amount === 15 && p.dir === 'meDeben' && p.concept === 'pizza' || p; });
+T('deudas: reconoce nombres ya usados en medio de la frase', () => { const p = run(`parseDebt('cena 12 con José Luis', 'meDeben', ['José Luis', 'Ana'])`); return p.who === 'José Luis' && p.amount === 12 || p; });
+T('deudas: «le dejé 50 a mi hermana»', () => { const p = run(`parseDebt('le dejé 50 a mi hermana', 'debo', [])`); return p.who === 'Mi hermana' && p.dir === 'meDeben' && p.amount === 50 || p; });
+T('deudas: «me prestó Carlos 30»', () => { const p = run(`parseDebt('me prestó Carlos 30', 'meDeben', [])`); return p.who === 'Carlos' && p.dir === 'debo' || p; });
+T('deudas: neto por persona compensa los dos sentidos', () => { const g = run(`debtGroups([{ who: 'Ana', dir: 'meDeben', amount: 20, date: '2026-10-01' }, { who: 'ana ', dir: 'debo', amount: 8, date: '2026-10-02' }], d => d.amount)`); return g.length === 1 && g[0].net === 12 && g[0].open.length === 2 || g; });
 console.log(`${bad ? '✗' : '✓'} ${ok} bien${bad ? `, ${bad} mal` : ''}`);
 process.exit(bad ? 1 : 0);

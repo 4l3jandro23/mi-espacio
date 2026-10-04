@@ -39,6 +39,7 @@ function tkRow(x, showList) {
     <button class="tk-chk" data-tkchk="${x.p.id}|${b.id}" aria-label="${b.checked ? 'Marcar como pendiente' : 'Hecho'}" aria-pressed="${!!b.checked}"></button>
     <button class="tk-body" data-tkopen="${x.p.id}|${b.id}"><span class="tk-t">${esc(nbPlain(b.html))}</span>${sub ? `<small>${sub}</small>` : ''}</button>
     ${b.flag ? `<span class="tk-flag" aria-label="Marcada">${ico('flag', 'fill')}</span>` : ''}
+    ${!b.checked && b.due && b.due <= todayISO() ? `<button class="tk-snz" data-tksnz="${x.p.id}|${b.id}" title="Pasarla a mañana">Mañana</button>` : ''}
   </div>`;
 }
 function tkNewRow(v) { return `<div class="tk-row tk-new"><span class="tk-chk ghost"></span><input id="tknew" data-tkv="${v}" placeholder="Nuevo recordatorio" enterkeyhint="done" autocomplete="off" aria-label="Nuevo recordatorio"></div><div class="tk-hint small muted" id="tkhint"></div>`; }
@@ -148,6 +149,11 @@ function bindTareas() {
     const v = t.closest('[data-tkview]'); if (v) { tkView = v.dataset.tkview; tkShowDone = false; render(); scrollTo(0, 0); return; }
     const c = t.closest('[data-tkchk]'); if (c) return tkToggle(c.dataset.tkchk, c);
     const o = t.closest('[data-tkopen]'); if (o) return tkOpen(o.dataset.tkopen);
+    const z = t.closest('[data-tksnz]'); if (z) { // posponer sin culpa: a mañana de un toque
+      const f = tkFind(z.dataset.tksnz); if (!f) return; const old = f.b.due;
+      f.b.due = hAdd(todayISO(), 1); nbTouch(f.p); nbSaveNow(); tkRe();
+      return toast('Pasada a mañana', { actions: [{ n: 'Deshacer', fn: () => { f.b.due = old; nbTouch(f.p); nbSaveNow(); tkRe(); } }] });
+    }
     if (t.closest('[data-tkdone]')) { tkShowDone = !tkShowDone; return tkRe(); }
     if (t.closest('[data-tkclear]')) {
       const hits = tkAll().filter(x => x.b.checked && tkIn(tkView, x)), undo = hits.map(x => [x.p, x.p.blocks.slice()]);

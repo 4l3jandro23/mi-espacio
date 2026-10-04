@@ -3,7 +3,7 @@
 'use strict';
 
 // ---------- inicio a tu gusto ----------
-const HOME_SECS = [['carta', 'Carta al futuro (cuando toca abrirla)'], ['miano', 'Tu año (en diciembre)'], ['resumen', 'Tu semana (domingo y lunes)'], ['hoy', 'Hoy'], ['porti', 'Hoy, por ti'], ['cuenta', 'Cuenta atrás'], ['fechas', 'Cumpleaños, documentos y entradas'], ['futbol', 'Fútbol'], ['noticias', 'Noticias'], ['dinero', 'Tu dinero (con el PIN puesto)'], ['semana', 'Tira de la semana'], ['seviene', 'Se viene'], ['finde', 'Tu finde (jueves a sábado)'], ['ciudad', 'Esta semana en Barcelona'], ['apps', 'Tus otras apps'], ['estrenos', 'Pelis y series'], ['descubre', 'Descubre'], ['copia', 'Copia del mes y copia en la nube'], ['apartados', 'Tus apartados'], ['recordatorios', 'Recordatorios de Apple'], ['proximos', 'Próximos días'], ['efemerides', 'Tal día como hoy'], ['cuaderno', 'Del cuaderno']];
+const HOME_SECS = [['carta', 'Carta al futuro (cuando toca abrirla)'], ['miano', 'Tu año (en diciembre)'], ['resumen', 'Tu semana (domingo y lunes)'], ['hoy', 'Hoy'], ['porti', 'Hoy, por ti'], ['cuenta', 'Cuenta atrás'], ['fechas', 'Cumpleaños, documentos y entradas'], ['futbol', 'Fútbol'], ['noticias', 'Noticias'], ['semana', 'Tira de la semana'], ['seviene', 'Se viene'], ['finde', 'Tu finde (jueves a sábado)'], ['ciudad', 'Esta semana en Barcelona'], ['apps', 'Tus otras apps'], ['estrenos', 'Pelis y series'], ['descubre', 'Descubre'], ['copia', 'Copia del mes y copia en la nube'], ['apartados', 'Tus apartados'], ['recordatorios', 'Recordatorios de Apple'], ['proximos', 'Próximos días'], ['efemerides', 'Tal día como hoy'], ['cuaderno', 'Del cuaderno']];
 // Lo que viene apagado de serie (se enciende en «Personalizar el inicio»): así el inicio se lee de un vistazo.
 const HOME_OFF = ['apartados', 'proximos', 'efemerides', 'cuaderno'];
 const calmOn = () => S.settings.calm === todayISO();
@@ -177,13 +177,13 @@ function openSyncGuide() {
     <ol class="sg-steps">
       <li><b>Hazlo en el ordenador.</b> Es más cómodo copiar y pegar.</li>
       <li><b>Crea la llave en GitHub.</b> <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">Abre esta página</a>. Nombre: «Mi Espacio». Caducidad: 1 año. Baja a <i>Account permissions</i> › <i>Gists</i> › <b>Read and write</b>. Pulsa <i>Generate token</i> y copia lo que sale (empieza por <code>github_pat_</code>).</li>
-      <li><b>Pégala en Mi Espacio.</b> Toca «Seguir» aquí abajo: te pedirá el PIN de Mi Dinero (o crearlo) y verás «Sincronizar». Pega la llave en «¿Es el primero?» y pulsa <b>Activar</b>.</li>
+      <li><b>Pégala en Mi Espacio.</b> Toca «Seguir» aquí abajo y verás «Sincronizar PC y móvil». Pega la llave en «¿Es el primero?» y pulsa <b>Activar</b>.</li>
       <li><b>En el iPhone:</b> en el ordenador pulsa «Vincular otro dispositivo» y, desde Mi Espacio en el iPhone, escanea el QR. Ya está.</li>
     </ol>
     <p class="small muted">La llave solo sirve para guardar tu copia. Todo va cifrado: en GitHub nadie puede leerlo.</p>
     <div class="sheet-acts"><button data-close>Ahora no</button><span style="flex:1"></span><button class="primary" data-syncgo>Seguir</button></div></div>`;
   document.body.appendChild(box);
-  box.onclick = e => { if (e.target === box || e.target.closest('[data-close]')) box.remove(); if (e.target.closest('[data-syncgo]')) { box.remove(); goTab('ajustes'); setTimeout(() => { const el = document.getElementById('stoken'); if (el) el.scrollIntoView({ block: 'center' }); }, 400); } };
+  box.onclick = e => { if (e.target === box || e.target.closest('[data-close]')) box.remove(); if (e.target.closest('[data-syncgo]')) { box.remove(); goTab('espacio'); setTimeout(() => { const el = document.getElementById('stoken'); if (el) el.scrollIntoView({ block: 'center' }); }, 400); } };
 }
 document.addEventListener('click', e => {
   const t = e.target; if (!t.closest) return;

@@ -5,7 +5,7 @@ const HH = 48; // píxeles por hora
 const LAYERS = {
   festivos: ['Festivos y puentes', '#EF5B4C'], senalados: ['Días señalados', '#F2A93B'], trabajo: ['Horario de trabajo', '#5B8DEF'],
   tiempo: ['El tiempo', '#6FA8F5'], planes: ['Planes en Barcelona', '#D9822B'], efemerides: ['Efemérides y música', '#9B7BEA'], ejercicio: ['Plan de Ejercicio', '#EF7F72'], comida: ['Plan de Alimentación', '#2FA98C'], piso: ['Tareas del piso', '#F2A93B'], futbol: ['Fútbol: Barça, Betis y España', '#A50044'],
-  apple: ['Apple', '#A2845E'], dinero: ['Mi Dinero', '#2FA98C'],
+  apple: ['Apple', '#A2845E'],
 };
 const layerOn = k => !((S.settings.calOff || {})[k]);
 function toggleLayer(k) { const o = Object.assign({}, S.settings.calOff || {}); if (o[k]) delete o[k]; else o[k] = 1; set('settings', 'calOff', o); save(); render(); }
@@ -227,7 +227,7 @@ function vCal() {
       </header>
       ${main}
       <div class="cal-foot"><div class="ap-bar"><span>🍎 ${appleOn() ? 'Apple · ' + agoTxt(appleData().at) : 'Calendario de Apple'}</span>${IS_APPLE && appleOn() ? '<button class="pill-btn" data-applefetch>Traer</button>' : ''}<button class="pill-btn" data-hubgo="apple">${appleOn() ? 'Ajustes' : 'Conectar'}</button></div>
-        ${AN && !financeUnlocked ? '<button class="link small" data-hubgo="hoy">🔒 Entra en Mi Dinero para ver aquí tus pagos</button>' : ''}<button class="link small" data-kbhelp>⌨️ Atajos</button></div>
+        <button class="link small" data-kbhelp>⌨️ Atajos</button></div>
     </div>
   </div>`;
 }

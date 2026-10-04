@@ -176,7 +176,7 @@ function vInicio() {
     apartados: () => `    <section class="hub-sec">
       <h2 class="hub-h">Tus apartados</h2>
       <div class="tiles">
-        ${tile('data-hubgo="hoy"', 'tile-money', '💰', 'Mi Dinero', m ? `<b class="tile-big">${eur(Math.max(0, m.A.perDay))}</b><span>al día hasta el cobro</span>` : AN ? '<span>🔒 Con PIN · toca para entrar</span>' : '<span>Carga tus extractos para empezar</span>')}
+        ${tile('data-rumbo=""', 'tile-money', '🧭', 'Rumbo', '<span>Con tu PIN · app aparte</span>')}
         ${tile('data-hubgo="cal"', 'tile-cal', '◷', 'Calendario', next ? `<span>${esc(next.title)} · ${hm(next.time)}</span>` : week[0] ? `<span>${fmtDay(week[0].d, { weekday: 'short', day: 'numeric' })}: ${esc(week[0].items[0].title)}</span>` : '<span>Nada en los próximos días</span>')}
         ${tile('data-hubgo="tareas"', 'tile-tasks', '☑', 'Tareas', typeof tkCount === 'function' && tkCount('hoy') ? `<b class="tile-big">${tkCount('hoy')}</b><span>para hoy · ${pendingTasks} en total</span>` : `<b class="tile-big">${pendingTasks}</b><span>${pendingTasks === 1 ? 'pendiente' : 'pendientes'}</span>`)}
         ${tile('data-hubtoday', 'tile-diary', moodToday ? moodToday[0] : '✎', 'Diario', moodToday ? `<span>Hoy: ${moodToday[1].toLowerCase()}${diaryToday.good ? ' · ' + esc(diaryToday.good) : ''}</span>` : '<span>¿Qué tal hoy? Un toque y listo</span>')}
@@ -249,7 +249,9 @@ function vEspacio() {
       <div class="toolbar" style="margin-top:10px"><button data-icsin>📥 Importar un calendario (.ics)</button><button data-icsout>📤 Descargar mis eventos (.ics)</button><button data-kbhelp>⌨️ Atajos de teclado</button></div>
       <p class="small muted" style="margin-bottom:0">Importar sirve para traerte de una vez el calendario del trabajo, de Google o de Outlook (en todos se puede exportar a .ics). Si lo vuelves a importar, se actualiza sin duplicar.</p></div>
     <div class="card"><h2>🍎 Calendario y Recordatorios de Apple</h2><p class="small">${appleOn() ? 'Conectado · ' + agoTxt(appleData().at) : 'Tráete tus eventos y recordatorios de Apple, y manda allí lo que crees aquí.'}</p><button data-hubgo="apple">${appleOn() ? 'Ver' : 'Conectar'}</button></div>
-    <div class="card"><h2>🔒 Mi Dinero, PIN y sincronización</h2><p class="small">Saldos, copias de seguridad, cambiar el PIN y vincular tus dispositivos. Te pedirá el PIN.</p><button data-hubgo="ajustes">Abrir</button></div>
+    <div class="card" id="sincronizar"><h2>☁️ Sincronizar PC y móvil</h2><div id="syncinfo">${syncInfo()}</div></div>
+    <div class="card"><h2>💾 Copias</h2><p class="small">Guarda una copia de Mi Espacio (calendario, tareas, notas, diario y ajustes). Tus cuentas no van aquí: tienen su propia copia en Rumbo, con PIN.</p>
+      <div class="toolbar"><button data-bkfull>Guardar copia</button><button id="impb">Restaurar copia</button><input id="bfile" type="file" accept=".json" class="hidden"></div></div>
   </div>`;
 }
 

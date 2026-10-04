@@ -1,8 +1,8 @@
 // Guarda la app para que funcione sin conexión. Nunca ve tus movimientos: solo cachea estos archivos.
-const CACHE_VERSION = 'midinero-v35';
-const FILES = ['./', 'index.html', 'iconos-data.js', 'iconos.js', 'engine.js', 'sync.js', 'cuaderno.js', 'hub.js', 'trabajo.js', 'festivos.js', 'tiempo.js', 'rapido.js', 'calendario.js', 'apps.js', 'ics.js', 'avisos.js', 'efemerides.js', 'planes.js', 'barcelona.js', 'extras.js', 'tareas.js', 'copias.js', 'mas.js', 'futbol.js', 'noticias.js', 'mejoras.js', 'viajes.js', 'mas2.js', 'mapa.js', 'apple.js', 'hub.css', 'fonts/bricolage.woff2', 'fonts/figtree.woff2', 'fonts/figtree-italic.woff2', 'fonts/flags.woff2', 'vendor/xlsx.full.min.js', 'vendor/qrcode.min.js', 'vendor/jsQR.min.js', 'manifest.json', 'icons/icon-192.png', 'icons/icon-180.png'];
+const CACHE_VERSION = 'midinero-v36';
+const FILES = ['./', 'index.html', 'iconos-data.js', 'iconos.js', 'engine.js', 'sync.js', 'ui.js', 'core.js', 'base.css', 'cuaderno.js', 'hub.js', 'trabajo.js', 'festivos.js', 'tiempo.js', 'rapido.js', 'calendario.js', 'apps.js', 'ics.js', 'avisos.js', 'efemerides.js', 'planes.js', 'barcelona.js', 'extras.js', 'tareas.js', 'copias.js', 'mas.js', 'futbol.js', 'noticias.js', 'mejoras.js', 'viajes.js', 'mas2.js', 'mapa.js', 'apple.js', 'hub.css', 'fonts/bricolage.woff2', 'fonts/figtree.woff2', 'fonts/figtree-italic.woff2', 'fonts/flags.woff2', 'vendor/xlsx.full.min.js', 'vendor/qrcode.min.js', 'vendor/jsQR.min.js', 'manifest.json', 'icons/icon-192.png', 'icons/icon-180.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE_VERSION).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' }))))); self.skipWaiting(); });
-self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE_VERSION).map(k => caches.delete(k))))); self.clients.claim(); });
+self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('midinero-') && k !== CACHE_VERSION).map(k => caches.delete(k))))); self.clients.claim(); });
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
