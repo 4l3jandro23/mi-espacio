@@ -123,6 +123,7 @@ const NB_LISTS = [
   { k: 'pelis', n: 'Pelis y series', i: '🎬', c: 'var(--lilac)', ph: 'Una peli o una serie…', hint: 'Lo que te recomienden, para no quedarte en blanco el domingo.', re: /^(libros, )?pelis y series$/i },
   { k: 'planes', n: 'Sitios y planes', i: '📍', c: 'var(--warm)', ph: 'Un bar, un sitio, un plan…', hint: 'Bares, restaurantes y planes para cuando te apetezca salir.' },
   { k: 'regalos', n: 'Ideas de regalo', i: '🎁', c: '#E0709A', ph: 'Para quién y qué…', hint: 'Apúntalas cuando se te ocurran, no la víspera del cumple.' },
+  { k: 'prestado', n: 'Cosas prestadas', i: '🤝', c: '#6E9BF0', ph: '«Dune» a Marta…', hint: 'Lo que has dejado (o te han dejado), para que no se pierda nada.' },
   { k: 'algundia', n: 'Algún día', i: '✨', c: '#4CC7A6', ph: 'Aprender a…, ir a…, probar…', hint: 'Ideas sin fecha que no quieres perder. Sin prisa ninguna.' },
 ];
 const NB_MOODS = [['😞', 'Fatal'], ['😕', 'Regular'], ['😐', 'Normal'], ['🙂', 'Bien'], ['😄', 'Genial']];
@@ -248,6 +249,7 @@ function nbRoute(txt) {
     ['planes', /^(?:probar|sitio|restaurante|plan)\s*:?\s+/i, true],
     ['tareas', /^(?:tarea|pendiente)\s*:?\s+/i, true],
     ['algundia', /^(?:alg[uú]n d[ií]a|alg[uú]n dia)\s*:?\s+/i, true],
+    ['prestado', /^(?:(?:le|les)\s+(?:prest[eé]|dej[eé])\s+|prest[eé]\s+|me\s+(?:prest[oó]|dej[oó])\s+)(?!\d)/i, false],
   ];
   for (const [k, re, strip] of rules) { const m = s.match(re); if (m && s.length > m[0].length) return { k, text: strip ? s.slice(m[0].length) : s }; }
   const q = parseQuick(s);

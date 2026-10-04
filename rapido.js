@@ -167,6 +167,8 @@ function openPalette(q0) {
     const acts = [
       { i: '🙂', t: 'Diario: ¿qué tal hoy?', s: 'Acción', fn: () => { tab = 'cuaderno'; nbToday(); } },
       { i: '📝', t: 'Nota rápida', s: 'En tu cuaderno', fn: () => { tab = 'cuaderno'; nbCur = null; render(); scrollTo(0, 0); const i = document.getElementById('nbcap'); if (i) i.focus(); } },
+      { i: '✨', t: '¿Qué hago hoy?', s: 'Una idea para hoy', fn: () => openSorpresa() },
+      { i: '🌙', t: 'Cierra el día', s: 'Cómo ha ido y qué hay mañana', fn: () => openCierre() },
       { i: '✉️', t: 'Escribir una carta al futuro', s: 'Se abre dentro de un tiempo', fn: () => cartaNueva() },
       { i: '⏳', t: 'Nueva cuenta atrás', s: 'Algo que esperas', fn: () => cdAdd() },
       { i: '🛋️', t: 'Hoy no puedo', s: 'Pasar las tareas de hoy a mañana', fn: () => hoyNoPuedo() },

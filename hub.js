@@ -155,6 +155,8 @@ function vInicio() {
     noticias: () => typeof noticiasHTML === 'function' ? noticiasHTML() : '',
     cuenta: () => typeof cuentaHTML === 'function' ? cuentaHTML() : '',
     porti: () => typeof portiHTML === 'function' ? portiHTML() : '',
+    cierre: () => typeof cierreHTML === 'function' ? cierreHTML() : '',
+    sorpresa: () => typeof sorpresaHTML === 'function' ? sorpresaHTML() : '',
     carta: () => typeof cartaHomeHTML === 'function' ? cartaHomeHTML() : '',
     fechas: () => typeof fechasHTML === 'function' ? fechasHTML() : '',
     dinero: () => typeof dineroHTML === 'function' ? dineroHTML() : '',

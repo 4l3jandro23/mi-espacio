@@ -27,7 +27,7 @@ vm.runInContext(`
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   function eur(n) { return n + ' €'; } function eur0(n) { return n + ' €'; } function debtList() { return []; } function debtLeft() { return 0; }
 `, ctx);
-const FILES = ['iconos-data.js', 'iconos.js', 'engine.js', 'ui.js', 'deudas.js', 'cuaderno.js', 'hub.js', 'trabajo.js', 'festivos.js', 'tiempo.js', 'rapido.js', 'calendario.js', 'apps.js', 'ics.js', 'avisos.js', 'efemerides.js', 'planes.js', 'barcelona.js', 'extras.js', 'tareas.js', 'copias.js', 'mas.js', 'futbol.js', 'noticias.js', 'mejoras.js', 'viajes.js', 'mas2.js', 'apple.js'];
+const FILES = ['iconos-data.js', 'iconos.js', 'engine.js', 'ui.js', 'deudas.js', 'cuaderno.js', 'hub.js', 'trabajo.js', 'festivos.js', 'tiempo.js', 'rapido.js', 'calendario.js', 'apps.js', 'ics.js', 'avisos.js', 'efemerides.js', 'planes.js', 'barcelona.js', 'extras.js', 'tareas.js', 'copias.js', 'mas.js', 'futbol.js', 'noticias.js', 'mejoras.js', 'viajes.js', 'mas2.js', 'nuevo.js', 'apple.js', 'rumbo-extra.js'];
 for (const f of FILES) {
   try { vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f }); }
   catch (e) { console.error(`✗ No carga ${f}: ${e.message}`); process.exit(1); }
@@ -135,5 +135,16 @@ T('deudas: reconoce nombres ya usados en medio de la frase', () => { const p = r
 T('deudas: «le dejé 50 a mi hermana»', () => { const p = run(`parseDebt('le dejé 50 a mi hermana', 'debo', [])`); return p.who === 'Mi hermana' && p.dir === 'meDeben' && p.amount === 50 || p; });
 T('deudas: «me prestó Carlos 30»', () => { const p = run(`parseDebt('me prestó Carlos 30', 'meDeben', [])`); return p.who === 'Carlos' && p.dir === 'debo' || p; });
 T('deudas: neto por persona compensa los dos sentidos', () => { const g = run(`debtGroups([{ who: 'Ana', dir: 'meDeben', amount: 20, date: '2026-10-01' }, { who: 'ana ', dir: 'debo', amount: 8, date: '2026-10-02' }], d => d.amount)`); return g.length === 1 && g[0].net === 12 && g[0].open.length === 2 || g; });
+T('ruta cosas prestadas', () => run(`nbRoute('le dejé Dune a Marta').k`) === 'prestado' && run(`nbRoute('me prestó Ana un libro').k`) === 'prestado' && run(`nbRoute('le dejé 20 a Pablo').k`) !== 'prestado' && run(`nbRoute('dejé el coche en el taller').k`) !== 'prestado');
+T('¿qué hago hoy? siempre tiene ideas', () => { const l = run(`ideasHoy()`); return Array.isArray(l) && l.length >= 10 && l.every(x => x.t) || l.length; });
+T('cierra el día solo de noche', () => typeof run(`cierreHTML()`) === 'string');
+T('rumbo: detecta que te suben una suscripción (y no se lía con varios cargos del mismo sitio)', () => {
+  run(`var lastDataDate = () => '2026-09-20'; var addD = (iso, n) => hAdd(iso, n);
+    const tx = (d, a, s) => ({ date: d, amt: -a, cat: 'Suscripciones', shop: s });
+    AN = { list: [tx('2026-06-05', 17.99, 'Spotify'), tx('2026-07-05', 17.99, 'Spotify'), tx('2026-08-05', 17.99, 'Spotify'), tx('2026-09-05', 20.99, 'Spotify'),
+      tx('2026-07-10', 0.99, 'Apple'), tx('2026-07-20', 2.99, 'Apple'), tx('2026-08-10', 0.99, 'Apple'), tx('2026-08-20', 2.99, 'Apple'), tx('2026-09-10', 0.99, 'Apple'), tx('2026-09-20', 2.99, 'Apple')] };`);
+  const r = run(`priceRises()`); run(`AN = null`);
+  return r.length === 1 && r[0].shop === 'Spotify' && r[0].from === 17.99 && r[0].to === 20.99 || r;
+});
 console.log(`${bad ? '✗' : '✓'} ${ok} bien${bad ? `, ${bad} mal` : ''}`);
 process.exit(bad ? 1 : 0);

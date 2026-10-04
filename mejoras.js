@@ -69,7 +69,7 @@ function fechasHTML() {
   if (!cs.length && !ds.length && !vs.length) return '';
   const when = n => n === 0 ? 'hoy' : n === 1 ? 'mañana' : n < 7 ? 'el ' + WD_L[hDow(hAdd(t, n))].toLowerCase() : `en ${n} días`;
   return `<section class="hub-sec"><h2 class="hub-h">Fechas que importan</h2><div class="fx">
-    ${cs.map(c => `<button class="fx-it ${c.n === 0 ? 'today' : ''}" data-editev="${c.ev.id}" data-occ="${c.d}"><span class="fx-ic" style="--c:#F2A93B">${ico('cake')}</span><span><b>${c.n === 0 ? '¡Hoy cumple ' + esc(cumpleName(c.ev)) + '!' : 'Cumple ' + esc(cumpleName(c.ev)) + ' ' + when(c.n)}</b><small>${fmtDay(c.d, { weekday: 'long', day: 'numeric', month: 'long' })}${c.age ? ` · ${c.age} años` : ''}</small></span></button>`).join('')}
+    ${cs.map(c => `<button class="fx-it ${c.n === 0 ? 'today' : ''}" data-editev="${c.ev.id}" data-occ="${c.d}"><span class="fx-ic" style="--c:#F2A93B">${ico('cake')}</span><span><b>${c.n === 0 ? '¡Hoy cumple ' + esc(cumpleName(c.ev)) + '!' : 'Cumple ' + esc(cumpleName(c.ev)) + ' ' + when(c.n)}</b><small>${fmtDay(c.d, { weekday: 'long', day: 'numeric', month: 'long' })}${c.age ? ` · ${c.age} años` : ''}</small></span></button>${c.n === 0 ? `<button class="fx-fel" data-felicitar="${esc(cumpleName(c.ev))}">${ico('party-popper')} Felicitar a ${esc(cumpleName(c.ev).split(' ')[0])}</button>` : ''}`).join('')}
     ${ds.map(x => { const n = hDays(t, x.d); return `<button class="fx-it" data-hubgo="espacio"><span class="fx-ic" style="--c:#5B8DEF">${ico('id-card')}</span><span><b>${esc(x.n)} ${n < 0 ? 'caducó' : 'caduca ' + when(n)}</b><small>${n < 0 ? 'el ' : ''}${fmtDay(x.d, { day: 'numeric', month: 'long', year: 'numeric' })}${n >= 0 && n <= 30 ? ' · buen momento para pedir cita' : ''}</small></span></button>`; }).join('')}
     ${vs.map(p => `<a class="fx-it" href="${esc(p.url || '#')}" target="_blank" rel="noopener noreferrer"><span class="fx-ic" style="--c:#9B7BEA">${ico('ticket')}</span><span><b>Entradas para ${esc(p.n)}</b><small>A la venta ${when(hDays(t, p.venta.slice(0, 10)))}${p.venta.length > 10 ? ' a las ' + p.venta.slice(11, 16) : ''}</small></span></a>`).join('')}
   </div></section>`;
@@ -357,7 +357,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 
 // ===================== «Apunta lo que sea» del inicio =====================
 // Adivina adónde va, enseña el destino y deja cambiarlo con un toque. Botón «Guardar» (en el iPhone, «Listo» no guarda).
-const QA_DESTS = [['cal', 'Calendario', 'calendar'], ['tareas', 'Tareas', 'list-checks'], ['nota', 'Nota', 'notebook-pen'], ['pelis', 'Pelis', 'tv'], ['planes', 'Sitios', 'map-pin'], ['algundia', 'Algún día', 'sparkles']];
+const QA_DESTS = [['cal', 'Calendario', 'calendar'], ['tareas', 'Tareas', 'list-checks'], ['nota', 'Nota', 'notebook-pen'], ['pelis', 'Pelis', 'tv'], ['planes', 'Sitios', 'map-pin'], ['prestado', 'Prestado', 'handshake'], ['algundia', 'Algún día', 'sparkles']];
 function homeCapSave(v, k) {
   const r = nbRoute(v); k = k || r.k; const text = k === r.k ? r.text : v;
   if (k === 'cal') { quickAdd(v, todayISO()); return; }

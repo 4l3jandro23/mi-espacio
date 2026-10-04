@@ -373,6 +373,7 @@ function vHoy() {
     <button class="r-tile" data-go="deudas"><small>Debes</small><b>${eur0(oweAll)}</b></button>
     <button class="r-tile" data-go="prev"><small>Al cobrar, a este ritmo</small><b class="${endAt < 0 ? 'warmt' : ''}">${eur0(endAt)}</b></button>
   </div>`;
+  h += affordHTML(A) + huchasMini() + risesHTML();
   if (!S.settings.myName) h += `<div class="note blue"><b class="t">Un ajuste rápido</b>En <b>Ajustes</b>, escribe tu nombre como sale en el banco y, si alguien de tu familia te pasa dinero, su nombre. Así separo tus traspasos entre cuentas y la ayuda familiar del resto.</div>`;
   if (old > 6) h += `<div class="note blue"><b class="t">Tus datos son de hace ${old} días</b>Carga los extractos nuevos para que las cuentas sean de hoy.</div>`;
   h += weekCard(A) + projectionCard(A);
@@ -494,7 +495,7 @@ function vFijos() {
   const fees = AN.list.filter(t => t.cat === 'Comisiones del banco');
   const servicios = AN.list.filter(t => /servicios del piso/i.test(t.shop));
   const lastServ = servicios[servicios.length - 1];
-  let h = `<div class="card"><h2>Fijos de cada mes: ${eur0(totalRec)}</h2>
+  let h = risesHTML() + `<div class="card"><h2>Fijos de cada mes: ${eur0(totalRec)}</h2>
     ${why('Son los pagos que salen solos cada mes. Los detecto porque se repiten en al menos 2 de los últimos 3 meses. Se restan del número de “Hoy” hasta que se cobran, para que ese dinero no te parezca libre.')}
     ${rec.map(r => { const e = fixedEnd(r), done = e && e < todayISO(); return `<div class="row" style="${done ? 'opacity:.55' : ''}"><span class="l">${Fin.CATS[r.cat].icon} ${esc(r.shop)} <span class="small muted">· día ${r.day}</span>${e ? ` <span class="pill ${done ? 'blue' : ''}">${done ? 'terminado' : 'hasta ' + fdate(e) + '/' + e.slice(0, 4)}</span>` : ''}<br><label class="small muted">Termina el <input type="date" data-end="${esc(fixedKey(r))}" value="${esc(e)}" style="padding:2px 6px;font-size:12px"></label></span><span class="num">${eur(r.amount)}</span></div>`; }).join('')}
     ${later < totalRec ? `<div class="note" style="margin-top:10px">Cuando acaben los que tienen fecha, tus fijos bajarán a <b>${eur0(later)}</b> al mes.</div>` : ''}
@@ -737,8 +738,8 @@ function openSplit() {
 
 // ===================== la app =====================
 const R_MAIN = ['hoy', 'prev', 'deudas', 'movs', 'mas'];
-const R_TITLES = { hoy: 'Hoy', prev: 'Previsión', deudas: 'Deudas', movs: 'Movimientos', mas: 'Más', mes: 'Meses', hormiga: 'Gastos hormiga', fijos: 'Fijos', guia: 'Tu plan', ajustes: 'Ajustes', bienvenida: 'Rumbo' };
-const R_PARENT = { mes: 'mas', hormiga: 'mas', fijos: 'mas', guia: 'mas', ajustes: 'mas' };
+const R_TITLES = { hoy: 'Hoy', prev: 'Previsión', deudas: 'Deudas', movs: 'Movimientos', mas: 'Más', mes: 'Meses', hormiga: 'Gastos hormiga', fijos: 'Fijos', guia: 'Tu plan', ajustes: 'Ajustes', bienvenida: 'Rumbo', huchas: 'Huchas', cargos: 'Cargos del mes' };
+const R_PARENT = { mes: 'mas', hormiga: 'mas', fijos: 'mas', guia: 'mas', ajustes: 'mas', huchas: 'mas', cargos: 'mas' };
 const isFresh = () => !S.settings.pinHash && !hasMoney();
 let softPending = false;
 function softRender() {
@@ -774,9 +775,9 @@ function render() {
     AN.pendingFixed = AN.pendingFixed.filter(r => !fixedEnd(r) || fixedEnd(r) >= todayISO());
     if (cycleIdx == null || cycleIdx >= AN.cycles.length) cycleIdx = AN.cycles.length - 1;
   }
-  const needsData = !has && ['hoy', 'prev', 'mes', 'hormiga', 'fijos', 'movs'].includes(tab);
+  const needsData = !has && ['hoy', 'prev', 'mes', 'hormiga', 'fijos', 'movs', 'cargos'].includes(tab);
   paintChrome(); paintSync();
-  app.innerHTML = tab === 'bienvenida' ? vWelcome() : needsData ? vNoData() : ({ hoy: vHoy, prev: vPrev, deudas: vDeudas, movs: vMovs, mas: vRMas, mes: vMes, hormiga: vHormiga, fijos: vFijos, guia: vGuia, ajustes: vAjustes })[tab]();
+  app.innerHTML = tab === 'bienvenida' ? vWelcome() : needsData ? vNoData() : ({ hoy: vHoy, prev: vPrev, deudas: vDeudas, movs: vMovs, mas: vRMas, mes: vMes, hormiga: vHormiga, fijos: vFijos, guia: vGuia, ajustes: vAjustes, huchas: vHuchas, cargos: vCargos })[tab]();
   bind();
 }
 const goTab = t => { tab = t; render(); scrollTo(0, 0); };
@@ -808,6 +809,10 @@ function vRMas() {
       ${rRow('data-go="mes"', 'chart-column', '#5B8DEF', 'Meses', 'De una nómina a la siguiente')}
       ${rRow('data-go="hormiga"', 'bug', '#D9822B', 'Gastos hormiga', AN ? `${eur0(AN.avg.hormiga)} al mes de media` : '')}
       ${rRow('data-go="fijos"', 'repeat', '#8A90AE', 'Fijos y suscripciones', AN ? `${eur0(AN.recurring.reduce((a, r) => a + r.amount, 0))} al mes` : '')}
+      ${rRow('data-go="cargos"', 'calendar-range', '#EF7F72', 'Cargos del mes', 'Qué sale cada día y cuándo cobras')}
+    </div>
+    <h2 class="ms-h">Para más adelante</h2><div class="ms-g">
+      ${rRow('data-go="huchas"', 'piggy-bank', '#2FA98C', 'Huchas', huchas().length ? huchas().map(h => esc(h.n)).slice(0, 3).join(' · ') : 'Para un viaje, un colchón, un capricho')}
     </div>
     <h2 class="ms-h">Ayuda</h2><div class="ms-g">
       ${rRow('data-go="guia"', 'compass', '#1E4D45', 'Tu plan, paso a paso', 'Y consejos con tus números')}
@@ -850,7 +855,7 @@ function bind() {
   document.querySelectorAll('[data-set]').forEach(el => el.onchange = () => { set('settings', el.dataset.set, el.value); save(); render(); });
   document.querySelectorAll('[data-bal]').forEach(el => el.onchange = () => { set('balances', el.dataset.bal, { amount: +el.value, date: todayISO() }); save(); render(); });
   document.querySelectorAll('[data-end]').forEach(el => el.onchange = () => { set('fixedEnds', el.dataset.end, el.value || null); save(); render(); });
-  bindDeudas(); bindSync(); bindPrev();
+  bindDeudas(); bindSync(); bindPrev(); bindRumboExtra();
   if ($('pinchange')) $('pinchange').onclick = () => lock('change');
   if ($('exp')) $('exp').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = 'rumbo-copia-' + todayISO() + '.json'; a.click(); };
   if ($('impb')) { $('impb').onclick = () => $('bfile').click(); $('bfile').onchange = async e => { try { restoreBackup(JSON.parse(await e.target.files[0].text())); } catch (_) { toast('Ese archivo no es una copia válida.'); } }; }
@@ -912,7 +917,7 @@ document.querySelectorAll('#rnav [data-tab]').forEach(b => b.onclick = () => goT
 document.getElementById('rback').onclick = () => goTab(R_PARENT[tab] || 'hoy');
 {
   const h0 = location.hash.slice(1);
-  if (/^(prev|deudas|movs|mas|mes|hormiga|fijos|guia|ajustes)$/.test(h0)) { tab = h0; history.replaceState(null, '', location.pathname); }
+  if (/^(prev|deudas|movs|mas|mes|hormiga|fijos|guia|ajustes|huchas|cargos)$/.test(h0)) { tab = h0; history.replaceState(null, '', location.pathname); }
 }
 render();
 if (/^#vincular=/.test(location.hash)) { const code = location.hash; history.replaceState(null, '', location.pathname); linkWith(code); }

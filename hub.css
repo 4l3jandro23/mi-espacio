@@ -1552,3 +1552,49 @@ button.fd-it { border: 0; background: none; font: inherit; color: inherit; text-
 .rm-steps .btn, .rm-steps button { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
 .tk-snz { flex: none; align-self: center; border: 0; background: color-mix(in srgb, var(--ink) 7%, transparent); color: var(--muted); font-size: 12.5px; font-weight: 700; padding: 5px 10px; border-radius: 999px; }
 .tk-snz:hover { color: var(--ink); }
+
+/* ---------- cierra el día ---------- */
+.ci-card, .sp-home { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 16px; border-radius: 22px; font: inherit; cursor: pointer; }
+.ci-card { border: 0; color: #EDEBFF; background: linear-gradient(160deg, #3A3F80, #1F2350 70%); box-shadow: 0 12px 30px rgba(31, 35, 80, .25); }
+.ci-card .ci-tx { flex: 1; } .ci-card b { display: block; font-family: var(--display); font-size: 18px; } .ci-card small { opacity: .8; }
+.ci-card .ms-go, .ci-card .ico { color: #EDEBFF; }
+.ci-moon { width: 42px; height: 42px; flex: none; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, .14); color: #FFE9A8; }
+.ci-moon .ico { width: 22px; height: 22px; color: #FFE9A8; }
+.ci-h { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.ci-h .ci-moon { background: #2A2F66; }
+.ci-h small { color: var(--muted); font-weight: 600; } .ci-h h2 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
+.ci-s { font-family: var(--body); font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; font-weight: 700; }
+.ci-wx { text-transform: none; letter-spacing: 0; font-weight: 600; }
+.ci-faces { display: flex; gap: 6px; }
+.ci-faces button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); }
+.ci-faces button span { font-size: 24px; } .ci-faces button small { font-size: 11px; color: var(--muted); }
+.ci-faces button.on { border-color: var(--ink); background: var(--card); box-shadow: 0 0 0 2px var(--ink) inset; }
+.ci-good { width: 100%; margin-top: 10px; padding: 11px 14px; border-radius: 14px; }
+.ci-list { display: flex; flex-direction: column; gap: 6px; }
+.ci-t { display: flex; align-items: center; gap: 6px; padding: 8px 8px 8px 14px; border-radius: 14px; background: var(--bg); }
+.ci-t span { flex: 1; min-width: 0; }
+.ci-t button { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; font-size: 13px; font-weight: 700; border-radius: 999px; border: 1px solid var(--line); background: var(--card); }
+.ci-t .ico { width: 14px; height: 14px; }
+.ci-all { margin-top: 8px; border: 0; background: none; color: var(--accent); font-weight: 700; padding: 4px 2px; }
+.ci-ev { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px; background: var(--bg); }
+.ci-ev i { width: 8px; height: 8px; border-radius: 50%; flex: none; } .ci-ev b { font-variant-numeric: tabular-nums; }
+.ci-ok { color: var(--muted); margin: 0; }
+.ci .sheet-acts .primary { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ---------- ¿qué hago hoy? ---------- */
+.sp-home { border: 1px solid color-mix(in srgb, #D9822B 30%, var(--line)); background: color-mix(in srgb, #FFB38A 14%, var(--card)); color: inherit; }
+.sp-home > span:nth-child(2) { flex: 1; } .sp-home b { display: block; font-family: var(--display); font-size: 17px; } .sp-home small { color: var(--muted); }
+.sp-ic { width: 42px; height: 42px; flex: none; border-radius: 14px; display: grid; place-items: center; background: linear-gradient(150deg, #FFB38A, #EF7F72); color: #fff; }
+.sp-ic .ico { width: 22px; height: 22px; color: #fff; }
+.sp-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sp-top small { font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.sp-wx { font-size: 13px; font-weight: 600; color: var(--blue); }
+.sp-card { margin: 14px 0 16px; padding: 22px 20px; border-radius: 22px; background: color-mix(in srgb, #FFB38A 12%, var(--card)); border: 1px solid color-mix(in srgb, #FFB38A 35%, var(--line)); display: flex; flex-direction: column; gap: 8px; animation: up .25s cubic-bezier(.2, .8, .2, 1) both; }
+.sp-card b { font-family: var(--display); font-size: 24px; line-height: 1.2; letter-spacing: -.015em; text-wrap: pretty; }
+.sp-card small { color: var(--muted); font-size: 14px; }
+.sp-acts { display: flex; gap: 8px; } .sp-acts > * { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 12px; border-radius: 14px; text-decoration: none; font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { .sp-card { animation: none; } }
+
+/* ---------- felicitar ---------- */
+.fx-fel { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; margin: -2px 0 4px 52px; border: 0; border-radius: 999px; padding: 7px 14px; font-weight: 700; background: color-mix(in srgb, #F2A93B 18%, var(--card)); color: color-mix(in srgb, #F2A93B 55%, var(--ink)); }
+.fx-fel .ico { width: 16px; height: 16px; }

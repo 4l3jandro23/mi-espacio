@@ -54,12 +54,12 @@ function weekSummaryHTML(today) {
 }
 
 // ---------- novedades ----------
-const NOVEDADES_V = 'v36';
+const NOVEDADES_V = 'v37';
 const NOVEDADES = [
-  ['compass', 'Tus cuentas ahora son Rumbo', 'Una app aparte, con su PIN y su icono. En Más › Rumbo puedes abrirla e instalarla en el iPhone.'],
-  ['users', 'Deudas en una línea', 'En Rumbo escribe «Ana 12 cena» y listo. Ficha por persona, dividir cuentas y recordárselo por WhatsApp.'],
-  ['check', 'Tareas: «Mañana»', 'Lo que tenías para hoy o se te pasó, a mañana de un toque y sin culpa.'],
-  ['cloud', 'Sincronizar, en Ajustes', 'La sincronización y las copias están ahora en Ajustes de Mi Espacio.'],
+  ['moon', 'Cierra el día', 'A partir de las 20 h: cómo ha ido, qué quedó pendiente y qué hay mañana. Dos minutos.'],
+  ['sparkles', '¿Qué hago hoy?', 'Los días libres, una idea cada vez según el tiempo, tus listas y lo que hay en Barcelona.'],
+  ['party-popper', 'Felicitar', 'El día de un cumple, un botón con el mensaje ya escrito para mandarlo por WhatsApp.'],
+  ['handshake', 'Cosas prestadas', 'Escribe «le dejé Dune a Marta» y va a su lista, para que no se pierda nada.'],
 ];
 function novedadesCheck() {
   let seen = ''; try { seen = localStorage.getItem('miespacio.novedades') || ''; } catch (e) {}

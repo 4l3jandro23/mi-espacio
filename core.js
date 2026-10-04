@@ -188,7 +188,7 @@ addEventListener('storage', e => {
 
 // ---------- pasar tus cuentas a Rumbo (en el iPhone cada app de la pantalla de inicio tiene su propio almacén) ----------
 const MONEY_MAPS = ['txs', 'balances', 'overrides', 'fixedEnds', 'debts'];
-const MONEY_SET = ['myName', 'family', 'savings', 'hormigaMax', 'reserve', 'payDay', 'goalCut', 'pinHash'];
+const MONEY_SET = ['myName', 'family', 'savings', 'hormigaMax', 'reserve', 'payDay', 'goalCut', 'pinHash', 'huchas'];
 const hasMoney = () => Object.keys(S.txs || {}).length > 0 || Object.values(S.debts || {}).some(Boolean) || Object.keys(S.balances || {}).length > 0;
 const gzPipe = async (u8, stream) => new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(stream)).arrayBuffer());
 async function moneyPack() {
