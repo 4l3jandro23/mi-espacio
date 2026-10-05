@@ -207,7 +207,7 @@ function appsLauncherHTML(iso) {
   const hasEj = appHas('ej', 'planEjercicioDias') || appHas('ej', 'planEjercicioEntrenos'), tipo = hasEj ? ejTipo(iso) : '', done = hasEj ? ejDone(iso) : null;
   const ej = done ? '✓ ' + esc(ejDoneTxt(done)) : tipo ? 'Hoy: ' + EJ_TIPOS[tipo].toLowerCase() : hasEj ? 'Hoy toca descansar' : 'Tu plan de gimnasio';
   const nArt = typeof artistNames === 'function' ? artistNames().length : 0;
-  const out = [a(APPS.ali.url, APPS.ali.c, '🥗', 'Alimentación', ali), a(APPS.ej.url, APPS.ej.c, '🏋️', 'Ejercicio', ej), a('../mi-musica/mando.html', '#1DB954', '🎧', 'Música', nArt ? `Tu mando de Spotify · ${nArt} artistas` : 'Tu mando de Spotify')];
+  const out = [a(APPS.ali.url, APPS.ali.c, '🥗', 'Alimentación', ali), a(APPS.ej.url, APPS.ej.c, '🏋️', 'Ejercicio', ej), a('../mi-musica/mando.html', '#1DB954', '🎧', 'Música', nArt ? `Tu mando de Spotify · ${nArt} artistas` : 'Tu mando de Spotify'), a('../cimientos/', '#3F7D6E', '🌱', 'Cimientos', 'Tu espacio, a tu ritmo')];
   if (pisoUrl()) {
     const R = window.Rotacion, ts = R && APX.piso && pisoWho() ? pisoWeek(R.mondayOf(iso)) : null, pend = ts ? ts.filter(t => !t.done).length : -1;
     out.push(a(pisoUrl(), '#6E9BF0', '🧹', 'Piso', pend > 0 ? `Te ${pend === 1 ? 'queda 1 tarea' : `quedan ${pend} tareas`} esta semana` : pend === 0 ? 'Esta semana, todo hecho' : 'Tareas de casa'));

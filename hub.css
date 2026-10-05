@@ -1669,3 +1669,14 @@ button.fd-it { border: 0; background: none; font: inherit; color: inherit; text-
 .bt-d { color: var(--muted); text-transform: capitalize; }
 .bt-t { font-family: var(--display); font-size: 22px; line-height: 1.3; margin: 10px 4px 12px; overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) { .fc-fg { transition: none; } }
+
+/* ---------- aspecto: muestras de color ---------- */
+.th-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+.th { display: flex; flex-direction: column; align-items: stretch; gap: 8px; border: 1px solid var(--line); background: var(--card); border-radius: 16px; padding: 8px 8px 10px; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink); cursor: pointer; box-shadow: none; }
+.th.on { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.th-sw { display: block; height: 52px; border-radius: 10px; }
+.th-cielo { background: linear-gradient(135deg, #A9C6FA 0%, #6E9BF0 45%, #C58BD9 75%, #FFB38A 100%); }
+.th-mar { background: linear-gradient(135deg, #8FD8D2 0%, #68CDB8 35%, #2A9DB0 65%, #3477D1 100%); }
+.th-bosque { background: linear-gradient(135deg, #E8F5E4 0%, #A6D8B0 35%, #4E9A6B 70%, #3E8C8A 100%); }
+.th-arena { background: linear-gradient(135deg, #FFF6E5 0%, #FBD9A6 35%, #F2B36B 65%, #D9785A 100%); }
+.th-grafito { background: linear-gradient(135deg, #D5D8DF 0%, #B0B4BE 35%, #7F8698 65%, #4A4F5E 100%); }

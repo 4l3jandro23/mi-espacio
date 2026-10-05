@@ -24,7 +24,7 @@ function aspectoHTML() {
   const p = S.settings.palette || 'cielo', t = S.settings.theme || 'auto';
   return `<div class="card"><h2>🎨 Aspecto</h2>
     <p class="small muted" style="margin-top:0">Colores de toda la app (el cielo de arriba sigue cambiando con la hora).</p>
-    <div class="pal-grid">${Object.entries(PALETTES).map(([k, n]) => `<button class="pal ${k === p ? 'on' : ''}" data-palette-set="${k}" aria-pressed="${k === p}"><span class="pal-sw pal-${k}"></span>${n}</button>`).join('')}</div>
+    <div class="th-grid">${Object.entries(PALETTES).map(([k, n]) => `<button class="th ${k === p ? 'on' : ''}" data-palette-set="${k}" aria-pressed="${k === p}"><span class="th-sw th-${k}"></span>${n}</button>`).join('')}</div>
     <p class="small muted" style="margin:14px 0 6px">Modo oscuro</p>
     <div class="seg2 theme-seg">${Object.entries(THEMES).map(([k, n]) => `<button class="${k === t ? 'on' : ''}" data-theme-set="${k}">${n}</button>`).join('')}</div></div>`;
 }
