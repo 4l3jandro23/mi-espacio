@@ -54,8 +54,12 @@ function weekSummaryHTML(today) {
 }
 
 // ---------- novedades ----------
-const NOVEDADES_V = 'v37';
+const NOVEDADES_V = 'v38';
 const NOVEDADES = [
+  ['sparkles', 'Pídele algo a la app', 'En el inicio: escribe «cena con Marta el viernes a las 21», «recuérdame…» o «¿qué tengo mañana?» y lo hace.'],
+  ['flame', 'Hábitos con racha', 'Marca lo que haces cada día y mira cómo crece la racha.'],
+  ['clock', 'Enfocarme', 'Un temporizador de 15, 25 o 50 minutos, con tu tarea y un final.'],
+  ['heart', 'Bote de cosas buenas', 'Las cosas buenas que apuntas al cerrar el día, para sacar una cuando la necesites.'],
   ['moon', 'Cierra el día', 'A partir de las 20 h: cómo ha ido, qué quedó pendiente y qué hay mañana. Dos minutos.'],
   ['sparkles', '¿Qué hago hoy?', 'Los días libres, una idea cada vez según el tiempo, tus listas y lo que hay en Barcelona.'],
   ['party-popper', 'Felicitar', 'El día de un cumple, un botón con el mensaje ya escrito para mandarlo por WhatsApp.'],

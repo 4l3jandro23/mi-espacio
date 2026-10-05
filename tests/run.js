@@ -27,7 +27,7 @@ vm.runInContext(`
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   function eur(n) { return n + ' €'; } function eur0(n) { return n + ' €'; } function debtList() { return []; } function debtLeft() { return 0; }
 `, ctx);
-const FILES = ['iconos-data.js', 'iconos.js', 'engine.js', 'ui.js', 'deudas.js', 'cuaderno.js', 'hub.js', 'trabajo.js', 'festivos.js', 'tiempo.js', 'rapido.js', 'calendario.js', 'apps.js', 'ics.js', 'avisos.js', 'efemerides.js', 'planes.js', 'barcelona.js', 'extras.js', 'tareas.js', 'copias.js', 'mas.js', 'futbol.js', 'noticias.js', 'mejoras.js', 'viajes.js', 'mas2.js', 'nuevo.js', 'apple.js', 'rumbo-extra.js'];
+const FILES = ['iconos-data.js', 'iconos.js', 'engine.js', 'ui.js', 'deudas.js', 'cuaderno.js', 'hub.js', 'trabajo.js', 'festivos.js', 'tiempo.js', 'rapido.js', 'calendario.js', 'apps.js', 'ics.js', 'avisos.js', 'efemerides.js', 'planes.js', 'barcelona.js', 'extras.js', 'tareas.js', 'copias.js', 'mas.js', 'futbol.js', 'noticias.js', 'mejoras.js', 'viajes.js', 'mas2.js', 'nuevo.js', 'asistente.js', 'rutinas.js', 'apple.js', 'rumbo-extra.js'];
 for (const f of FILES) {
   try { vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f }); }
   catch (e) { console.error(`✗ No carga ${f}: ${e.message}`); process.exit(1); }
@@ -137,6 +137,16 @@ T('deudas: «me prestó Carlos 30»', () => { const p = run(`parseDebt('me prest
 T('deudas: neto por persona compensa los dos sentidos', () => { const g = run(`debtGroups([{ who: 'Ana', dir: 'meDeben', amount: 20, date: '2026-10-01' }, { who: 'ana ', dir: 'debo', amount: 8, date: '2026-10-02' }], d => d.amount)`); return g.length === 1 && g[0].net === 12 && g[0].open.length === 2 || g; });
 T('ruta cosas prestadas', () => run(`nbRoute('le dejé Dune a Marta').k`) === 'prestado' && run(`nbRoute('me prestó Ana un libro').k`) === 'prestado' && run(`nbRoute('le dejé 20 a Pablo').k`) !== 'prestado' && run(`nbRoute('dejé el coche en el taller').k`) !== 'prestado');
 T('¿qué hago hoy? siempre tiene ideas', () => { const l = run(`ideasHoy()`); return Array.isArray(l) && l.length >= 10 && l.every(x => x.t) || l.length; });
+T('deudas: «familia me ha dado 50 euros» es lo que debes', () => { const p = run(`parseDebt('familia me ha dado 50 euros', 'meDeben', [])`); return p.who === 'Familia' && p.amount === 50 && p.dir === 'debo' || p; });
+T('asistente: recuérdame → tarea con fecha', () => { const p = run(`askPlan('recuérdame llamar al dentista el jueves')`); return p.kind === 'tareas' && /^llamar al dentista/.test(p.text) || p; });
+T('asistente: frase con hora → evento', () => { const p = run(`askPlan('cena con Marta el viernes a las 21')`); return p.kind === 'cal' || p; });
+T('asistente: «¿qué tengo mañana?» mira mañana', () => run(`askDays('¿qué tengo mañana?')`)[0] > run(`todayISO()`));
+T('asistente: pregunta → respuesta', () => { const p = run(`askPlan('¿qué tengo mañana?')`); return p.kind === 'ans' && typeof run(`askAnswerHTML('¿qué tengo mañana?')`) === 'string' || p; });
+T('asistente: deuda con importe va a Rumbo', () => { const p = run(`askPlan('Ana me debe 12 de la cena')`); return p.kind === 'rumbo' || p; });
+T('asistente: sin importe, prestar un libro va a Cosas prestadas', () => { const p = run(`askPlan('le dejé Dune a Marta')`); return p.kind === 'prestado' || p; });
+T('asistente: añade X a una lista nueva', () => { const p = run(`askPlan('añade leche a la compra')`); return p.kind === 'newlist' && p.list === 'Compra' && p.text === 'leche' || p; });
+T('asistente: añade X a una lista que existe', () => { const p = run(`askPlan('apunta Dune a pelis y series')`); return p.kind === 'pelis' || p; });
+T('asistente: comandos', () => { const p = run(`askPlan('qué hago hoy')`); return p.kind === 'cmd' && typeof p.fn === 'function' || p; });
 T('cierra el día solo de noche', () => typeof run(`cierreHTML()`) === 'string');
 T('rumbo: detecta que te suben una suscripción (y no se lía con varios cargos del mismo sitio)', () => {
   run(`var lastDataDate = () => '2026-09-20'; var addD = (iso, n) => hAdd(iso, n);

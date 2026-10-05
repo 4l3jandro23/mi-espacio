@@ -918,6 +918,7 @@ document.getElementById('rback').onclick = () => goTab(R_PARENT[tab] || 'hoy');
 {
   const h0 = location.hash.slice(1);
   if (/^(prev|deudas|movs|mas|mes|hormiga|fijos|guia|ajustes|huchas|cargos)$/.test(h0)) { tab = h0; history.replaceState(null, '', location.pathname); }
+  else if (/^d=/.test(h0)) { try { dqText = decodeURIComponent(h0.slice(2)); tab = 'deudas'; } catch (e) {} history.replaceState(null, '', location.pathname); }
 }
 render();
 if (/^#vincular=/.test(location.hash)) { const code = location.hash; history.replaceState(null, '', location.pathname); linkWith(code); }

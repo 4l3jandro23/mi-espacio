@@ -111,6 +111,7 @@ function tkAdd(v, text) {
   if (v === 'hoy' && !b.due) b.due = t;
   if (v === 'flag') b.flag = true;
   nbTouch(p); nbSaveNow();
+  return { p, b };
 }
 function tkOpen(ref) {
   const f = tkFind(ref); if (!f) return;

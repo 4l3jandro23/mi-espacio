@@ -2,7 +2,7 @@
 'use strict';
 const DQ_AFTER = '(?=\\s|$)';
 const DQ_ME = new RegExp('\\b(?:me\\s+deben?|me\\s+tienen?\\s+que\\s+(?:pagar|devolver|dar)|les?\\s+(?:dej[eé]|prest[eé]|adelant[eé]|pagu[eé]|invit[eé]))' + DQ_AFTER, 'i');
-const DQ_YO = new RegExp('\\b(?:(?:le\\s+|les\\s+)?debo|me\\s+(?:dej[oó]|prest[oó]|adelant[oó]|pag[oó]|invit[oó]|dejaron|prestaron|pagaron|invitaron)|tengo\\s+que\\s+(?:pagar|devolver|dar)(?:le|les)?)' + DQ_AFTER, 'i');
+const DQ_YO = new RegExp('\\b(?:(?:le\\s+|les\\s+)?debo|me\\s+(?:ha|han)\\s+(?:dado|prestado|dejado|pagado|adelantado|invitado)|me\\s+(?:dej[oó]|prest[oó]|adelant[oó]|pag[oó]|invit[oó]|dejaron|prestaron|pagaron|invitaron)|tengo\\s+que\\s+(?:pagar|devolver|dar)(?:le|les)?)' + DQ_AFTER, 'i');
 const dqCap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 
 // people = nombres que ya has usado (para reconocerlos aunque vayan en medio de la frase).
