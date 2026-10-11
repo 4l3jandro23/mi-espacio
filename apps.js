@@ -211,7 +211,7 @@ function appsLauncherHTML(iso) {
   const hasEj = appHas('ej', 'planEjercicioDias') || appHas('ej', 'planEjercicioEntrenos'), tipo = hasEj ? ejTipo(iso) : '', done = hasEj ? ejDone(iso) : null;
   const ej = done ? '✓ ' + esc(ejDoneTxt(done)) : tipo ? 'Hoy: ' + EJ_TIPOS[tipo].toLowerCase() : hasEj ? 'Hoy toca descansar' : 'Tu plan de gimnasio';
   const nArt = typeof artistNames === 'function' ? artistNames().length : 0;
-  const out = [a(APPS.ali.url, APPS.ali.c, '🥗', 'Alimentación', ali), a(APPS.ej.url, APPS.ej.c, '🏋️', 'Ejercicio', ej), a('../mi-musica/mando.html', '#1DB954', '🎧', 'Música', nArt ? `Tu mando de Spotify · ${nArt} artistas` : 'Tu mando de Spotify'), a('../cimientos/', '#3F7D6E', '🌱', 'Cimientos', 'Tu espacio, a tu ritmo'), a('../estilo/', '#2F4A7A', '👕', 'Estilo', estiloSub()),
+  const out = [a(APPS.ali.url, APPS.ali.c, '🥗', 'Alimentación', ali), a(APPS.ej.url, APPS.ej.c, '🏋️', 'Ejercicio', ej), a('../mi-musica/mando.html', '#1DB954', '🎧', 'Música', nArt ? `Tu mando de Spotify · ${nArt} artistas` : 'Tu mando de Spotify'), a('../cimientos/', '#3F7D6E', '🌱', 'Cimientos', typeof cimSub === 'function' ? cimSub() : 'Tu espacio, a tu ritmo'), a('../estilo/', '#2F4A7A', '👕', 'Estilo', estiloSub()),
     `<a class="al" href="rumbo/" data-rumbo="" style="--c:#1E4D45"><span class="al-ic">🧭</span><span class="al-t"><b>Rumbo</b><small>Tus cuentas, con tu PIN</small></span><span class="al-go" aria-hidden="true">↗</span></a>`];
   if (pisoUrl()) {
     const R = window.Rotacion, ts = R && APX.piso && pisoWho() ? pisoWeek(R.mondayOf(iso)) : null, pend = ts ? ts.filter(t => !t.done).length : -1;
