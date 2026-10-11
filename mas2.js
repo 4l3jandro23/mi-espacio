@@ -28,6 +28,7 @@ function vMas() {
       ${row('data-sorpresa', 'sparkles', '#D9822B', '¿Qué hago hoy?', 'Una idea cada vez')}
       ${row('data-cierre', 'moon', '#3A3F80', 'Cierra el día', 'Cómo ha ido y qué hay mañana')}
       <a class="ms-row" href="../cimientos/" target="_blank" rel="noopener noreferrer"><span class="ms-ic" style="--c:#6B7184">${ico('heart')}</span><span class="ms-l"><b>Cimientos</b><small>Tu espacio privado, a tu ritmo</small></span><span class="ms-go">${ico('arrow-up-right')}</span></a>
+      <a class="ms-row" href="../estilo/" target="_blank" rel="noopener noreferrer"><span class="ms-ic" style="--c:#2F4A7A">${ico('shirt')}</span><span class="ms-l"><b>Estilo</b><small>Tu armario y cómo verte mejor</small></span><span class="ms-go">${ico('arrow-up-right')}</span></a>
     </div>
     <h2 class="ms-h">Ajustes</h2><div class="ms-g">
       ${row('data-hubgo="espacio"', 'settings', '#8A90AE', 'Ajustes de Mi Espacio', 'Colores, horario, avisos, vacaciones…')}

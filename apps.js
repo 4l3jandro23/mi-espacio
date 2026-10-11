@@ -199,6 +199,10 @@ function appsDayHTML(iso, big) {
   }
   return rows.length ? `<div class="ax ${big ? 'ax-big' : ''}">${rows.join('')}</div>` : '';
 }
+// Estilo vive en el mismo dominio: si ya tiene ropa en este dispositivo, se cuenta.
+function estiloSub() {
+  try { const d = JSON.parse(localStorage.getItem('estiloDatos')), n = d && d.prendas ? d.prendas.length : 0; return n ? `${n} ${n === 1 ? 'prenda' : 'prendas'} en tu armario` : 'Tu armario y cómo verte mejor'; } catch (e) { return 'Tu armario y cómo verte mejor'; }
+}
 // Accesos a tus otras apps desde el inicio, con lo que te toca hoy en cada una.
 function appsLauncherHTML(iso) {
   const a = (url, c, ic, n, sub) => `<a class="al" href="${esc(url)}" target="_blank" rel="noopener" style="--c:${c}"><span class="al-ic">${ic}</span><span class="al-t"><b>${n}</b><small>${sub}</small></span><span class="al-go" aria-hidden="true">↗</span></a>`;
@@ -207,7 +211,7 @@ function appsLauncherHTML(iso) {
   const hasEj = appHas('ej', 'planEjercicioDias') || appHas('ej', 'planEjercicioEntrenos'), tipo = hasEj ? ejTipo(iso) : '', done = hasEj ? ejDone(iso) : null;
   const ej = done ? '✓ ' + esc(ejDoneTxt(done)) : tipo ? 'Hoy: ' + EJ_TIPOS[tipo].toLowerCase() : hasEj ? 'Hoy toca descansar' : 'Tu plan de gimnasio';
   const nArt = typeof artistNames === 'function' ? artistNames().length : 0;
-  const out = [a(APPS.ali.url, APPS.ali.c, '🥗', 'Alimentación', ali), a(APPS.ej.url, APPS.ej.c, '🏋️', 'Ejercicio', ej), a('../mi-musica/mando.html', '#1DB954', '🎧', 'Música', nArt ? `Tu mando de Spotify · ${nArt} artistas` : 'Tu mando de Spotify'), a('../cimientos/', '#3F7D6E', '🌱', 'Cimientos', 'Tu espacio, a tu ritmo'),
+  const out = [a(APPS.ali.url, APPS.ali.c, '🥗', 'Alimentación', ali), a(APPS.ej.url, APPS.ej.c, '🏋️', 'Ejercicio', ej), a('../mi-musica/mando.html', '#1DB954', '🎧', 'Música', nArt ? `Tu mando de Spotify · ${nArt} artistas` : 'Tu mando de Spotify'), a('../cimientos/', '#3F7D6E', '🌱', 'Cimientos', 'Tu espacio, a tu ritmo'), a('../estilo/', '#2F4A7A', '👕', 'Estilo', estiloSub()),
     `<a class="al" href="rumbo/" data-rumbo="" style="--c:#1E4D45"><span class="al-ic">🧭</span><span class="al-t"><b>Rumbo</b><small>Tus cuentas, con tu PIN</small></span><span class="al-go" aria-hidden="true">↗</span></a>`];
   if (pisoUrl()) {
     const R = window.Rotacion, ts = R && APX.piso && pisoWho() ? pisoWeek(R.mondayOf(iso)) : null, pend = ts ? ts.filter(t => !t.done).length : -1;
