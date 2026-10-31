@@ -1,0 +1,148 @@
+/* ==========================================================================
+   DISEÑO — Mi Espacio sobrio
+   --------------------------------------------------------------------------
+   Capa que va DESPUÉS de hub.css y la pisa, como en Ejercicio y Alimentación.
+   Hecha con las reglas de pantallas de trabajo (design-taste-frontend):
+
+   · El color va en los datos, no en el marco. Papel, tinta y gris; los tonos
+     vivos se quedan para los eventos, las barras y las marcas pequeñas.
+   · Lo único propio de Mi Espacio es el cielo del día: sigue cambiando de color
+     con la hora, pero plano, sin degradados ni estrellas.
+   · Superficies planas: un filo de 1 px, nunca vidrio ni sombras en reposo.
+     Los iconos van sueltos, sin caja de color.
+   · La acción principal es casi negra.
+   · Etiquetas en minúscula y a un tamaño que se lee; nada en mayúsculas
+     espaciadas. Fondo oscuro neutro, no azul marino.
+   ========================================================================== */
+
+:root{
+  --bg:#f5f6f7; --card:#ffffff; --ink:#15171a; --muted:#5b6169; --line:#e4e6e9; --bar:#d9dce0;
+  --accent:#1f8a70; --accent-soft:#dcf0ea; --warm:#b5651d; --warm-soft:#fbecdc;
+  --blue:#2f6fdc; --blue-soft:#e4edfc; --lilac:#b8527e; --lilac-soft:#f8e7ef; --peach:#f0a07a;
+  --shadow:none;
+  --display:'Banderas','Bricolage',system-ui,sans-serif;
+  --r-card:14px; --control:#c9cdd2;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0e0f11; --card:#17191c; --ink:#eceef0; --muted:#9aa0a7; --line:#2a2d32; --bar:#34383e;
+  --accent:#4cc7a6; --accent-soft:#15302a; --warm:#f0a45a; --warm-soft:#33261a;
+  --shadow:none; --control:#3a3e44;
+}}
+:root[data-theme="dark"]{
+  --bg:#0e0f11; --card:#17191c; --ink:#eceef0; --muted:#9aa0a7; --line:#2a2d32; --bar:#34383e;
+  --accent:#4cc7a6; --accent-soft:#15302a; --warm:#f0a45a; --warm-soft:#33261a;
+  --shadow:none; --control:#3a3e44;
+}
+
+/* ---- Base ---- */
+body{ -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums; }
+
+/* ---- Esquinas: una sola medida para todo lo que es tarjeta ---- */
+.card,.agenda,.cal-day,.nb-card,.nb-diary,.nb-list,.nb-note,.ap-card,.work-setup,.mg-wrap,.ef-row,.pl,.fx-it,.ag-list,.al,
+.wk-card,.ag-mine,.hub-mood,.fd,.tk-sc,.tk-lists,.tk-card,.dsc-img,.dsc-it,.nbr-list,.nb-first,.bk,.he,.calm,.fb-card,.fb-live,.fb-list,
+.nw-card,.nw-hero,.nw-calm,.cd,.cd-empty,.fx,.mo,.ma-hero,.ma-card,.vj-hero,.vj-p,.vj-add,.vj-empty,.vj-tip,.vj-card,.dp,.nb-today,.nbf,
+.ms-g,.pt,.ct-it,.ct-paper,.ct-home,.ci-card,.sp-home,.sp-card,.ask-box,.ak-card,.hb-empty,.hb-row,.blk-callout,.nb-cap,.nb-photo.has,
+.tile,.di,.sv,.ws-d,.empty-day{
+  border-radius:var(--r-card);
+}
+.sheet{ border-radius:18px 18px 0 0; }
+
+/* Las tarjetas se separan con un filo, no con sombra. */
+.ask-box{ box-shadow:none; border:1px solid var(--line); }
+.nb-icon,.nb-cap,.nb-list,.qa-in,.al,.wk-card,.fd,.nb-lchip,.tk-sc,.tk-lists,.tk-card,.dsc-it,.nb-home .nb-diary,.nbr-list,.bk{ box-shadow:none; border:1px solid var(--line); }
+.tile:hover,.ws-d:hover,.sv:hover{ transform:none; box-shadow:none; }
+@media (hover:hover){ .tile:hover,.ws-d:hover,.sv:hover{ border-color:var(--control); } }
+/* Lo discontinuo, solo para huecos vacíos de verdad. */
+.di.di-plan,.work-setup{ border-style:solid; }
+
+/* ---- El cielo: plano, del color de la hora ---- */
+.sky{ border-radius:var(--r-card); }
+.sky::after,.sky-night::before{ display:none; }
+.sky-dawn{ --sky-ink:#3a2530; --arc:rgba(58,37,48,.32); --arc-done:#3a2530; background:#ffdcc6; }
+.sky-day { --sky-ink:#0f2350; --arc:rgba(15,35,80,.26); --arc-done:#0f2350; background:#d3e3fd; }
+.sky-dusk{ --sky-ink:#fff6f0; --arc:rgba(255,246,240,.4); --arc-done:#fff6f0; background:#9a4532; }
+.sky-night{ --sky-ink:#eef0f5; --arc:rgba(238,240,245,.3); --arc-done:#eef0f5; background:#1d2230; }
+[data-pal="mar"] .sky-dawn{ --sky-ink:#0e2f3f; background:#c4ebe6; }
+[data-pal="mar"] .sky-day { --sky-ink:#0e2f3f; background:#c6e4f8; }
+[data-pal="mar"] .sky-dusk{ --sky-ink:#f2fbff; background:#2c7398; }
+[data-pal="mar"] .sky-night{ --sky-ink:#e6f4fa; background:#123048; }
+[data-pal="bosque"] .sky-dawn{ --sky-ink:#1f3326; background:#e4eec8; }
+[data-pal="bosque"] .sky-day { --sky-ink:#173323; background:#cde9d2; }
+[data-pal="bosque"] .sky-dusk{ --sky-ink:#fbf8ec; background:#2f6a55; }
+[data-pal="bosque"] .sky-night{ --sky-ink:#e8f3ec; background:#152e28; }
+[data-pal="arena"] .sky-dawn{ --sky-ink:#3d2418; background:#ffe2c2; }
+[data-pal="arena"] .sky-day { --sky-ink:#3d2418; background:#fbe5c4; }
+[data-pal="arena"] .sky-dusk{ --sky-ink:#fff6ee; background:#a24f4c; }
+[data-pal="arena"] .sky-night{ --sky-ink:#f8e9ee; background:#2e1c2a; }
+[data-pal="grafito"] .sky-dawn,[data-pal="grafito"] .sky-day{ --sky-ink:#1e2026; background:#e2e4e8; }
+[data-pal="grafito"] .sky-dusk{ --sky-ink:#f6f7f9; background:#5a5f6d; }
+[data-pal="grafito"] .sky-night{ --sky-ink:#ecedf1; background:#222329; }
+/* Muestras de tema en Ajustes: el mismo color plano que verá el cielo. */
+.th-sw.th-cielo{ background:#d3e3fd; } .th-sw.th-mar{ background:#c6e4f8; } .th-sw.th-bosque{ background:#cde9d2; }
+.th-sw.th-arena{ background:#fbe5c4; } .th-sw.th-grafito{ background:#e2e4e8; }
+.boot-sky{ background:var(--bar) !important; }
+
+.sky-h{ font-size:clamp(24px,3vw,30px); font-weight:650; letter-spacing:-.02em; }
+.sky-gear,.sky-acts button,.sky-badge{ backdrop-filter:none; -webkit-backdrop-filter:none; box-shadow:none; }
+.sky-gear{ background:transparent; }
+.sun-glow{ animation:none; opacity:.55; }
+
+/* ---- Barra de abajo: plana, de lado a lado, sin cristal ---- */
+.hubnav{
+  left:0; right:0; transform:none; width:auto; bottom:0; border-radius:0;
+  background:var(--card); backdrop-filter:none; -webkit-backdrop-filter:none; box-shadow:none;
+  border:0; border-top:1px solid var(--line); gap:0; justify-content:space-around;
+  padding:6px 8px calc(6px + env(safe-area-inset-bottom));
+}
+.hubnav button{ flex:1; max-width:128px; min-width:0; min-height:48px; padding:6px 4px; border-radius:10px; }
+.hubnav button.on{ background:color-mix(in srgb,var(--ink) 8%,transparent); color:var(--ink); }
+.nb-top{ background:var(--bg); backdrop-filter:none; -webkit-backdrop-filter:none; border-bottom:1px solid var(--line); }
+
+/* ---- Títulos de apartado: minúscula, legibles, en tinta ---- */
+.hub-h,.ms-h{
+  font-family:var(--display); font-size:18px; font-weight:650; letter-spacing:-.01em;
+  text-transform:none; color:var(--ink);
+}
+.ws-wd,.pl-tipo,.nb-sec,.cal-head small,.agenda h3,
+#app h3,#app small{ text-transform:none; letter-spacing:0; }
+.ws-wd{ font-size:12px; font-weight:600; }
+.pl-tipo{ font-size:12px; font-weight:650; }
+
+/* ---- Iconos sueltos, sin caja de color ---- */
+.al-ic,.dsc-ic,.bk-ic,.ms-ic,.tk-sc-ic,.sp-ic{ background:none !important; border-radius:0; width:24px; height:24px; }
+.al-ic,.dsc-ic,.bk-ic,.sp-ic{
+  color:var(--muted) !important;
+}
+.sp-ic .ico{ color:var(--muted); }
+.rvcard .bk-ic,.sg .bk-ic{ background:none; color:var(--muted); }
+
+/* ---- Acción principal casi negra; el resto, botones suaves ---- */
+button.primary,.btn.primary,.ask-go{ background:var(--ink); border-color:var(--ink); color:var(--bg); }
+.ask-go .ico{ color:var(--bg); }
+
+/* ---- Viajes: plano ---- */
+.vj-hero{ background:var(--card); }
+
+
+
+/* ---- Ajustes que pisan reglas más concretas de hub.css ---- */
+.sky .sky-h{ font-size:clamp(24px,3vw,30px); }
+.pt-h span{ font-size:14px; font-weight:650; text-transform:none; letter-spacing:0; }
+.pt-b{ background:var(--ink); color:var(--bg); font-weight:600; }
+.es-strip,.sv-row,.cd-row,.nw-tabs{ margin-inline:0; padding-inline:0; scroll-padding-inline:0; }
+.sv{ scroll-margin-left:0; }
+/* Filas del día: lo discontinuo queda solo para huecos vacíos. */
+.di-sen,.di-app{ border-style:solid; }
+/* Tus otras apps y avisos: sin raya de color al lado; el icono ya dice qué es. */
+.al,.bk{ border-left-color:var(--line); }
+/* En el ordenador, la barra no se estira de punta a punta. */
+@media (min-width:821px){ .hubnav{ padding-inline:max(8px, calc(50% - 360px)); } }
+/* Iconos de listas y accesos: sueltos, en el color de su lista (es su seña), sin círculo detrás. */
+.tile-ic,.tk-li-ic,.fx-ic{ background:none !important; border-radius:0; }
+.tk-li-ic,.tk-sc-ic,.ms-ic,.tk-li-ic .ico,.tk-sc-ic .ico,.ms-ic .ico{ color:color-mix(in srgb,var(--c) 80%,var(--ink)) !important; }
+.tile-ic{ color:var(--tc); } .fx-ic{ color:var(--c); }
+/* En oscuro, sin paleta elegida: rosa y azul más claros. Con paleta, manda la paleta. */
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]):not([data-pal]){ --blue:#86a9f5; --blue-soft:#1a2536; --lilac:#e08aae; --lilac-soft:#34202a; } }
+:root[data-theme="dark"]:not([data-pal]){ --blue:#86a9f5; --blue-soft:#1a2536; --lilac:#e08aae; --lilac-soft:#34202a; }
+/* La hoja de ajustes, redonda entera cuando flota en el ordenador. */
+@media (min-width:700px){ .sheet{ border-radius:18px; } }
