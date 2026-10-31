@@ -196,7 +196,7 @@ body.rumbo .dots i.on { background: var(--accent); border-color: var(--accent); 
 .cg-d { min-height: 46px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 5px; gap: 1px; background: var(--bg); }
 .cg-d.off { background: none; }
 .cg-d b { font-size: 13px; font-weight: 700; }
-.cg-d em { font-style: normal; font-size: 10px; font-weight: 700; color: var(--warm); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cg-d em { font-style: normal; font-size:11px; font-weight: 700; color: var(--warm); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cg-d.pay { background: var(--accent-soft); } .cg-d.pay em { color: var(--accent); }
 .cg-d.today { box-shadow: inset 0 0 0 2px var(--ink); }
 .cg-d.past { opacity: .5; }
