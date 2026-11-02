@@ -166,7 +166,7 @@ function vInicio() {
     miano: () => typeof miAnoCardHTML === 'function' ? miAnoCardHTML() : '',
     semana: () => weekStrip(today),
     seviene: () => comingHTML(today),
-    resumen: () => (typeof reviewDue === 'function' && reviewDue() ? `<section class="hub-sec"><div class="bk rvcard"><span class="bk-ic">${ico('calendar-heart')}</span><div class="bk-b"><b>Revisión de la semana</b><small>5 minutos para mirar la semana que viene con calma.</small><div class="bk-acts"><button class="primary" data-review>Empezar</button></div></div></div></section>` : '') + (typeof weekSummaryHTML === 'function' ? weekSummaryHTML(today) : ''),
+    resumen: () => (typeof reviewDue === 'function' && reviewDue() ? `<section class="hub-sec"><button class="ci-card ci-soft" data-review><span class="ci-moon">${ico('calendar-heart')}</span><span class="ci-tx"><b>Revisión de la semana</b><small>5 minutos para mirar la semana que viene.</small></span><span class="ms-go">${ico('chevron-right')}</span></button></section>` : '') + (typeof weekSummaryHTML === 'function' ? weekSummaryHTML(today) : ''),
     ciudad: () => ciudadHoyHTML(today),
     finde: () => typeof findeHTML === 'function' ? findeHTML(today) : '',
     hoy: () => `    ${workSched() ? '' : workSetupCard()}

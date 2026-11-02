@@ -3,11 +3,15 @@
 'use strict';
 
 // ---------- inicio a tu gusto ----------
-const HOME_SECS = [['pidelo', 'Pídele algo a la app (escribe y lo hace)'], ['carta', 'Carta al futuro (cuando toca abrirla)'], ['miano', 'Tu año (en diciembre)'], ['resumen', 'Tu semana (domingo y lunes)'], ['cierre', 'Cierra el día (por la noche)'], ['hoy', 'Hoy'], ['rutinas', 'Rutinas: hábitos, enfoque y bote de cosas buenas'], ['porti', 'Hoy, por ti'], ['sorpresa', '¿Qué hago hoy? (días libres)'], ['cuenta', 'Cuenta atrás'], ['fechas', 'Cumpleaños, documentos y entradas'], ['futbol', 'Fútbol'], ['noticias', 'Noticias'], ['semana', 'Tira de la semana'], ['seviene', 'Se viene'], ['finde', 'Tu finde (jueves a sábado)'], ['ciudad', 'Esta semana en Barcelona'], ['apps', 'Tus otras apps'], ['estrenos', 'Pelis y series'], ['descubre', 'Descubre'], ['copia', 'Copia del mes y copia en la nube'], ['apartados', 'Tus apartados'], ['recordatorios', 'Recordatorios de Apple'], ['proximos', 'Próximos días'], ['efemerides', 'Tal día como hoy'], ['cuaderno', 'Del cuaderno']];
-// Lo que viene apagado de serie (se enciende en «Personalizar el inicio»): así el inicio se lee de un vistazo.
-const HOME_OFF = ['apartados', 'proximos', 'efemerides', 'cuaderno'];
+const HOME_SECS = [['pidelo', 'Pídele algo a la app (escribe y lo hace)'], ['carta', 'Carta al futuro (cuando toca abrirla)'], ['miano', 'Tu año (en diciembre)'], ['resumen', 'Tu semana (domingo y lunes)'], ['cierre', 'Cierra el día (por la noche)'], ['hoy', 'Hoy'], ['proximos', 'Próximos días'], ['rutinas', 'Rutinas: hábitos, enfoque y bote de cosas buenas'], ['porti', 'Hoy, por ti'], ['sorpresa', '¿Qué hago hoy? (días libres)'], ['cuenta', 'Cuenta atrás'], ['fechas', 'Cumpleaños, documentos y entradas'], ['futbol', 'Fútbol'], ['noticias', 'Noticias'], ['semana', 'Tira de la semana'], ['seviene', 'Se viene'], ['finde', 'Tu finde (jueves a sábado)'], ['ciudad', 'Esta semana en Barcelona'], ['apps', 'Tus otras apps'], ['estrenos', 'Pelis y series'], ['descubre', 'Descubre'], ['copia', 'Copia del mes y copia en la nube'], ['apartados', 'Tus apartados'], ['recordatorios', 'Recordatorios de Apple'],['efemerides', 'Tal día como hoy'], ['cuaderno', 'Del cuaderno']];
+// Lo que viene apagado de serie (se enciende en «Personalizar el inicio»): así el inicio cabe en una pantalla.
+// De serie se queda solo lo de hoy, los próximos días y los avisos que salen cuando tocan (cierre, revisión, copia…).
+const HOME_OFF = ['pidelo', 'rutinas', 'porti', 'sorpresa', 'cuenta', 'futbol', 'noticias', 'semana', 'seviene', 'finde', 'ciudad', 'apps', 'estrenos', 'descubre', 'apartados', 'recordatorios', 'efemerides', 'cuaderno'];
+// v44: el inicio pasa a ser sencillo. Una sola vez, apaga lo de arriba aunque lo tuvieras encendido; tu orden se respeta.
+const HOME_V = 2;
 const calmOn = () => S.settings.calm === todayISO();
 function homeCfg() {
+  if (S.settings.homeV !== HOME_V) { const o = (S.settings.home || {}).order; set('settings', 'home', o ? { order: o, off: HOME_OFF } : null); set('settings', 'homeV', HOME_V); save(); }
   const h = S.settings.home || {}, keys = HOME_SECS.map(s => s[0]);
   const order = (h.order || []).filter(k => keys.includes(k));
   keys.forEach((k, i) => { if (!order.includes(k)) order.splice(Math.min(i, order.length), 0, k); });

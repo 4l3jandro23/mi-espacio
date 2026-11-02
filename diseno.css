@@ -146,3 +146,26 @@ button.primary,.btn.primary,.ask-go{ background:var(--ink); border-color:var(--i
 :root[data-theme="dark"]:not([data-pal]){ --blue:#86a9f5; --blue-soft:#1a2536; --lilac:#e08aae; --lilac-soft:#34202a; }
 /* La hoja de ajustes, redonda entera cuando flota en el ordenador. */
 @media (min-width:700px){ .sheet{ border-radius:18px; } }
+
+/* ---- v44: inicio tranquilo ----
+   Menos bloques (ver HOME_OFF en mas.js) y más aire entre ellos. Los avisos que
+   salen según el momento (cerrar el día, revisión de la semana) son una fila
+   discreta, no una tarjeta que grita: se tocan si apetece y si no, ni se notan. */
+.hub .hub-sec{ margin-top:32px; }
+.hub .sky-qa{ margin-top:14px; }
+.hub-sec .ci-card{
+  background:var(--card); color:var(--ink); border:1px solid var(--line); box-shadow:none;
+  border-radius:var(--r-card); padding:14px 16px; gap:12px;
+}
+.hub-sec .ci-card b{ font-size:16px; font-weight:650; }
+.hub-sec .ci-card small{ opacity:1; color:var(--muted); font-size:13px; line-height:1.4; }
+.hub-sec .ci-card .ci-moon{ width:24px; height:24px; background:none; }
+.hub-sec .ci-card .ci-moon .ico{ color:var(--muted); width:20px; height:20px; }
+.hub-sec .ci-card .ms-go,.hub-sec .ci-card .ms-go .ico{ color:var(--muted); }
+@media (hover:hover){ .hub-sec .ci-card:hover{ border-color:var(--control); } }
+/* Dos avisos seguidos van juntos, como una lista corta. */
+.hub-sec:has(> .ci-card) + .hub-sec:has(> .ci-card){ margin-top:8px; }
+/* Configurar el horario: una invitación, no un muro. */
+.work-setup{ border:1px solid var(--line); background:var(--card); }
+.work-setup b{ font-size:16px; }
+.home-edit{ margin-top:40px; }
