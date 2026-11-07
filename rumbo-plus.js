@@ -140,8 +140,13 @@ function openExtractos() {
 
 // ---------- Hoy ----------
 // Un solo mensaje, el que más importa ahora (antes había seis tarjetas de avisos).
+function bigTransferPending() {
+  const linked = new Set(debtList().flatMap(d => [d.tx, ...(d.payments || []).map(p => p.tx)]).filter(Boolean)), seen = S.settings.bigSeen || {};
+  return AN.list.filter(t => t.amt <= -100 && t.date >= addD(todayISO(), -21) && /bizum|transfer/i.test(t.desc + ' ' + t.kind) && !['Alquiler y piso', 'Préstamo', 'Seguros', 'Entre mis cuentas', 'Dinero prestado'].includes(t.cat) && !linked.has(t.id) && !seen[t.id]).pop() || null;
+}
 function mainMessage(A, rate, endAt) {
-  const age = balanceAge();
+  const age = balanceAge(), big = bigTransferPending();
+  if (big) return { tone: 'blue', ic: 'handshake', t: `¿Te van a devolver los ${eur0(-big.amt)} del ${fdate(big.date)}?`, d: `${esc(big.shop)}. Si es un préstamo, márcalo y deja de contar como gasto: tus números de la semana y del mes saldrán bien.`, btn: [`data-bigtx="${esc(big.id)}"`, 'Sí, me lo devuelven'], btn2: [`data-bigno="${esc(big.id)}"`, 'No, era un gasto'] };
   if (age != null && age >= 3) return { tone: 'blue', ic: 'refresh-cw', t: `Tu saldo es ${ageTxt(age)}`, d: 'Lo que has gastado desde entonces aún no cuenta. Actualízalo y el número de arriba será el de verdad.', btn: ['data-ra-saldo', 'Actualizar saldo'] };
   if (A.free > 0 && endAt < 0) return { tone: 'warm', ic: 'trending-down', t: `A tu ritmo no llegas al cobro`, d: `Estas semanas vas a unos ${eur0(rate)} al día. Así te faltarían unos <b>${eur0(-endAt)}</b>. Si te quedas en ${eur0(Math.max(0, A.perDay))} al día, llegas justo sin quedarte en negativo.`, btn: ['data-go="prev"', 'Ver la previsión'] };
   const r = typeof priceRises === 'function' ? priceRises() : [];
@@ -156,7 +161,9 @@ function vHoy2() {
   const pct = Math.max(2, Math.min(98, Fin.daysBetween(new Date(cur.start), new Date(t0)) / span * 100));
   const mon = addD(t0, -((new Date(t0 + 'T12:00:00').getDay() + 6) % 7)), sun = addD(mon, 6);
   const spent = weekSpent(mon, t0), weekLeftDays = Fin.daysBetween(new Date(t0), new Date(sun)) + 1;
-  const cap = Math.max(0, A.perDay * 7);
+  // Lo que aún puedes gastar hasta el domingo (el número de Hoy ya ha descontado lo gastado). La barra: gastado frente a gastado + lo que queda.
+  const leftWeek = Math.max(0, A.perDay) * weekLeftDays, cap = spent + leftWeek;
+  const usual = (() => { const w = []; for (let i = 1; i <= 8; i++) w.push(weekSpent(addD(mon, -7 * i), addD(mon, -7 * i + 6))); return w.reduce((a, b) => a + b, 0) / 8; })();
   const owedMe = debtList().filter(d => d.dir === 'meDeben' && debtLeft(d) > 0).reduce((a, d) => a + debtLeft(d), 0);
   const owe = debtList().filter(d => d.dir === 'debo' && debtLeft(d) > 0).reduce((a, d) => a + debtLeft(d), 0);
   const age = balanceAge(), m = mainMessage(A, rate, endAt), up = upcoming(A, 7), man = manualTxs().filter(t => (t.ts || 0) > balanceTs());
@@ -176,14 +183,17 @@ function vHoy2() {
       <button data-ra-ext>${ico('receipt')}<span>Extractos</span></button>
     </div>
     ${(() => { const soon = debtList().filter(d => d.dir === 'meDeben' && debtLeft(d) > 0 && d.due && d.due <= A.nextPay), v = soon.reduce((a, d) => a + debtLeft(d), 0); return v && A.days ? `<p class="h-owed">${ico('handshake')}<span>Cuando te devuelvan ${soon.length === 1 ? `los ${eur0(v)} de ${esc(soon[0].who)} (sobre el ${fdate(soon[0].due)})` : eur0(v)}, podrás gastar unos <b>${eur0(Math.max(0, (A.free + v) / A.days))} al día</b>.</span></p>` : ''; })()}
-    <div id="affbox" class="h-aff ${affOpen ? '' : 'hidden'}">${affOpen ? affordHTML(A) : ''}</div>
+    <div id="affbox" class="h-aff ${affOpen ? '' : 'hidden'}">${affOpen ? affordHTML(A) + `<div class="dec-b aff-dec"><button data-dec="compro">Lo compro</button><button data-dec="espero">Me espero 24 h</button><button data-dec="no">No lo compro</button></div>` : ''}</div>
+    ${decisionPendiente() ? decisionCard(decisionPendiente()) : ''}
 
-    <div class="h-msg ${m.tone}">${ico(m.ic)}<div><b>${m.t}</b><p>${m.d}</p>${m.btn ? `<button class="lnkb" ${m.btn[0]}>${m.btn[1]} ${ico('chevron-right')}</button>` : ''}</div></div>
+    ${!S.settings.tourOk ? `<div class="card h-tour"><div class="h-row"><h2>Así se usa Rumbo</h2><button class="ibtn-s" data-tourok aria-label="Entendido">${ico('x')}</button></div><ol><li><b>Mira el número</b> antes de gastar. Es lo que puedes gastar hoy sin llegar en negativo al cobro.</li><li><b>Actualiza el saldo</b> (arriba, «Actualizar») cuando haya cambiado: 5 segundos.</li><li><b>El domingo</b>, carga los extractos con el ＋ y mira Tu semana.</li><li><b>Toca cualquier gasto</b> en Movimientos: te doy consejos y otras opciones.</li></ol></div>` : ''}
+    <div class="h-msg ${m.tone}">${ico(m.ic)}<div><b>${m.t}</b><p>${m.d}</p>${m.btn ? `<button class="lnkb" ${m.btn[0]}>${m.btn[1]} ${ico('chevron-right')}</button>` : ''}${m.btn2 ? ` <button class="lnkb muted-b" ${m.btn2[0]}>${m.btn2[1]}</button>` : ''}</div></div>
 
+    ${(() => { const r = retoSemana(); if (!r) return ''; const n = r.n(); return `<button class="h-reto" data-go="asesor">${ico('target')}<span><small>Reto de la semana</small><b>${r.t}</b></span><em class="${n > r.max ? 'over' : ''}">${n}/${r.max}</em></button>`; })()}
     <div class="card h-week"><div class="h-row"><h2>Esta semana</h2><span class="small muted">quedan ${weekLeftDays} ${weekLeftDays === 1 ? 'día' : 'días'}</span></div>
-      <div class="h-big"><b>${eur0(spent)}</b><span>de ${eur0(cap)}</span></div>
-      <div class="bar"><i class="${spent > cap ? 'warm' : ''}" style="width:${Math.min(100, cap ? spent / cap * 100 : 0)}%"></i></div>
-      <p class="small muted" style="margin:8px 0 0">${spent <= cap ? `Te quedan <b>${eur0(cap - spent)}</b> hasta el domingo.` : `Te has pasado ${eur0(spent - cap)}. No pasa nada: el número de arriba ya lo ha repartido en los días que quedan.`}${lastDataDate() < t0 ? ` Movimientos hasta el ${fdate(lastDataDate())}.` : ''}</p>
+      <div class="h-big"><b>${eur0(spent)}</b><span>gastados · tu semana normal, ${eur0(usual)}</span></div>
+      <div class="bar"><i class="${spent > usual * 1.1 ? 'warm' : ''}" style="width:${Math.min(100, cap ? spent / cap * 100 : 0)}%"></i></div>
+      <p class="small muted" style="margin:8px 0 0">Hasta el domingo puedes gastar <b>${eur0(leftWeek)}</b> más.${lastDataDate() < t0 ? ` Movimientos hasta el ${fdate(lastDataDate())}.` : ''}</p>
       ${dow0 === 0 || dow0 === 6 || dow0 === 1 ? `<button class="lnkb" data-go="semana">Tu resumen de la semana ${ico('chevron-right')}</button>` : ''}</div>
 
     ${up.length ? `<div class="card"><h2>Próximos 7 días</h2>${up.map(u => `<div class="h-up"><span class="h-up-d"><b>${new Date(u.date + 'T12:00:00').getDate()}</b><small>${new Date(u.date + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short' })}</small></span><span class="h-up-t">${esc(u.what)}</span><span class="num ${u.amount > 0 ? 'pos' : ''}">${u.amount == null ? '' : eur(u.amount)}</span></div>`).join('')}</div>` : ''}
@@ -194,7 +204,8 @@ function vHoy2() {
     <div class="ms-g h-more">
       ${rRow('data-go="semana"', 'calendar-days', '#2F6FDC', 'Tu semana', 'Qué gastaste, dónde y lo que viene')}
       ${rRow('data-go="mes"', 'chart-column', '#5B6169', `Este mes · ${esc(cur.label)}`, `Llevas ${eur0(cur.variable)} en el día a día`)}
-      ${rRow('data-go="guia"', 'compass', '#1F8A70', 'Tu plan y consejos', esc(dailyTip().t.replace(/^\P{L}+/u, '')))}
+      ${rRow('data-go="asesor"', 'lightbulb', '#1F8A70', 'Tu asesor', 'Lo que sé de ti, dónde ahorrar y tus reglas')}
+      ${rRow('data-go="prev"', 'trending-up', '#2F6FDC', 'Previsión', 'Cómo llegarás al cobro y los próximos meses')}
     </div>`;
 }
 let affOpen = false;
@@ -266,8 +277,9 @@ function openMov(id) {
   const paint = () => {
     box.querySelector('.r-sheet-in').innerHTML = `<div class="mv-head"><span class="mv-ic lg ${t.amt > 0 ? 'in' : ''}">${(Fin.CATS[t.cat] || Fin.CATS.Otros).icon}</span><div><h2>${esc(t.shop)}</h2><p class="num ${t.amt > 0 ? 'pos' : ''}">${t.amt > 0 ? '+' : ''}${eur(t.amt)}</p></div></div>
     <div class="mv-det"><span>Día</span><b>${fdateL(t.date)}</b><span>Banco</span><b>${esc(t.bank)}</b><span>Concepto</span><b>${esc(t.desc)}</b>${t.kind ? `<span>Tipo</span><b>${esc(t.kind)}</b>` : ''}${t.obs ? `<span>Nota</span><b>${esc(t.obs)}</b>` : ''}</div>
+    ${adviceHTML(t)}
     ${debt ? `<div class="h-msg">${ico('handshake')}<div><b>${debt.dir === 'meDeben' ? `${esc(debt.who)} te lo devuelve` : `Se lo devuelves a ${esc(debt.who)}`}</b><p>No cuenta como gasto ni como ingreso. ${debtLeft(debt) > 0 ? `Quedan ${eur(debtLeft(debt))}${debt.due ? ', para el ' + fdate(debt.due) : ''}.` : 'Ya está saldado.'}</p><button class="lnkb" data-mvdebt>Ver en Deudas ${ico('chevron-right')}</button></div></div>`
-      : t.amt < 0 && (Fin.CATS[t.cat] || {}).type !== 'fixed' ? `<button class="mv-lend" data-mvlend>${ico('handshake')}<span><b>Es dinero que me van a devolver</b><small>Lo apunto en Deudas y deja de contar como gasto</small></span>${ico('chevron-right')}</button>` : ''}
+      : t.amt < 0 && /bizum|transfer|traspaso/i.test(t.desc + ' ' + t.kind + ' ' + t.shop) && (Fin.CATS[t.cat] || {}).type !== 'fixed' ? `<button class="mv-lend" data-mvlend>${ico('handshake')}<span><b>Es dinero que me van a devolver</b><small>Lo apunto en Deudas y deja de contar como gasto</small></span>${ico('chevron-right')}</button>` : ''}
     <div class="f"><span>Categoría</span>${n > 1 ? `<div class="seg mv-scope"><button data-scope="1" class="${solo ? 'on' : ''}">Solo este</button><button data-scope="0" class="${solo ? '' : 'on'}">Los ${n} de ${esc(t.shop.length > 18 ? t.shop.slice(0, 17) + '…' : t.shop)}</button></div>` : ''}
       <div class="ap-cats">${cats.map(k => `<button data-mvc="${esc(k)}" class="${k === t.cat ? 'on' : ''}">${Fin.CATS[k].icon} ${esc(k)}</button>`).join('')}</div></div>
     <div class="sheet-acts"><button data-close>Cerrar</button></div>`;
@@ -279,6 +291,7 @@ function openMov(id) {
     });
     const l = box.querySelector('[data-mvlend]'); if (l) l.onclick = () => { box.remove(); openLend(t); };
     const dd = box.querySelector('[data-mvdebt]'); if (dd) dd.onclick = () => { box.remove(); goTab('deudas'); };
+    const am = box.querySelector('[data-advmore]'); if (am) am.onclick = () => { box.remove(); asTab = 'consejos'; asTema = am.dataset.advmore; goTab('asesor'); };
   };
   paint();
 }
@@ -322,4 +335,8 @@ function bindPlus() {
   on('[data-mvk]', el => { mvKind = el.dataset.mvk; filterCat = ''; render(); });
   on('[data-mvcat]', () => { filterCat = ''; render(); });
   on('[data-mv]', el => openMov(el.dataset.mv));
+  on('[data-bigtx]', el => { const t = AN.list.find(x => x.id === el.dataset.bigtx); if (t) openLend(t); });
+  on('[data-bigno]', el => { set('settings', 'bigSeen', Object.assign({}, S.settings.bigSeen, { [el.dataset.bigno]: 1 })); save(); render(); });
+  on('[data-tourok]', () => { set('settings', 'tourOk', true); save(); render(); });
+  bindAsesor();
 }

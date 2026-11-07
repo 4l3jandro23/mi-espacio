@@ -199,3 +199,81 @@ body.rumbo .ms-ic .ico { color: var(--muted); }
 .h-owed { display: flex; gap: 10px; align-items: flex-start; margin: -2px 2px 12px; font-size: 14px; color: var(--muted); line-height: 1.45; }
 .h-owed .ico { width: 18px; height: 18px; color: var(--accent); flex: none; margin-top: 1px; }
 .h-owed b { color: var(--ink); }
+
+/* ==========================================================================
+   Asesor y consejos
+   ========================================================================== */
+.as-seg { margin: 0 0 12px; }
+.as-list { padding: 0 14px; }
+.as-it { display: flex; gap: 12px; padding: 14px 0; }
+.as-it + .as-it { border-top: 1px solid var(--line); }
+.as-it > .ico { width: 20px; height: 20px; color: var(--accent); flex: none; margin-top: 2px; }
+.as-it b { display: block; font-weight: 650; }
+.as-it p { margin: 3px 0 0; font-size: 14px; color: var(--muted); line-height: 1.45; }
+.as-reto small { color: var(--muted); font-size: 13px; }
+.as-reto h2 { margin: 2px 0 12px !important; }
+.as-prog { display: flex; gap: 6px; margin-bottom: 8px; }
+.as-prog i { flex: 1; height: 8px; border-radius: 4px; background: var(--bar); }
+.as-prog i.on { background: var(--accent); }
+.as-prog i.over { background: var(--warm); }
+.as-pal { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-top: 1px solid var(--line); }
+.as-pal:first-of-type { border-top: 0; }
+.as-n { flex: 0 0 24px; height: 24px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+.as-pal > div { flex: 1; min-width: 0; }
+.as-pal p { margin: 2px 0 0; font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+.as-v { text-align: right; font-weight: 700; white-space: nowrap; }
+.as-v small { display: block; font-weight: 400; color: var(--muted); font-size: 11.5px; }
+.rg { display: flex; gap: 10px; align-items: center; padding: 11px 0; border-top: 1px solid var(--line); }
+.rg:first-of-type { border-top: 0; }
+.rg > div { flex: 1; } .rg b { display: block; font-weight: 600; }
+.rg-ok, .rg-no { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; margin-top: 2px; }
+.rg-ok { color: var(--accent); } .rg-no { color: var(--warm); }
+.rg-ok .ico { width: 14px; height: 14px; }
+.ibtn-s { width: 32px; height: 32px; padding: 0 !important; border-radius: 6px !important; display: grid; place-items: center; flex: none; background: none !important; border: 0 !important; color: var(--muted) !important; }
+.ibtn-s .ico { width: 16px; height: 16px; }
+.as-claude .primary { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 13px; }
+.as-foot { text-align: center; margin: 16px 8px; }
+.as-tema { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 0 14px; margin-bottom: 8px; }
+.as-tema summary { list-style: none; display: flex; justify-content: space-between; align-items: center; padding: 14px 0; font-weight: 650; cursor: pointer; font-family: 'Bricolage', system-ui, sans-serif; font-size: 16px; }
+.as-tema summary::-webkit-details-marker { display: none; }
+.as-tema summary small { color: var(--muted); font-weight: 500; font-family: -apple-system, system-ui, sans-serif; }
+.as-tema[open] { padding-bottom: 6px; }
+.adv { border-top: 1px solid var(--line); margin: 4px 0 14px; padding-top: 12px; }
+.adv-st { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-bottom: 6px; }
+.adv-st div { padding: 10px 8px; text-align: center; }
+.adv-st div + div { border-left: 1px solid var(--line); }
+.adv-st b { display: block; font-family: 'Bricolage', system-ui, sans-serif; font-size: 17px; font-variant-numeric: tabular-nums; }
+.adv-st small { font-size: 11.5px; color: var(--muted); line-height: 1.2; display: block; }
+.adv-pos { margin: 0 0 8px; }
+.adv-h { display: flex; align-items: center; gap: 6px; font-weight: 650; margin: 10px 0 4px; }
+.adv-h .ico { width: 17px; height: 17px; color: var(--gold, #c99400); }
+.adv-c { padding: 9px 0; border-top: 1px solid var(--line); }
+.adv-h + .adv-c { border-top: 0; }
+.adv-c b { display: block; font-weight: 600; font-size: 14.5px; }
+.adv-c p { margin: 2px 0 0; font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+.dec-b { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.dec-b button { flex: 1 1 auto; padding: 9px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); font-size: 13.5px; font-weight: 600; }
+.aff-dec { margin: 8px 0 0; }
+.h-reto { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 12px 14px; margin: 0 0 12px; }
+.h-reto > .ico { width: 20px; height: 20px; color: var(--accent); flex: none; }
+.h-reto span { flex: 1; min-width: 0; } .h-reto small { display: block; color: var(--muted); font-size: 12.5px; } .h-reto b { display: block; font-weight: 600; font-size: 14.5px; }
+.h-reto em { font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--accent); }
+.h-reto em.over { color: var(--warm); }
+.h-tour ol { margin: 4px 0 0; padding-left: 20px; font-size: 14.5px; line-height: 1.5; }
+.h-tour li { margin: 6px 0; }
+
+/* ==========================================================================
+   iPhone: que se sienta como una app
+   ========================================================================== */
+body.rumbo { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; overscroll-behavior-y: none; }
+body.rumbo button, body.rumbo a { touch-action: manipulation; }
+body.rumbo input, body.rumbo select, body.rumbo textarea { font-size: 16px; } /* con menos, el iPhone hace zoom al escribir */
+body.rumbo .sal-in input { font-size: 20px; }
+body.rumbo .ap-amt input { font-size: 44px; }
+body.rumbo button:active, body.rumbo .ms-row:active, body.rumbo .mv:active { opacity: .7; }
+body.rumbo .sheet { border-radius: 14px 14px 0 0; box-shadow: none; overscroll-behavior: contain; max-height: 90vh; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+@media (min-width: 700px) { body.rumbo .sheet { border-radius: 14px; } }
+body.rumbo .sheet-acts { position: sticky; bottom: calc(-24px - env(safe-area-inset-bottom)); background: var(--card); padding: 12px 0 calc(4px + env(safe-area-inset-bottom)); margin-bottom: calc(-24px - env(safe-area-inset-bottom)); }
+body.rumbo .sheet-acts button { min-height: 44px; }
+@media (prefers-reduced-motion: reduce) { body.rumbo .sheet, body.rumbo .sheet-veil { animation: none; } }
+.lnkb.muted-b { color: var(--muted); margin-left: 14px; }

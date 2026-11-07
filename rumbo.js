@@ -748,9 +748,9 @@ function openSplit() {
 }
 
 // ===================== la app =====================
-const R_MAIN = ['hoy', 'prev', 'deudas', 'movs', 'mas'];
-const R_TITLES = { hoy: 'Hoy', prev: 'Previsión', deudas: 'Deudas', movs: 'Movimientos', mas: 'Más', mes: 'Meses', hormiga: 'Gastos hormiga', fijos: 'Fijos', guia: 'Tu plan', ajustes: 'Ajustes', bienvenida: 'Rumbo', huchas: 'Huchas', cargos: 'Cargos del mes', semana: 'Tu semana', como: 'Cómo usar Rumbo' };
-const R_PARENT = { mes: 'mas', hormiga: 'mas', fijos: 'mas', guia: 'mas', ajustes: 'mas', huchas: 'mas', cargos: 'mas', semana: 'hoy', como: 'mas' };
+const R_MAIN = ['hoy', 'movs', 'asesor', 'deudas', 'mas'];
+const R_TITLES = { hoy: 'Hoy', prev: 'Previsión', deudas: 'Deudas', movs: 'Movimientos', mas: 'Más', mes: 'Meses', hormiga: 'Gastos hormiga', fijos: 'Fijos', guia: 'Tu plan', ajustes: 'Ajustes', bienvenida: 'Rumbo', huchas: 'Huchas', cargos: 'Cargos del mes', semana: 'Tu semana', como: 'Cómo usar Rumbo', asesor: 'Tu asesor' };
+const R_PARENT = { mes: 'mas', hormiga: 'mas', fijos: 'mas', guia: 'mas', ajustes: 'mas', huchas: 'mas', cargos: 'mas', semana: 'hoy', como: 'mas', prev: 'hoy' };
 const isFresh = () => !S.settings.pinHash && !hasMoney();
 let softPending = false;
 function softRender() {
@@ -767,7 +767,7 @@ function paintChrome() {
   $('rhead').classList.toggle('hidden', w || locked);
   $('rnav').classList.toggle('hidden', w || locked);
   document.querySelectorAll('#rnav [data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === (R_PARENT[tab] || tab)));
-  $('btnImport').classList.toggle('hidden', !['hoy', 'movs', 'mes', 'semana', 'prev'].includes(tab)); $('btnImport').setAttribute('aria-label', AN ? 'Añadir' : 'Cargar extractos');
+  $('btnImport').classList.toggle('hidden', !['hoy', 'movs', 'mes', 'semana', 'prev', 'asesor'].includes(tab)); $('btnImport').setAttribute('aria-label', AN ? 'Añadir' : 'Cargar extractos');
   document.body.dataset.tab = tab;
 }
 function render() {
@@ -787,9 +787,9 @@ function render() {
     AN.pendingFixed = AN.pendingFixed.filter(r => !fixedEnd(r) || fixedEnd(r) >= todayISO());
     if (cycleIdx == null || cycleIdx >= AN.cycles.length) cycleIdx = AN.cycles.length - 1;
   }
-  const needsData = !has && ['hoy', 'prev', 'mes', 'hormiga', 'fijos', 'movs', 'cargos', 'semana'].includes(tab);
+  const needsData = !has && ['hoy', 'prev', 'mes', 'hormiga', 'fijos', 'movs', 'cargos', 'semana', 'asesor'].includes(tab);
   paintChrome(); paintSync();
-  app.innerHTML = tab === 'bienvenida' ? vWelcome() : needsData ? vNoData() : ({ hoy: vHoy2, prev: vPrev, deudas: vDeudas, movs: vMovs2, mas: vRMas, semana: vSemana, como: vComo, mes: vMes, hormiga: vHormiga, fijos: vFijos, guia: vGuia, ajustes: vAjustes, huchas: vHuchas, cargos: vCargos })[tab]();
+  app.innerHTML = tab === 'bienvenida' ? vWelcome() : needsData ? vNoData() : ({ hoy: vHoy2, prev: vPrev, deudas: vDeudas, movs: vMovs2, mas: vRMas, semana: vSemana, como: vComo, asesor: vAsesor, mes: vMes, hormiga: vHormiga, fijos: vFijos, guia: vGuia, ajustes: vAjustes, huchas: vHuchas, cargos: vCargos })[tab]();
   bind();
 }
 const goTab = t => { tab = t; render(); scrollTo(0, 0); };
@@ -816,10 +816,13 @@ function vNoData() {
 }
 function vRMas() {
   const n = Object.keys(S.txs).length;
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent), app = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
   return `<div class="r-mas">
+    ${ios && !app ? `<div class="h-msg blue">${ico('smartphone')}<div><b>Instálala en el iPhone</b><p>En Safari: botón Compartir › <b>Añadir a pantalla de inicio</b>. Se abre como una app, a pantalla completa y con tu PIN. Ojo: la app instalada y Safari no comparten datos; usa la instalada y la sincronización.</p></div></div>` : ''}
     <div class="ms-g">${rRow('data-go="como"', 'lightbulb', '#B5651D', 'Cómo usar Rumbo', 'Lo que hago yo: 5 segundos al día y 2 minutos el domingo')}</div>
     <h2 class="ms-h">Tus números</h2><div class="ms-g">
       ${rRow('data-go="semana"', 'calendar-days', '#2F6FDC', 'Tu semana', 'El repaso del domingo')}
+      ${rRow('data-go="prev"', 'trending-up', '#2F6FDC', 'Previsión', 'Cómo llegarás al cobro y los próximos meses')}
       ${rRow('data-go="mes"', 'chart-column', '#5B8DEF', 'Meses', 'De una nómina a la siguiente')}
       ${rRow('data-go="hormiga"', 'bug', '#D9822B', 'Gastos hormiga', AN ? `${eur0(AN.avg.hormiga)} al mes de media` : '')}
       ${rRow('data-go="fijos"', 'repeat', '#8A90AE', 'Fijos y suscripciones', AN ? `${eur0(AN.recurring.reduce((a, r) => a + r.amount, 0))} al mes` : '')}
@@ -932,7 +935,7 @@ document.querySelectorAll('#rnav [data-tab]').forEach(b => b.onclick = () => goT
 document.getElementById('rback').onclick = () => goTab(R_PARENT[tab] || 'hoy');
 {
   const h0 = location.hash.slice(1);
-  if (/^(prev|deudas|movs|mas|mes|hormiga|fijos|guia|ajustes|huchas|cargos|semana|como)$/.test(h0)) { tab = h0; history.replaceState(null, '', location.pathname); }
+  if (/^(prev|deudas|movs|mas|mes|hormiga|fijos|guia|ajustes|huchas|cargos|semana|como|asesor)$/.test(h0)) { tab = h0; history.replaceState(null, '', location.pathname); }
   else if (/^d=/.test(h0)) { try { dqText = decodeURIComponent(h0.slice(2)); tab = 'deudas'; } catch (e) {} history.replaceState(null, '', location.pathname); }
 }
 render();
