@@ -301,3 +301,4 @@ body.rumbo .sheet-acts button { min-height: 44px; }
 .ds-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 4px 0 8px; }
 .ds-acts button { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px; border-radius: 8px; font-weight: 600; }
 .ds-acts .ico { width: 18px; height: 18px; }
+.ds-pl { padding-top: 0; } .ds-tae { margin-top: 10px; } .ds-tae input { max-width: 120px; }
