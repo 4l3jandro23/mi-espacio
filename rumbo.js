@@ -3,13 +3,13 @@
 'use strict';
 // ---------- importar ----------
 const $file = document.getElementById('file');
-document.getElementById('btnImport').onclick = () => $file.click();
+document.getElementById('btnImport').onclick = () => (AN ? addMenu() : $file.click());
 $file.onchange = () => { importFiles([...$file.files]); $file.value = ''; };
 ['dragover', 'dragenter'].forEach(e => document.addEventListener(e, ev => { ev.preventDefault(); document.body.classList.add('dragging'); }));
 ['dragleave', 'drop'].forEach(e => document.addEventListener(e, ev => { ev.preventDefault(); document.body.classList.remove('dragging'); }));
 document.addEventListener('drop', ev => { if (ev.dataTransfer && ev.dataTransfer.files.length) importFiles([...ev.dataTransfer.files]); });
 async function importFiles(files) {
-  const msgs = [];
+  const msgs = [], imported = [];
   for (const f of files) {
     try {
       let res;
@@ -23,14 +23,16 @@ async function importFiles(files) {
       } else if (/\.pdf$/i.test(f.name)) { msgs.push(`${f.name}: los PDF no se pueden leer bien. Descarga el Excel (BBVA) o el CSV (Revolut).`); continue; }
       else { msgs.push(`${f.name}: formato no reconocido.`); continue; }
       let added = 0;
-      for (const t of res.txs) { if (!S.txs[t.id]) added++; S.txs[t.id] = t; }
+      for (const t of res.txs) { if (!S.txs[t.id]) { added++; imported.push(t); } S.txs[t.id] = t; }
       const bank = res.txs[0] ? res.txs[0].bank : '?';
       if (res.balance != null && (!S.balances[bank] || res.balanceDate >= (S.balances[bank].date || ''))) set('balances', bank, { amount: res.balance, date: res.balanceDate });
       msgs.push(`${bank}: ${res.txs.length} movimientos leídos, ${added} nuevos.`);
     } catch (e) { msgs.push(`${f.name}: ${e.message}`); }
   }
+  const gone = dropMatchedManual(imported);
+  if (gone) msgs.push(`${gone} ${gone === 1 ? 'apunte a mano ya estaba' : 'apuntes a mano ya estaban'} en el extracto: quitado${gone === 1 ? '' : 's'} para no contarlo dos veces.`);
   save(); render();
-  if (msgs.length) toast(msgs.join('\n'));
+  if (msgs.length) toast(msgs.join('\n'), { ms: 8000 });
 }
 
 function lastDataDate() { return AN.list[AN.list.length - 1].date; }
@@ -144,6 +146,7 @@ function planSteps() {
 }
 function vGuia() {
   return `<div class="card"><h2>🧭 Tu plan, paso a paso</h2><p class="small muted" style="margin-top:0">Uno detrás de otro. No hace falta hacerlo todo a la vez.</p>${planSteps()}</div>
+  <div class="card"><h2>📊 Lo que dicen tus números</h2>${insights().map(i => `<div class="note ${i.tone || ''}"><b class="t">${i.t}</b>${i.d}</div>`).join('')}</div>
   <div class="card"><h2>🔎 Consejos con tus números</h2>${tipsPersonal().map(i => `<div class="note ${i.tone || ''}"><b class="t">${i.t}</b>${i.d}</div>`).join('')}</div>
   <div class="card"><h2>💡 Consejos que funcionan</h2>${TIPS_GENERAL.map(i => `<div class="note blue"><b class="t">${i.t}</b>${i.d}</div>`).join('')}</div>
   <div class="card"><h2>📖 Qué significa cada cosa</h2>
@@ -200,7 +203,7 @@ function payDays(n) {
 function simulate(daily, horizonEnd, opt) {
   opt = opt || {};
   const model = spendModel();
-  const start = Object.values(S.balances).reduce((a, b) => a + (b ? b.amount : 0), 0);
+  const start = Object.values(S.balances).reduce((a, b) => a + (b ? b.amount : 0), 0) + manualSinceBalance();
   const d0 = Object.values(S.balances).map(b => b.date).sort().pop() || lastDataDate();
   const pays = payDays(5), pay = typicalPay();
   const famAvg = opt.family ? Math.max(0, AN.full.reduce((a, c) => a + (c.byCat['Ayuda familiar'] || 0), 0) / (AN.full.length || 1)) : 0;
@@ -267,9 +270,7 @@ function chartSVG(series, pays) {
   </svg>`;
 }
 function vPrev() {
-  const o = opts();
-  const owe = debtList().filter(d => d.dir === 'debo' && debtLeft(d) > 0 && (!d.due || d.due <= AN.current.end));
-  const A = Fin.dailyAllowance(AN, S.balances, Object.assign({}, o, { extra: owe.reduce((a, d) => a + debtLeft(d), 0) }));
+  const A = allowance();
   const model = spendModel();
   const usual = Math.round(model.mean);
   const plan = Math.max(0, Math.floor(A.perDay));
@@ -418,7 +419,7 @@ function insights() {
   const cats = {}; full.forEach(c => Object.entries(c.byCat).forEach(([k, v]) => { if ((Fin.CATS[k] || {}).type === 'var') cats[k] = (cats[k] || 0) - v / n; }));
   const top = Object.entries(cats).sort((a, b) => b[1] - a[1]).slice(0, 3);
   out.push({ t: '🧭 Tus 3 mayores gastos del día a día', d: top.map(([k, v]) => `${Fin.CATS[k].icon} ${esc(k)}: ${eur0(v)}/mes`).join('<br>') });
-  out.push({ tone: 'blue', t: '💡 Un truco que funciona', d: `Deja en Revolut solo el dinero de la semana (${eur0(Math.max(0, Fin.dailyAllowance(AN, S.balances, opts()).perWeek))}) y paga con esa tarjeta. Cuando se acaba, se acaba, y no tienes que ir sumando nada. Los fijos siguen saliendo de BBVA.` });
+  out.push({ tone: 'blue', t: '💡 Un truco que funciona', d: `Deja en Revolut solo el dinero de la semana (${eur0(Math.max(0, allowance().perWeek))}) y paga con esa tarjeta. Cuando se acaba, se acaba, y no tienes que ir sumando nada. Los fijos siguen saliendo de BBVA.` });
   return out;
 }
 
@@ -738,8 +739,8 @@ function openSplit() {
 
 // ===================== la app =====================
 const R_MAIN = ['hoy', 'prev', 'deudas', 'movs', 'mas'];
-const R_TITLES = { hoy: 'Hoy', prev: 'Previsión', deudas: 'Deudas', movs: 'Movimientos', mas: 'Más', mes: 'Meses', hormiga: 'Gastos hormiga', fijos: 'Fijos', guia: 'Tu plan', ajustes: 'Ajustes', bienvenida: 'Rumbo', huchas: 'Huchas', cargos: 'Cargos del mes' };
-const R_PARENT = { mes: 'mas', hormiga: 'mas', fijos: 'mas', guia: 'mas', ajustes: 'mas', huchas: 'mas', cargos: 'mas' };
+const R_TITLES = { hoy: 'Hoy', prev: 'Previsión', deudas: 'Deudas', movs: 'Movimientos', mas: 'Más', mes: 'Meses', hormiga: 'Gastos hormiga', fijos: 'Fijos', guia: 'Tu plan', ajustes: 'Ajustes', bienvenida: 'Rumbo', huchas: 'Huchas', cargos: 'Cargos del mes', semana: 'Tu semana', como: 'Cómo usar Rumbo' };
+const R_PARENT = { mes: 'mas', hormiga: 'mas', fijos: 'mas', guia: 'mas', ajustes: 'mas', huchas: 'mas', cargos: 'mas', semana: 'hoy', como: 'mas' };
 const isFresh = () => !S.settings.pinHash && !hasMoney();
 let softPending = false;
 function softRender() {
@@ -752,11 +753,11 @@ document.addEventListener('focusout', () => setTimeout(() => { if (softPending &
 function paintChrome() {
   const $ = id => document.getElementById(id), w = tab === 'bienvenida', locked = !financeUnlocked && !isFresh();
   $('rtitle').textContent = R_TITLES[tab] || 'Rumbo';
-  $('rback').classList.toggle('hidden', !R_PARENT[tab]);
+  $('rback').classList.toggle('hidden', !R_PARENT[tab]); $('rback').textContent = '‹ ' + (R_TITLES[R_PARENT[tab]] || 'Más');
   $('rhead').classList.toggle('hidden', w || locked);
   $('rnav').classList.toggle('hidden', w || locked);
   document.querySelectorAll('#rnav [data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === (R_PARENT[tab] || tab)));
-  $('btnImport').classList.toggle('hidden', !['hoy', 'movs', 'mes'].includes(tab));
+  $('btnImport').classList.toggle('hidden', !['hoy', 'movs', 'mes', 'semana', 'prev'].includes(tab)); $('btnImport').setAttribute('aria-label', AN ? 'Añadir' : 'Cargar extractos');
   document.body.dataset.tab = tab;
 }
 function render() {
@@ -775,9 +776,9 @@ function render() {
     AN.pendingFixed = AN.pendingFixed.filter(r => !fixedEnd(r) || fixedEnd(r) >= todayISO());
     if (cycleIdx == null || cycleIdx >= AN.cycles.length) cycleIdx = AN.cycles.length - 1;
   }
-  const needsData = !has && ['hoy', 'prev', 'mes', 'hormiga', 'fijos', 'movs', 'cargos'].includes(tab);
+  const needsData = !has && ['hoy', 'prev', 'mes', 'hormiga', 'fijos', 'movs', 'cargos', 'semana'].includes(tab);
   paintChrome(); paintSync();
-  app.innerHTML = tab === 'bienvenida' ? vWelcome() : needsData ? vNoData() : ({ hoy: vHoy, prev: vPrev, deudas: vDeudas, movs: vMovs, mas: vRMas, mes: vMes, hormiga: vHormiga, fijos: vFijos, guia: vGuia, ajustes: vAjustes, huchas: vHuchas, cargos: vCargos })[tab]();
+  app.innerHTML = tab === 'bienvenida' ? vWelcome() : needsData ? vNoData() : ({ hoy: vHoy2, prev: vPrev, deudas: vDeudas, movs: vMovs2, mas: vRMas, semana: vSemana, como: vComo, mes: vMes, hormiga: vHormiga, fijos: vFijos, guia: vGuia, ajustes: vAjustes, huchas: vHuchas, cargos: vCargos })[tab]();
   bind();
 }
 const goTab = t => { tab = t; render(); scrollTo(0, 0); };
@@ -805,7 +806,9 @@ function vNoData() {
 function vRMas() {
   const n = Object.keys(S.txs).length;
   return `<div class="r-mas">
+    <div class="ms-g">${rRow('data-go="como"', 'lightbulb', '#B5651D', 'Cómo usar Rumbo', 'Lo que hago yo: 5 segundos al día y 2 minutos el domingo')}</div>
     <h2 class="ms-h">Tus números</h2><div class="ms-g">
+      ${rRow('data-go="semana"', 'calendar-days', '#2F6FDC', 'Tu semana', 'El repaso del domingo')}
       ${rRow('data-go="mes"', 'chart-column', '#5B8DEF', 'Meses', 'De una nómina a la siguiente')}
       ${rRow('data-go="hormiga"', 'bug', '#D9822B', 'Gastos hormiga', AN ? `${eur0(AN.avg.hormiga)} al mes de media` : '')}
       ${rRow('data-go="fijos"', 'repeat', '#8A90AE', 'Fijos y suscripciones', AN ? `${eur0(AN.recurring.reduce((a, r) => a + r.amount, 0))} al mes` : '')}
@@ -850,12 +853,13 @@ function bind() {
   document.querySelectorAll('[data-cyc]').forEach(el => el.onclick = () => { cycleIdx = +el.dataset.cyc; render(); });
   document.querySelectorAll('[data-cat]').forEach(el => el.onclick = () => { filterCat = el.dataset.cat; search = ''; goTab('movs'); });
   if ($('cut')) $('cut').oninput = e => { const v = +e.target.value; $('cutv').textContent = v + '%'; $('cutm').textContent = eur0(AN.avg.hormiga * v / 100); $('cuty').textContent = eur0(AN.avg.hormiga * 12 * v / 100); set('settings', 'goalCut', v); save(); };
-  if ($('q')) { $('q').oninput = e => { search = e.target.value; const pos = e.target.selectionStart; render(); const q = $('q'); q.focus(); q.setSelectionRange(pos, pos); }; $('fc').onchange = e => { filterCat = e.target.value; render(); }; }
+  if ($('q')) { $('q').oninput = e => { search = e.target.value; const pos = e.target.selectionStart; render(); const q = $('q'); q.focus(); try { q.setSelectionRange(pos, pos); } catch (_) {} }; }
+  if ($('fc')) $('fc').onchange = e => { filterCat = e.target.value; render(); };
   document.querySelectorAll('select[data-mk]').forEach(el => el.onchange = () => { set('overrides', el.dataset.mk, el.value); save(); render(); });
   document.querySelectorAll('[data-set]').forEach(el => el.onchange = () => { set('settings', el.dataset.set, el.value); save(); render(); });
   document.querySelectorAll('[data-bal]').forEach(el => el.onchange = () => { set('balances', el.dataset.bal, { amount: +el.value, date: todayISO() }); save(); render(); });
   document.querySelectorAll('[data-end]').forEach(el => el.onchange = () => { set('fixedEnds', el.dataset.end, el.value || null); save(); render(); });
-  bindDeudas(); bindSync(); bindPrev(); bindRumboExtra();
+  bindDeudas(); bindSync(); bindPrev(); bindRumboExtra(); bindPlus();
   if ($('pinchange')) $('pinchange').onclick = () => lock('change');
   if ($('exp')) $('exp').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = 'rumbo-copia-' + todayISO() + '.json'; a.click(); };
   if ($('impb')) { $('impb').onclick = () => $('bfile').click(); $('bfile').onchange = async e => { try { restoreBackup(JSON.parse(await e.target.files[0].text())); } catch (_) { toast('Ese archivo no es una copia válida.'); } }; }
@@ -917,7 +921,7 @@ document.querySelectorAll('#rnav [data-tab]').forEach(b => b.onclick = () => goT
 document.getElementById('rback').onclick = () => goTab(R_PARENT[tab] || 'hoy');
 {
   const h0 = location.hash.slice(1);
-  if (/^(prev|deudas|movs|mas|mes|hormiga|fijos|guia|ajustes|huchas|cargos)$/.test(h0)) { tab = h0; history.replaceState(null, '', location.pathname); }
+  if (/^(prev|deudas|movs|mas|mes|hormiga|fijos|guia|ajustes|huchas|cargos|semana|como)$/.test(h0)) { tab = h0; history.replaceState(null, '', location.pathname); }
   else if (/^d=/.test(h0)) { try { dqText = decodeURIComponent(h0.slice(2)); tab = 'deudas'; } catch (e) {} history.replaceState(null, '', location.pathname); }
 }
 render();

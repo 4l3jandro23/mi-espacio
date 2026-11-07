@@ -157,6 +157,7 @@
     const d = strip(t.desc), k = strip(t.kind), o = strip(t.obs);
     const me = strip(opts.myName || '');
     const fam = (opts.family || []).map(strip).filter(Boolean);
+    if (t.mcat && CATS[t.mcat]) return t.mcat; // apuntado a mano: la categoría la eliges tú
     const override = opts.overrides && opts.overrides[merchantKey(t)];
     if (override) return override;
     if (t.amt > 0) {
