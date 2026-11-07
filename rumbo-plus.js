@@ -205,6 +205,7 @@ function vHoy2() {
       ${rRow('data-go="semana"', 'calendar-days', '#2F6FDC', 'Tu semana', 'Qué gastaste, dónde y lo que viene')}
       ${rRow('data-go="mes"', 'chart-column', '#5B6169', `Este mes · ${esc(cur.label)}`, `Llevas ${eur0(cur.variable)} en el día a día`)}
       ${rRow('data-go="asesor"', 'lightbulb', '#1F8A70', 'Tu asesor', 'Lo que sé de ti, dónde ahorrar y tus reglas')}
+      ${rRow('data-dsnew', 'shopping-bag', '#B5651D', '¿Me lo compro?', deseos().length ? deseos().map(w => esc(w.n)).slice(0, 2).join(' · ') : 'Apunta algo que quieras y te digo si ahora o cuándo')}
       ${rRow('data-go="prev"', 'trending-up', '#2F6FDC', 'Previsión', 'Cómo llegarás al cobro y los próximos meses')}
     </div>`;
 }
@@ -338,5 +339,5 @@ function bindPlus() {
   on('[data-bigtx]', el => { const t = AN.list.find(x => x.id === el.dataset.bigtx); if (t) openLend(t); });
   on('[data-bigno]', el => { set('settings', 'bigSeen', Object.assign({}, S.settings.bigSeen, { [el.dataset.bigno]: 1 })); save(); render(); });
   on('[data-tourok]', () => { set('settings', 'tourOk', true); save(); render(); });
-  bindAsesor();
+  bindAsesor(); bindDeseos();
 }

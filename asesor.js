@@ -190,6 +190,7 @@ function vAsesor() {
     ${pend ? decisionCard(pend) : ''}
     ${reto ? `<div class="card as-reto"><small>El reto de esta semana</small><h2>${reto.t}</h2><div class="as-prog">${Array.from({ length: Math.max(reto.max, reto.n()) }, (_, i) => `<i class="${i < reto.n() ? (i < reto.max ? 'on' : 'over') : ''}"></i>`).join('')}</div>
       <p class="small muted">${reto.n()} de ${reto.max} hasta ahora · si se convierte en costumbre, unos <b>${eur0(reto.ahorro)}</b> al año.</p><button class="lnkb" data-rgadd="${reto.k}">Convertirlo en una de mis reglas ${ico('chevron-right')}</button></div>` : ''}
+    ${deseosCard()}
     ${pal.length ? `<div class="card"><h2>Dónde ahorrarías más</h2><p class="small muted" style="margin:-4px 0 6px">De más a menos, con tus números de los últimos 3 meses. Con elegir una basta.</p>
       ${pal.slice(0, 5).map((p, i) => `<div class="as-pal"><span class="as-n">${i + 1}</span><div><b>${p.t}</b><p>${p.d}</p></div><span class="num as-v">${eur0(p.v)}<small>al año</small></span></div>`).join('')}</div>` : ''}
     <div class="card"><div class="h-row"><h2>Mis reglas</h2><button class="lnkb" data-rgnew>${ico('plus')} Añadir</button></div>

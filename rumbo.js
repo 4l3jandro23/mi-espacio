@@ -749,8 +749,8 @@ function openSplit() {
 
 // ===================== la app =====================
 const R_MAIN = ['hoy', 'movs', 'asesor', 'deudas', 'mas'];
-const R_TITLES = { hoy: 'Hoy', prev: 'Previsión', deudas: 'Deudas', movs: 'Movimientos', mas: 'Más', mes: 'Meses', hormiga: 'Gastos hormiga', fijos: 'Fijos', guia: 'Tu plan', ajustes: 'Ajustes', bienvenida: 'Rumbo', huchas: 'Huchas', cargos: 'Cargos del mes', semana: 'Tu semana', como: 'Cómo usar Rumbo', asesor: 'Tu asesor' };
-const R_PARENT = { mes: 'mas', hormiga: 'mas', fijos: 'mas', guia: 'mas', ajustes: 'mas', huchas: 'mas', cargos: 'mas', semana: 'hoy', como: 'mas', prev: 'hoy' };
+const R_TITLES = { hoy: 'Hoy', prev: 'Previsión', deudas: 'Deudas', movs: 'Movimientos', mas: 'Más', mes: 'Meses', hormiga: 'Gastos hormiga', fijos: 'Fijos', guia: 'Tu plan', ajustes: 'Ajustes', bienvenida: 'Rumbo', huchas: 'Huchas', cargos: 'Cargos del mes', semana: 'Tu semana', como: 'Cómo usar Rumbo', asesor: 'Tu asesor', deseo: '¿Me lo compro?' };
+const R_PARENT = { mes: 'mas', hormiga: 'mas', fijos: 'mas', guia: 'mas', ajustes: 'mas', huchas: 'mas', cargos: 'mas', semana: 'hoy', como: 'mas', prev: 'hoy', deseo: 'asesor' };
 const isFresh = () => !S.settings.pinHash && !hasMoney();
 let softPending = false;
 function softRender() {
@@ -787,9 +787,9 @@ function render() {
     AN.pendingFixed = AN.pendingFixed.filter(r => !fixedEnd(r) || fixedEnd(r) >= todayISO());
     if (cycleIdx == null || cycleIdx >= AN.cycles.length) cycleIdx = AN.cycles.length - 1;
   }
-  const needsData = !has && ['hoy', 'prev', 'mes', 'hormiga', 'fijos', 'movs', 'cargos', 'semana', 'asesor'].includes(tab);
+  const needsData = !has && ['hoy', 'prev', 'mes', 'hormiga', 'fijos', 'movs', 'cargos', 'semana', 'asesor', 'deseo'].includes(tab);
   paintChrome(); paintSync();
-  app.innerHTML = tab === 'bienvenida' ? vWelcome() : needsData ? vNoData() : ({ hoy: vHoy2, prev: vPrev, deudas: vDeudas, movs: vMovs2, mas: vRMas, semana: vSemana, como: vComo, asesor: vAsesor, mes: vMes, hormiga: vHormiga, fijos: vFijos, guia: vGuia, ajustes: vAjustes, huchas: vHuchas, cargos: vCargos })[tab]();
+  app.innerHTML = tab === 'bienvenida' ? vWelcome() : needsData ? vNoData() : ({ hoy: vHoy2, prev: vPrev, deudas: vDeudas, movs: vMovs2, mas: vRMas, semana: vSemana, como: vComo, asesor: vAsesor, deseo: vDeseo, mes: vMes, hormiga: vHormiga, fijos: vFijos, guia: vGuia, ajustes: vAjustes, huchas: vHuchas, cargos: vCargos })[tab]();
   bind();
 }
 const goTab = t => { tab = t; render(); scrollTo(0, 0); };
@@ -829,6 +829,7 @@ function vRMas() {
       ${rRow('data-go="cargos"', 'calendar-range', '#EF7F72', 'Cargos del mes', 'Qué sale cada día y cuándo cobras')}
     </div>
     <h2 class="ms-h">Para más adelante</h2><div class="ms-g">
+      ${rRow('data-dsnew', 'shopping-bag', '#B5651D', '¿Me lo compro?', 'Si te lo recomiendo, cuándo y otras opciones')}
       ${rRow('data-go="huchas"', 'piggy-bank', '#2FA98C', 'Huchas', huchas().length ? huchas().map(h => esc(h.n)).slice(0, 3).join(' · ') : 'Para un viaje, un colchón, un capricho')}
     </div>
     <h2 class="ms-h">Ayuda</h2><div class="ms-g">
