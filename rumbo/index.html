@@ -24,9 +24,11 @@
 </head>
 <body class="rumbo">
 <div class="wrap">
+  <!-- Cabecera como en Ejercicio y Alimentación: la marca y el nombre, y debajo dónde estás. -->
   <header class="r-head" id="rhead">
-    <div class="r-tt"><button id="rback" class="r-back hidden">‹ Más</button><h1 id="rtitle">Hoy</h1></div>
-    <div class="r-tools"><span id="syncst" class="small muted"></span><button id="btnImport" class="r-ib" aria-label="Cargar extractos" title="Cargar extractos">＋</button></div>
+    <button id="rback" class="r-back hidden">‹ Más</button>
+    <div class="r-tt"><h1><span class="r-logo">🧭</span>Rumbo</h1><p id="rtitle">Hoy</p></div>
+    <div class="r-tools"><span id="syncst" class="small muted"></span><button id="btnImport" class="r-ib" aria-label="Añadir" title="Añadir">＋</button></div>
     <input id="file" type="file" multiple accept=".xlsx,.xls,.csv" class="hidden">
   </header>
   <main id="app"></main>

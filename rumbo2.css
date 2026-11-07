@@ -149,3 +149,53 @@ body.rumbo .r-hero { box-shadow: none; background: var(--r-deep); }
 body.rumbo .r-hero::before { display: none; }
 body.rumbo .r-tile, body.rumbo .af, body.rumbo .dq, body.rumbo .dq-k, body.rumbo .hu, body.rumbo .ms-g { box-shadow: none; }
 body.rumbo .ms-g { border: 1px solid var(--line); }
+
+/* ==========================================================================
+   Estilo de las apps hermanas (Ejercicio, Alimentación, Cimientos)
+   · Letra del sistema para leer; Bricolage solo en títulos y cifras.
+   · Cabecera de papel con la marca y el nombre; debajo, la sección.
+   · Esquinas de 8 px, un filo de 1 px, sin sombras. Acción principal casi negra.
+   · Barra de abajo lisa: la pestaña activa se ve por la tinta y una raya fina.
+   ========================================================================== */
+body.rumbo { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; line-height: 1.5; }
+body.rumbo h1, body.rumbo h2, body.rumbo .r-sheet-h, body.rumbo .h-msg b, body.rumbo .h-n, body.rumbo .h-big b { font-family: 'Bricolage', 'Avenir Next', system-ui, sans-serif; }
+body.rumbo .card, body.rumbo .h-hero, body.rumbo .h-msg, body.rumbo .h-acts button, body.rumbo .h-tiles button, body.rumbo .ms-g,
+body.rumbo .ex-b, body.rumbo .h-aff .af, body.rumbo .hu-mini, body.rumbo .buscar-r input, body.rumbo .dq, body.rumbo .hu, body.rumbo .dq-k { border-radius: 8px; }
+body.rumbo .h-age { border-radius: 0 0 8px 8px; }
+body.rumbo button.primary { background: var(--ink); border-color: var(--ink); color: var(--bg); border-radius: 6px; }
+body.rumbo .sheet-acts button, body.rumbo .toolbar button { border-radius: 6px; }
+
+/* Cabecera */
+.r-head { display: flex; align-items: center; gap: 10px; margin: 0 -16px 14px; padding: calc(12px + env(safe-area-inset-top)) 16px 12px; border-bottom: 1px solid var(--line); background: var(--bg); }
+.r-head .r-tt { flex: 1; min-width: 0; }
+.r-head h1 { font-size: 1.15rem !important; font-weight: 700; letter-spacing: -.025em; display: flex; align-items: center; gap: 9px; margin: 0; line-height: 1.2; }
+.r-logo { display: inline-flex; color: var(--accent); }
+.r-logo .ico { width: 1.2em; height: 1.2em; color: var(--accent); }
+.r-head #rtitle { margin: 1px 0 0; font-size: .8rem; color: var(--muted); }
+.r-back { flex: none; border: 1px solid var(--line) !important; background: var(--card) !important; border-radius: 6px; padding: 8px 10px !important; font-size: 14px; font-weight: 600; color: var(--ink) !important; }
+.r-ib { width: 40px !important; height: 40px !important; border-radius: 6px !important; background: var(--card) !important; color: var(--ink) !important; border: 1px solid var(--line) !important; font-size: 20px; }
+.r-ib .ico { width: 20px; height: 20px; }
+
+/* Barra de abajo */
+body.rumbo .hubnav { left: 0; right: 0; bottom: 0; transform: none; width: auto; max-width: none; border-radius: 0; background: var(--bg); border: 0; border-top: 1px solid var(--line); box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); display: flex; gap: 0; }
+body.rumbo .hubnav button { flex: 1; max-width: none; background: none !important; border-radius: 0; font-size: 11px; font-weight: 500; color: var(--muted); position: relative; min-height: 48px; }
+body.rumbo .hubnav button.on { color: var(--ink); font-weight: 650; }
+body.rumbo .hubnav button.on::before { content: ''; position: absolute; top: -7px; left: 50%; width: 24px; height: 2px; margin-left: -12px; border-radius: 0 0 2px 2px; background: var(--ink); }
+body.rumbo .hubnav .ico { width: 22px; height: 22px; }
+body.rumbo .wrap { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+body.rumbo #toasts { bottom: calc(80px + env(safe-area-inset-bottom)); }
+
+/* Filas de «Más»: iconos sueltos, sin caja de color */
+body.rumbo .ms-ic { background: none !important; color: var(--muted); }
+body.rumbo .ms-ic .ico { color: var(--muted); }
+
+/* Movimiento: préstamo */
+.mv-lend { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; border: 1px solid var(--line); border-radius: 8px; background: var(--card); padding: 12px 14px; margin: 0 0 14px; }
+.mv-lend > .ico:first-child { width: 22px; height: 22px; color: var(--accent); flex: none; }
+.mv-lend span { flex: 1; } .mv-lend b { display: block; } .mv-lend small { color: var(--muted); font-size: 12.5px; }
+.mv-lend > .ico:last-child { width: 16px; height: 16px; color: var(--muted); }
+.mv-scope { margin: 6px 0 2px; }
+.mv-top { top: calc(66px + env(safe-area-inset-top)); }
+.h-owed { display: flex; gap: 10px; align-items: flex-start; margin: -2px 2px 12px; font-size: 14px; color: var(--muted); line-height: 1.45; }
+.h-owed .ico { width: 18px; height: 18px; color: var(--accent); flex: none; margin-top: 1px; }
+.h-owed b { color: var(--ink); }

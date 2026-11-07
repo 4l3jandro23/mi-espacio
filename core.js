@@ -7,7 +7,7 @@ const DEFAULTS = { myName: '', family: '', savings: '', hormigaMax: 10, reserve:
 let S = load();
 let tab = window.APP === 'rumbo' ? 'hoy' : 'inicio', cycleIdx = null, filterCat = '', search = '';
 
-function fresh() { return { txs: {}, balances: {}, settings: Object.assign({}, DEFAULTS), overrides: {}, fixedEnds: {}, debts: {}, pages: {}, events: {}, apple: {}, days: {}, _t: {} }; }
+function fresh() { return { txs: {}, balances: {}, settings: Object.assign({}, DEFAULTS), overrides: {}, fixedEnds: {}, debts: {}, txGone: {}, pages: {}, events: {}, apple: {}, days: {}, _t: {} }; }
 function normalize(s) {
   const f = fresh();
   for (const k of Object.keys(f)) if (k !== 'settings') s[k] = s[k] || f[k];
@@ -64,7 +64,7 @@ const eur0 = n => eur(n, 0);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fdate = s => { const [y, m, d] = s.split('-'); return `${+d}/${+m}`; };
 const fdateL = s => new Date(s + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
-const opts = () => ({ myName: S.settings.myName, family: String(S.settings.family || '').split(',').map(x => x.trim()).filter(Boolean), hormigaMax: +S.settings.hormigaMax || 10, payDay: +S.settings.payDay || 0, overrides: S.overrides, reserve: +S.settings.reserve || 0 });
+const opts = () => ({ myName: S.settings.myName, family: String(S.settings.family || '').split(',').map(x => x.trim()).filter(Boolean), hormigaMax: +S.settings.hormigaMax || 10, payDay: +S.settings.payDay || 0, overrides: Object.assign({}, S.overrides, lentTxs()), reserve: +S.settings.reserve || 0 });
 
 
 // Las librerías grandes (Excel, QR) se cargan solo cuando hacen falta: así la app abre al momento.
@@ -76,6 +76,7 @@ const todayISO = () => { const d = new Date(); return new Date(d.getTime() - d.g
 const fixedKey = r => r.shop + '|' + Math.round(r.amount);
 const fixedEnd = r => S.fixedEnds[fixedKey(r)] || '';
 const debtList = () => Object.values(S.debts).filter(Boolean);
+function lentTxs() { const o = {}; for (const d of Object.values(S.debts || {})) if (d) { if (d.tx) o['tx:' + d.tx] = 'Dinero prestado'; for (const p of d.payments || []) if (p.tx) o['tx:' + p.tx] = 'Dinero prestado'; } return o; }
 const debtLeft = d => Fin.round2(d.amount - (d.payments || []).reduce((a, p) => a + p.amount, 0));
 const FIN_TABS = ['hoy', 'prev', 'mes', 'hormiga', 'fijos', 'movs', 'deudas', 'guia', 'ajustes'];
 let financeUnlocked = false, pendingTab = null, lockMode = null;
@@ -187,7 +188,7 @@ addEventListener('storage', e => {
 });
 
 // ---------- pasar tus cuentas a Rumbo (en el iPhone cada app de la pantalla de inicio tiene su propio almacén) ----------
-const MONEY_MAPS = ['txs', 'balances', 'overrides', 'fixedEnds', 'debts'];
+const MONEY_MAPS = ['txs', 'balances', 'overrides', 'fixedEnds', 'debts', 'txGone'];
 const MONEY_SET = ['myName', 'family', 'savings', 'hormigaMax', 'reserve', 'payDay', 'goalCut', 'pinHash', 'huchas'];
 const hasMoney = () => Object.keys(S.txs || {}).length > 0 || Object.values(S.debts || {}).some(Boolean) || Object.keys(S.balances || {}).length > 0;
 const gzPipe = async (u8, stream) => new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(stream)).arrayBuffer());

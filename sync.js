@@ -4,7 +4,7 @@
   'use strict';
   const API = 'https://api.github.com';
   const FILE = 'midinero-sync.enc.json';
-  const MAPS = ['settings', 'overrides', 'balances', 'fixedEnds', 'debts', 'pages', 'events', 'apple', 'days'];
+  const MAPS = ['settings', 'overrides', 'balances', 'fixedEnds', 'debts', 'pages', 'events', 'apple', 'days', 'txGone'];
 
   const b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
   const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
@@ -82,6 +82,8 @@
         if (ta || tb) out._t[M + '/' + k] = Math.max(ta, tb);
       }
     }
+    // Los movimientos se juntan, salvo los que se borraron a propósito (repetidos, apuntes a mano ya en el extracto).
+    for (const [id, v] of Object.entries(out.txGone)) if (v) delete out.txs[id];
     return out;
   }
   // ¿Tiene "merged" algo que "side" no tenga?

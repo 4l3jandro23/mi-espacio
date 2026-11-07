@@ -32,9 +32,27 @@ function dropMatchedManual(imported) {
   const used = new Set(), gone = [];
   for (const m of manualTxs()) {
     const hit = imported.find(t => !used.has(t.id) && Math.abs(t.amt - m.amt) < 0.01 && Math.abs(Fin.daysBetween(new Date(m.date), new Date(t.date))) <= 5);
-    if (hit) { used.add(hit.id); gone.push(m); delete S.txs[m.id]; }
+    if (hit) { used.add(hit.id); gone.push(m); dropTx(m.id); }
   }
   return gone.length;
+}
+
+// Borrar un movimiento de verdad: se apunta para que la sincronización no lo traiga de vuelta del otro dispositivo.
+function dropTx(id) { delete S.txs[id]; set('txGone', id, Date.now()); }
+function undropTx(t) { S.txs[t.id] = t; set('txGone', t.id, null); }
+// Repetidos que se colaron antes de saber reconocerlos (el banco renombró el comercio): se queda uno.
+function cleanDupes() {
+  const by = {}; let n = 0;
+  for (const t of Object.values(S.txs)) if (!isManual(t)) (by[t.bank + '|' + t.date + '|' + t.amt.toFixed(2)] = by[t.bank + '|' + t.date + '|' + t.amt.toFixed(2)] || []).push(t);
+  for (const g of Object.values(by)) {
+    if (g.length < 2) continue;
+    g.sort((a, b) => a.desc.length - b.desc.length || (a.id < b.id ? -1 : 1));
+    const keep = [];
+    for (const t of g) { const twin = keep.find(k => !k._used && Fin.sameMove(k, t, true)); if (twin) { twin._used = true; dropTx(t.id); n++; } else keep.push(t); }
+    keep.forEach(k => delete k._used);
+  }
+  if (n) { save(); setTimeout(() => toast(`He quitado ${n} ${n === 1 ? 'movimiento repetido' : 'movimientos repetidos'} (el banco había cambiado el nombre del comercio).`), 600); }
+  return n;
 }
 
 // ---------- hojas ----------
@@ -85,7 +103,7 @@ function openApunte(sign, edit) {
     toast(edit ? 'Guardado' : `Apuntado: ${eur(sign * v)}`, edit ? {} : { actions: [{ n: 'Deshacer', fn: () => { delete S.txs[id]; save(); render(); } }] });
   };
   $('#apok').onclick = ok; $('#apv').onkeydown = e => { if (e.key === 'Enter') ok(); };
-  const del = $('[data-apdel]'); if (del) del.onclick = () => { const old = S.txs[edit.id]; delete S.txs[edit.id]; save(); box.remove(); render(); toast('Apunte borrado', { actions: [{ n: 'Deshacer', fn: () => { S.txs[old.id] = old; save(); render(); } }] }); };
+  const del = $('[data-apdel]'); if (del) del.onclick = () => { const old = S.txs[edit.id]; dropTx(edit.id); save(); box.remove(); render(); toast('Apunte borrado', { actions: [{ n: 'Deshacer', fn: () => { undropTx(old); save(); render(); } }] }); };
 }
 
 function openSaldo() {
@@ -157,6 +175,7 @@ function vHoy2() {
       <button data-ra-afford>${ico('wallet')}<span>¿Me lo permito?</span></button>
       <button data-ra-ext>${ico('receipt')}<span>Extractos</span></button>
     </div>
+    ${(() => { const soon = debtList().filter(d => d.dir === 'meDeben' && debtLeft(d) > 0 && d.due && d.due <= A.nextPay), v = soon.reduce((a, d) => a + debtLeft(d), 0); return v && A.days ? `<p class="h-owed">${ico('handshake')}<span>Cuando te devuelvan ${soon.length === 1 ? `los ${eur0(v)} de ${esc(soon[0].who)} (sobre el ${fdate(soon[0].due)})` : eur0(v)}, podrás gastar unos <b>${eur0(Math.max(0, (A.free + v) / A.days))} al día</b>.</span></p>` : ''; })()}
     <div id="affbox" class="h-aff ${affOpen ? '' : 'hidden'}">${affOpen ? affordHTML(A) : ''}</div>
 
     <div class="h-msg ${m.tone}">${ico(m.ic)}<div><b>${m.t}</b><p>${m.d}</p>${m.btn ? `<button class="lnkb" ${m.btn[0]}>${m.btn[1]} ${ico('chevron-right')}</button>` : ''}</div></div>
@@ -241,11 +260,48 @@ function openMov(id) {
   // Entradas: primero los tipos de ingreso (una devolución puede ir a cualquier categoría). Salidas: todo menos ingresos.
   const cats = Object.keys(Fin.CATS).filter(k => t.amt > 0 || Fin.CATS[k].type !== 'in').sort((a, b) => t.amt > 0 ? (Fin.CATS[b].type === 'in') - (Fin.CATS[a].type === 'in') : 0);
   const mk = Fin.merchantKey(t), n = AN.list.filter(x => Fin.merchantKey(x) === mk).length;
-  const box = rSheet('rmov', 'Movimiento', `<div class="mv-head"><span class="mv-ic lg ${t.amt > 0 ? 'in' : ''}">${(Fin.CATS[t.cat] || Fin.CATS.Otros).icon}</span><div><h2>${esc(t.shop)}</h2><p class="num ${t.amt > 0 ? 'pos' : ''}">${t.amt > 0 ? '+' : ''}${eur(t.amt)}</p></div></div>
+  const debt = debtList().find(d => d.tx === id || (d.payments || []).some(p => p.tx === id));
+  let solo = !!S.overrides['tx:' + id] || n === 1 || /^bizum/i.test(t.shop);
+  const box = rSheet('rmov', 'Movimiento', '');
+  const paint = () => {
+    box.querySelector('.r-sheet-in').innerHTML = `<div class="mv-head"><span class="mv-ic lg ${t.amt > 0 ? 'in' : ''}">${(Fin.CATS[t.cat] || Fin.CATS.Otros).icon}</span><div><h2>${esc(t.shop)}</h2><p class="num ${t.amt > 0 ? 'pos' : ''}">${t.amt > 0 ? '+' : ''}${eur(t.amt)}</p></div></div>
     <div class="mv-det"><span>Día</span><b>${fdateL(t.date)}</b><span>Banco</span><b>${esc(t.bank)}</b><span>Concepto</span><b>${esc(t.desc)}</b>${t.kind ? `<span>Tipo</span><b>${esc(t.kind)}</b>` : ''}${t.obs ? `<span>Nota</span><b>${esc(t.obs)}</b>` : ''}</div>
-    <div class="f"><span>Categoría${n > 1 ? ` · se cambia en los ${n} de ${esc(t.shop)}` : ''}</span><div class="ap-cats">${cats.map(k => `<button data-mvc="${esc(k)}" class="${k === t.cat ? 'on' : ''}">${Fin.CATS[k].icon} ${esc(k)}</button>`).join('')}</div></div>
-    <div class="sheet-acts"><button data-close>Cerrar</button></div>`);
-  box.querySelectorAll('[data-mvc]').forEach(b => b.onclick = () => { const old = S.overrides[mk]; set('overrides', mk, b.dataset.mvc); save(); box.remove(); render(); toast(`${t.shop}: ${b.dataset.mvc}`, { actions: [{ n: 'Deshacer', fn: () => { set('overrides', mk, old || null); if (!old) delete S.overrides[mk]; save(); render(); } }] }); });
+    ${debt ? `<div class="h-msg">${ico('handshake')}<div><b>${debt.dir === 'meDeben' ? `${esc(debt.who)} te lo devuelve` : `Se lo devuelves a ${esc(debt.who)}`}</b><p>No cuenta como gasto ni como ingreso. ${debtLeft(debt) > 0 ? `Quedan ${eur(debtLeft(debt))}${debt.due ? ', para el ' + fdate(debt.due) : ''}.` : 'Ya está saldado.'}</p><button class="lnkb" data-mvdebt>Ver en Deudas ${ico('chevron-right')}</button></div></div>`
+      : t.amt < 0 && (Fin.CATS[t.cat] || {}).type !== 'fixed' ? `<button class="mv-lend" data-mvlend>${ico('handshake')}<span><b>Es dinero que me van a devolver</b><small>Lo apunto en Deudas y deja de contar como gasto</small></span>${ico('chevron-right')}</button>` : ''}
+    <div class="f"><span>Categoría</span>${n > 1 ? `<div class="seg mv-scope"><button data-scope="1" class="${solo ? 'on' : ''}">Solo este</button><button data-scope="0" class="${solo ? '' : 'on'}">Los ${n} de ${esc(t.shop.length > 18 ? t.shop.slice(0, 17) + '…' : t.shop)}</button></div>` : ''}
+      <div class="ap-cats">${cats.map(k => `<button data-mvc="${esc(k)}" class="${k === t.cat ? 'on' : ''}">${Fin.CATS[k].icon} ${esc(k)}</button>`).join('')}</div></div>
+    <div class="sheet-acts"><button data-close>Cerrar</button></div>`;
+    box.querySelectorAll('[data-scope]').forEach(b => b.onclick = () => { solo = b.dataset.scope === '1'; paint(); });
+    box.querySelectorAll('[data-mvc]').forEach(b => b.onclick = () => {
+      const key = solo ? 'tx:' + id : mk, old = S.overrides[key];
+      set('overrides', key, b.dataset.mvc); save(); box.remove(); render();
+      toast(`${solo ? 'Este movimiento' : t.shop}: ${b.dataset.mvc}`, { actions: [{ n: 'Deshacer', fn: () => { set('overrides', key, old || null); if (!old) delete S.overrides[key]; save(); render(); } }] });
+    });
+    const l = box.querySelector('[data-mvlend]'); if (l) l.onclick = () => { box.remove(); openLend(t); };
+    const dd = box.querySelector('[data-mvdebt]'); if (dd) dd.onclick = () => { box.remove(); goTab('deudas'); };
+  };
+  paint();
+}
+// Un préstamo que ya ha salido del banco: deuda «me deben» enlazada al movimiento.
+function openLend(t) {
+  const guess = t.shop.replace(/^Bizum · /, '').replace(/^(pg|pago|para)\s+/i, '');
+  const box = rSheet('rlend', 'Me lo van a devolver', `<h2 class="r-sheet-h">Me lo van a devolver</h2>
+    <p class="small muted" style="margin-top:-6px">${eur(-t.amt)} del ${fdateL(t.date)}. Deja de contar como gasto y, cuando te lo devuelvan, tampoco contará como ingreso: así tus números no se inflan.</p>
+    <label class="f"><span>Quién</span><input id="lw" value="${esc(dqCap(guess.length < 24 ? guess : ''))}" placeholder="Nombre"></label>
+    <div class="sp-row"><label class="f"><span>Cuánto te devuelve (€)</span><input id="la" type="text" inputmode="decimal" value="${String(-t.amt).replace('.', ',')}"></label>
+    <label class="f"><span>Para cuándo (aprox.)</span><input id="ld" type="date" value="${addD(todayISO(), 7)}"></label></div>
+    <label class="f"><span>De qué (opcional)</span><input id="lc" placeholder="Préstamo"></label>
+    <div class="sheet-acts"><button data-close>Cancelar</button><span style="flex:1"></span><button id="lok" class="primary">Apuntar</button></div>`);
+  setTimeout(() => { const w = box.querySelector('#lw'); w.focus(); w.select(); }, 60);
+  box.querySelector('#lok').onclick = () => {
+    const who = dqCap(box.querySelector('#lw').value.trim()), amount = Fin.round2(parseFloat(String(box.querySelector('#la').value).replace(',', '.')));
+    if (!who) return toast('Escribe quién te lo devuelve.');
+    if (!(amount > 0)) return toast('Escribe cuánto te devuelve.');
+    const id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    set('debts', id, { id, dir: 'meDeben', who, concept: box.querySelector('#lc').value.trim() || 'Préstamo', amount, date: t.date, due: box.querySelector('#ld').value || '', payments: [], tx: t.id });
+    save(); box.remove(); render();
+    toast(`Apuntado: ${who} te devuelve ${eur(amount)}`, { actions: [{ n: 'Deshacer', fn: () => { set('debts', id, null); save(); render(); } }] });
+  };
 }
 
 // ---------- Cómo usar Rumbo ----------

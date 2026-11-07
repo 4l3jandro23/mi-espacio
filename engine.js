@@ -131,6 +131,7 @@
     'Efectivo': { type: 'var', icon: '💶' },
     'Otros': { type: 'var', icon: '•' },
     'Entre mis cuentas': { type: 'internal', icon: '🔄' },
+    'Dinero prestado': { type: 'internal', icon: '🙏' }, // lo que prestas y te devuelven: ni gasto ni ingreso
   };
 
   // Orden importa: la primera regla que encaja gana.
@@ -145,7 +146,7 @@
     ['Comida fuera', /uber\s*\*?eats|glovo|just ?eat|deliveroo|mc ?donald|goiko|honest green|popeyes|plk\d|\bbk\d|burger|pans & company|bocata|sushi|pizz|taqueria|kebab|kebap|restaura|t298|chalito|kiltro|da nanni|in the bowl|telepizza|domino|foster|vips|ginos|tagliatella|five guys|taco|wok|ramen|poke|bowl|rasoi|jai bhagwan|comeporketa|roti|hostaria|pasqualino|trattoria|osteria|mamma|timesburg|walking chef|frankfurt|sweet gaufre|grom|gelat|roadhouse|d'azurro|muteki|kahiki|aloha|carls jr|sandwich|mcd|self servic|take away|gastro|pollos|malatang|mordi e vai|fratelli|las fritas|gelaaati|delicia|vaive|demasie|coco consell/],
     ['Ocio y noche', /nevermind|4 latas|rocktail|sala plataforma|\bsala\b|club|ku barcelona|twenties|fourvenues|vermut|pool|hellotickets|cine|dance|ooga booga|cantina|wemet|pub|\bbar\b|cerveceria|cocktail|spritz|entradas|ticket|concierto|bolera|karaoke|teatre|teatro|kahala|la pecera|discoteca|duplex|raven|plataforma|rei de copas|las ca|meson|l ovella negra|akihabar|steam/],
     ['Cafés y panaderías', /santa ?gloria|vivari|\bforn\b|bakery|bakes|panaderia|panet|bread projects|\bcafe\b|coffee|good news|turris|macxipa|maskafe|daurada|calvet|365|granier|fornet|pastisseria|pasteleria|churreria|la botticella|manolo|forns|paul|cafeteria|cafereria|venchi/],
-    ['Súper y tiendas de barrio', /k-4|\bk 4\b|bon ?preu|bonpreu|coaliment|condis|entenc|supermerca|supermarket|super |mercadona|lidl|ametller|consum|carrefour|alcampo|aldi|\bdia\b|caprabo|spar|keisy|nuruzzama|xarcuteria|alimentacio|alimentacion|fruteria|plus fresc|ibu dar|shehran|fit vending|vending|distributore|charcuteria|6033 barcelona/],
+    ['Súper y tiendas de barrio', /k-4|\bk 4\b|bon ?preu|bonpreu|coaliment|condis|proxim|entenc|supermerca|supermarket|super |mercadona|lidl|ametller|consum|carrefour|alcampo|aldi|\bdia\b|caprabo|spar|keisy|nuruzzama|xarcuteria|alimentacio|alimentacion|fruteria|plus fresc|ibu dar|shehran|fit vending|vending|distributore|charcuteria|6033 barcelona/],
     ['Salud', /farmacia|psico|policlinic|clinica|dental|dentist|medic|hospital|optica|fisio/],
     ['Cuidado personal', /pelu|barber|rossmann|druni|primor|sephora|perfum/],
     ['Ropa', /uniqlo|pull ?(&|and) ?bear|lefties|primark|zara|bershka|h&m|\bhm\b|decathlon|mango|springfield|jack|portal del angel|nike|adidas|foot|zalando|shein|vinted/],
@@ -158,6 +159,8 @@
     const me = strip(opts.myName || '');
     const fam = (opts.family || []).map(strip).filter(Boolean);
     if (t.mcat && CATS[t.mcat]) return t.mcat; // apuntado a mano: la categoría la eliges tú
+    const one = opts.overrides && opts.overrides['tx:' + t.id]; // cambiada solo en este movimiento
+    if (one && CATS[one]) return one;
     const override = opts.overrides && opts.overrides[merchantKey(t)];
     if (override) return override;
     if (t.amt > 0) {
@@ -172,7 +175,11 @@
       }
       return 'Otros ingresos';
     }
-    if (/transferencia realizada|transfer/.test(d + ' ' + k) && me && (k.includes(me) || d.includes(me))) return 'Entre mis cuentas';
+    if (/transferencia realizada|transfer/.test(d + ' ' + k)) {
+      // El alquiler o el préstamo pueden llevar tu nombre en el concepto («pg renta… [tu nombre]»): no son un paso entre tus cuentas.
+      for (const [c, re] of RULES) if (['Alquiler y piso', 'Préstamo', 'Seguros'].includes(c) && (re.test(d) || re.test(k) || re.test(o))) return c;
+      if (me && (k.includes(me) || d.includes(me))) return 'Entre mis cuentas';
+    }
     if (/bizum/.test(d + ' ' + k)) {
       if (fam.some(f => (d + ' ' + k + ' ' + o).includes(f) || (d + ' ' + k).includes('to: ' + f.split(' ')[0]))) return 'Devolver a familia';
       if (fam.some(f => new RegExp('\b' + f.split(' ')[0] + '\b').test(k + ' ' + o))) return 'Devolver a familia';
@@ -209,6 +216,17 @@
     return t.desc.replace(/\s+(barcelona|es|madrid).*$/i, '').replace(/\s{2,}.*/, '').trim().replace(/^./, c => c.toUpperCase());
   }
   const merchantKey = t => strip(merchant(t));
+  const squash = s => strip(s).replace(/[^a-z0-9]/g, '');
+  function similarDesc(a, b) {
+    const x = squash(a), y = squash(b); if (!x || !y) return false;
+    if (x === y) return true;
+    const [s, l] = x.length <= y.length ? [x, y] : [y, x];
+    return (s.length >= 4 && l.startsWith(s)) || (s.length >= 6 && s.slice(0, 6) === l.slice(0, 6));
+  }
+  // El mismo movimiento ya guardado con otro texto: mismo banco, día e importe, y un nombre parecido.
+  // strict: solo cuando un nombre es el otro alargado (para limpiar lo ya guardado sin tocar dos compras reales parecidas).
+  const prefixDesc = (a, b) => { const x = squash(a), y = squash(b); if (x === y) return false; const [s, l] = x.length <= y.length ? [x, y] : [y, x]; return s.length >= 4 && l.startsWith(s); };
+  const sameMove = (a, b, strict) => a.bank === b.bank && a.date === b.date && Math.abs(a.amt - b.amt) < 0.005 && a.desc !== b.desc && (strict ? prefixDesc(a.desc, b.desc) : similarDesc(a.desc, b.desc));
 
   // Empareja transferencias BBVA → Revolut (salen de uno, entran en otro el mismo importe en ±3 días).
   function markInternal(txs, opts) {
@@ -342,6 +360,6 @@
     return { money: round2(money), pending: round2(pending), reserve, extra: round2(extra), free: round2(free), days, perDay: round2(free / days), perWeek: round2(free / days * 7), nextPay: an.current.end };
   }
 
-  const API = { parseBBVA, parseRevolut, parseCSV, analyze, dailyAllowance, categorize, merchant, merchantKey, CATS, HORMIGA_CATS, strip, round2, daysBetween };
+  const API = { parseBBVA, parseRevolut, parseCSV, analyze, dailyAllowance, categorize, merchant, merchantKey, CATS, HORMIGA_CATS, strip, round2, daysBetween, similarDesc, sameMove };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.Fin = API;
 })(this);

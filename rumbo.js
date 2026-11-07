@@ -9,7 +9,7 @@ $file.onchange = () => { importFiles([...$file.files]); $file.value = ''; };
 ['dragleave', 'drop'].forEach(e => document.addEventListener(e, ev => { ev.preventDefault(); document.body.classList.remove('dragging'); }));
 document.addEventListener('drop', ev => { if (ev.dataTransfer && ev.dataTransfer.files.length) importFiles([...ev.dataTransfer.files]); });
 async function importFiles(files) {
-  const msgs = [], imported = [];
+  const msgs = [], imported = []; let dup = 0;
   for (const f of files) {
     try {
       let res;
@@ -23,12 +23,21 @@ async function importFiles(files) {
       } else if (/\.pdf$/i.test(f.name)) { msgs.push(`${f.name}: los PDF no se pueden leer bien. Descarga el Excel (BBVA) o el CSV (Revolut).`); continue; }
       else { msgs.push(`${f.name}: formato no reconocido.`); continue; }
       let added = 0;
-      for (const t of res.txs) { if (!S.txs[t.id]) { added++; imported.push(t); } S.txs[t.id] = t; }
+      // Lo que este archivo trae tal cual no puede ser el «gemelo renombrado» de otro movimiento del mismo archivo.
+      const ids = new Set(res.txs.map(t => t.id)), prev = Object.values(S.txs).filter(p => !ids.has(p.id));
+      for (const t of res.txs) {
+        if (S.txs[t.id]) { S.txs[t.id] = t; continue; }
+        if ((S.txGone || {})[t.id]) continue; // lo borraste a propósito
+        if (prev.some(p => Fin.sameMove(p, t))) { dup++; continue; } // ya estaba con otro nombre
+        added++; imported.push(t); S.txs[t.id] = t;
+      }
       const bank = res.txs[0] ? res.txs[0].bank : '?';
-      if (res.balance != null && (!S.balances[bank] || res.balanceDate >= (S.balances[bank].date || ''))) set('balances', bank, { amount: res.balance, date: res.balanceDate });
-      msgs.push(`${bank}: ${res.txs.length} movimientos leídos, ${added} nuevos.`);
+      const bd = res.balanceDate && res.balanceDate > todayISO() ? todayISO() : res.balanceDate; // el BBVA a veces fecha el saldo con la fecha valor, en el futuro
+      if (res.balance != null && (!S.balances[bank] || bd >= (S.balances[bank].date || ''))) set('balances', bank, { amount: res.balance, date: bd });
+      msgs.push(added ? `${bank}: ${added} ${added === 1 ? 'movimiento nuevo' : 'movimientos nuevos'} de ${res.txs.length}${res.txs.length - added ? ' (el resto ya estaba)' : ''}.` : `${bank}: nada nuevo, ya tenías todo lo de este archivo.`);
     } catch (e) { msgs.push(`${f.name}: ${e.message}`); }
   }
+  if (dup && imported.length) msgs.push(`${dup} ya ${dup === 1 ? 'estaba' : 'estaban'} con otro nombre del comercio: no se duplican.`);
   const gone = dropMatchedManual(imported);
   if (gone) msgs.push(`${gone} ${gone === 1 ? 'apunte a mano ya estaba' : 'apuntes a mano ya estaban'} en el extracto: quitado${gone === 1 ? '' : 's'} para no contarlo dos veces.`);
   save(); render();
@@ -563,7 +572,8 @@ function debtMatch(d) { // un movimiento del banco que parece el pago de esta de
   if (who.length < 3) return null;
   const left = debtLeft(d), used = new Set((d.payments || []).map(p => p.tx));
   const sign = d.dir === 'meDeben' ? 1 : -1;
-  return Object.values(S.txs).find(t => !used.has(t.id) && t.date >= d.date && Math.sign(t.amt) === sign && Math.abs(Math.abs(t.amt) - left) < 0.01 && Fin.strip(t.desc + ' ' + t.kind + ' ' + (t.obs || '')).includes(who)) || null;
+  const near = t => d.due && Math.abs(Fin.daysBetween(new Date(d.due), new Date(t.date))) <= 10;
+  return Object.values(S.txs).find(t => !used.has(t.id) && t.id !== d.tx && t.date >= d.date && Math.sign(t.amt) === sign && Math.abs(Math.abs(t.amt) - left) < 0.01 && (Fin.strip(t.desc + ' ' + t.kind + ' ' + (t.obs || '')).includes(who) || near(t))) || null;
 }
 const debtPeople = () => debtGroups(debtList(), debtLeft).sort((a, b) => (b.open.length > 0) - (a.open.length > 0) || (b.last > a.last ? 1 : -1)).map(p => p.who);
 const dqAv = (who, h, cls) => `<span class="dp-av ${cls || ''}" style="--h:${h}">${esc(who.slice(0, 1).toUpperCase())}</span>`;
@@ -752,7 +762,7 @@ document.addEventListener('focusout', () => setTimeout(() => { if (softPending &
 
 function paintChrome() {
   const $ = id => document.getElementById(id), w = tab === 'bienvenida', locked = !financeUnlocked && !isFresh();
-  $('rtitle').textContent = R_TITLES[tab] || 'Rumbo';
+  $('rtitle').textContent = R_TITLES[tab] || 'Rumbo'; document.title = tab === 'hoy' || !R_TITLES[tab] ? 'Rumbo' : R_TITLES[tab] + ' · Rumbo';
   $('rback').classList.toggle('hidden', !R_PARENT[tab]); $('rback').textContent = '‹ ' + (R_TITLES[R_PARENT[tab]] || 'Más');
   $('rhead').classList.toggle('hidden', w || locked);
   $('rnav').classList.toggle('hidden', w || locked);
@@ -767,6 +777,7 @@ function render() {
     if (tab === 'bienvenida') tab = 'hoy';
     if (!financeUnlocked) { app.innerHTML = ''; paintChrome(); if (!lockMode) { pendingTab = tab; lock(S.settings.pinHash ? 'enter' : 'create'); } return; }
   }
+  if (!render._clean) { render._clean = true; cleanDupes(); }
   const txs = Object.values(S.txs), has = txs.length > 0;
   AN = has ? Fin.analyze(txs, opts()) : null;
   if (AN) {
