@@ -166,7 +166,7 @@ function adviceHTML(t) {
   const V = ventana(90).filter(x => isVar(x) && x.amt < 0), rank = {}; V.forEach(x => rank[x.shop] = (rank[x.shop] || 0) - x.amt);
   const pos = Object.entries(rank).sort((a, b) => b[1] - a[1]).findIndex(([s]) => s === t.shop);
   const stats = t.amt < 0 && aqui.length >= 2 ? `<div class="adv-st"><div><b>${aqui.length}</b><small>veces en 3 meses</small></div><div><b>${eur(gasto(aqui) / aqui.length)}</b><small>de media</small></div><div><b>${eur0(gasto(aqui) / k * 12)}</b><small>al año a este ritmo</small></div></div>${pos >= 0 && pos < 5 ? `<p class="small muted adv-pos">Es tu sitio número ${pos + 1} en el día a día.</p>` : ''}` : '';
-  return `<div class="adv">${stats}<p class="adv-h">${ico('lightbulb')} Consejos para esto</p>${vis.map(c => `<div class="adv-c"><b>${c.t}</b><p>${c.d}</p></div>`).join('')}${tips.length > 3 ? `<button class="lnkb" data-advmore="${esc(t.cat)}">Más ideas sobre ${esc(t.cat.toLowerCase())} ${ico('chevron-right')}</button>` : ''}</div>`;
+  return `<div class="adv">${gymHTML(t)}${stats}<p class="adv-h">${ico('lightbulb')} Consejos para esto</p>${vis.map(c => `<div class="adv-c"><b>${c.t}</b><p>${c.d}</p></div>`).join('')}${tips.length > 3 ? `<button class="lnkb" data-advmore="${esc(t.cat)}">Más ideas sobre ${esc(t.cat.toLowerCase())} ${ico('chevron-right')}</button>` : ''}</div>`;
 }
 
 // ---------- la pantalla del asesor ----------
@@ -190,11 +190,14 @@ function vAsesor() {
     ${pend ? decisionCard(pend) : ''}
     ${reto ? `<div class="card as-reto"><small>El reto de esta semana</small><h2>${reto.t}</h2><div class="as-prog">${Array.from({ length: Math.max(reto.max, reto.n()) }, (_, i) => `<i class="${i < reto.n() ? (i < reto.max ? 'on' : 'over') : ''}"></i>`).join('')}</div>
       <p class="small muted">${reto.n()} de ${reto.max} hasta ahora · si se convierte en costumbre, unos <b>${eur0(reto.ahorro)}</b> al año.</p><button class="lnkb" data-rgadd="${reto.k}">Convertirlo en una de mis reglas ${ico('chevron-right')}</button></div>` : ''}
+    ${vieneCard()}
     ${deseosCard()}
     ${pal.length ? `<div class="card"><h2>Dónde ahorrarías más</h2><p class="small muted" style="margin:-4px 0 6px">De más a menos, con tus números de los últimos 3 meses. Con elegir una basta.</p>
       ${pal.slice(0, 5).map((p, i) => `<div class="as-pal"><span class="as-n">${i + 1}</span><div><b>${p.t}</b><p>${p.d}</p></div><span class="num as-v">${eur0(p.v)}<small>al año</small></span></div>`).join('')}</div>` : ''}
     <div class="card"><div class="h-row"><h2>Mis reglas</h2><button class="lnkb" data-rgnew>${ico('plus')} Añadir</button></div>
       ${rg.length ? rg.map(r => `<div class="rg"><div><b>${esc(r.txt || (REGLAS[r.k] || {}).t || '')}</b>${reglaEstado(r)}</div><button class="ibtn-s" data-rgdel="${r.id}" aria-label="Quitar regla">${ico('x')}</button></div>`).join('') : '<p class="small muted" style="margin:0">Unas pocas reglas tuyas funcionan mejor que cualquier presupuesto. Añade una y te digo cada semana cómo vas.</p>'}</div>
+    ${sobreCard()}
+    ${contextoCard()}
     <div class="card as-claude"><h2>Pregúntale a Claude</h2><p class="small muted">Te preparo un resumen de tus números (sin nombres ni datos del banco) para que se lo pegues a Claude y lo hables con calma.</p><button class="primary" data-asclaude>${ico('message-circle')} Copiar resumen y abrir Claude</button></div>
     <p class="small muted as-foot">Rumbo te ayuda con el gasto del día a día y el ahorro. No es asesoramiento financiero profesional ni de inversión.</p>`;
 }
@@ -225,6 +228,8 @@ function resumenClaude() {
     '', 'Lo que la app ha visto de mí:', ...hab.map(h => `- ${strip(h.t)}: ${strip(h.d)}`),
     '', 'Dónde podría ahorrar más:', ...pal.map(p => `- ${strip(p.t)}: unos ${eur0(p.v)} al año`),
     reglas().length ? '\nMis reglas: ' + reglas().map(r => r.txt || (REGLAS[r.k] || {}).t).join('; ') + '.' : '',
+    loQueViene(60).length ? '\nLo que viene: ' + loQueViene(60).slice(0, 6).map(x => `${strip(x.t)} (${fdate(x.d)})`).join('; ') + '.' : '',
+    S.settings.contexto ? '\nLo que debes saber: ' + S.settings.contexto : '',
     '', 'Con esto, dime en corto: 1) qué es lo más importante que debería cambiar este mes, 2) un plan sencillo para las próximas 4 semanas, 3) qué estoy haciendo bien. En español de España, frases cortas.'].filter(l => l !== null).join('\n');
 }
 

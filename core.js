@@ -76,6 +76,12 @@ const todayISO = () => { const d = new Date(); return new Date(d.getTime() - d.g
 const fixedKey = r => r.shop + '|' + Math.round(r.amount);
 const fixedEnd = r => S.fixedEnds[fixedKey(r)] || '';
 const debtList = () => Object.values(S.debts).filter(Boolean);
+// Apuntes a mano posteriores al último saldo: aún no están en ese saldo. Rumbo y la tarjeta de Mi Espacio cuentan igual.
+const MANUAL = 'A mano';
+const isManual = t => t && t.bank === MANUAL;
+const manualTxs = () => Object.values(S.txs).filter(isManual);
+function balanceTs() { return Math.max(0, ...Object.values(S.balances).filter(Boolean).map(b => b.ts || Date.parse(b.date + 'T23:59:00'))); }
+function manualSinceBalance() { const ts = balanceTs(); return Fin.round2(manualTxs().filter(t => (t.ts || 0) > ts).reduce((a, t) => a + t.amt, 0)); }
 function lentTxs() { const o = {}; for (const d of Object.values(S.debts || {})) if (d) { if (d.tx) o['tx:' + d.tx] = 'Dinero prestado'; for (const p of d.payments || []) if (p.tx) o['tx:' + p.tx] = 'Dinero prestado'; } return o; }
 const debtLeft = d => Fin.round2(d.amount - (d.payments || []).reduce((a, p) => a + p.amount, 0));
 const FIN_TABS = ['hoy', 'prev', 'mes', 'hormiga', 'fijos', 'movs', 'deudas', 'guia', 'ajustes'];
@@ -189,7 +195,7 @@ addEventListener('storage', e => {
 
 // ---------- pasar tus cuentas a Rumbo (en el iPhone cada app de la pantalla de inicio tiene su propio almacén) ----------
 const MONEY_MAPS = ['txs', 'balances', 'overrides', 'fixedEnds', 'debts', 'txGone'];
-const MONEY_SET = ['myName', 'family', 'savings', 'hormigaMax', 'reserve', 'payDay', 'goalCut', 'pinHash', 'huchas'];
+const MONEY_SET = ['myName', 'family', 'savings', 'hormigaMax', 'reserve', 'payDay', 'goalCut', 'pinHash', 'huchas', 'deseos', 'decis', 'reglas', 'contexto', 'sobre', 'bigSeen', 'fijoOk', 'tourOk'];
 const hasMoney = () => Object.keys(S.txs || {}).length > 0 || Object.values(S.debts || {}).some(Boolean) || Object.keys(S.balances || {}).length > 0;
 const gzPipe = async (u8, stream) => new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(stream)).arrayBuffer());
 async function moneyPack() {

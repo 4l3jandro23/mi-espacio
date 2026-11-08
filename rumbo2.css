@@ -302,3 +302,14 @@ body.rumbo .sheet-acts button { min-height: 44px; }
 .ds-acts button { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px; border-radius: 8px; font-weight: 600; }
 .ds-acts .ico { width: 18px; height: 18px; }
 .ds-pl { padding-top: 0; } .ds-tae { margin-top: 10px; } .ds-tae input { max-width: 120px; }
+
+/* Lo que viene y el sobre */
+.cx-it { display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+.cx-it:first-of-type { border-top: 0; }
+.cx-it > .ico { width: 20px; height: 20px; color: var(--accent); flex: none; margin-top: 2px; }
+.cx-it b { display: block; font-weight: 650; }
+.cx-it b small { display: block; font-weight: 400; color: var(--muted); font-size: 12.5px; }
+.cx-it p { margin: 3px 0 0; font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+.cx-sobre { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0 0; padding-top: 10px; border-top: 1px solid var(--line); font-size: 14px; line-height: 1.45; }
+.cx-sobre .ico { width: 18px; height: 18px; color: var(--accent); flex: none; margin-top: 1px; }
+body.rumbo #cxnota { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 10px 12px; resize: vertical; }

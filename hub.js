@@ -45,7 +45,7 @@ function moneyCtx() {
   for (const t of AN.list) if ((Fin.CATS[t.cat] || {}).type === 'var' && t.amt < 0) { const s = spent[t.date] || (spent[t.date] = { v: 0, n: 0 }); s.v -= t.amt; s.n++; }
   const o = opts();
   const owe = debtList().filter(d => d.dir === 'debo' && debtLeft(d) > 0 && (!d.due || d.due <= AN.current.end));
-  const A = Fin.dailyAllowance(AN, S.balances, Object.assign({}, o, { extra: owe.reduce((a, d) => a + debtLeft(d), 0) }));
+  const A = Fin.dailyAllowance(AN, S.balances, Object.assign({}, o, { extra: owe.reduce((a, d) => a + debtLeft(d), 0) - manualSinceBalance() }));
   moneyCtx._an = AN;
   return (moneyCtx._c = { pays, spent, A, first: AN.list[0].date });
 }

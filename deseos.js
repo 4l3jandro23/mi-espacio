@@ -52,6 +52,7 @@ function evaluar(w) {
   porque.push(m.normal > 0 ? `Con tu gasto de los últimos meses te sobran unos <b>${eur0(m.normal)} al mes</b>.` : `Con tu gasto de los últimos meses <b>no te sobra nada al mes</b> (faltan unos ${eur0(-m.normal)}).`);
   if (m.mejor > m.normal + 20) porque.push(`Si repites tu mejor mes (${m.mejorMes}), te sobrarían unos ${eur0(m.mejor)} al mes.`);
   if (ex) porque.push(`En ${mesAnio(ex.cobro)} cobraste una paga extra de unos ${eur0(ex.extra)}. Si vuelve a llegar, será en ${mesAnio(ex.d)}.`);
+  const est = estiloLinea(w); if (est) porque.push(est);
   let v;
   const pl = +w.plazos || 0, cuota = cuotaDe(falta, pl, w.tae), totalPl = Fin.round2(cuota * pl);
   if (pl) {

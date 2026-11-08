@@ -7,18 +7,6 @@
 // Se carga antes que rumbo.js: aquí solo hay funciones.
 'use strict';
 
-const MANUAL = 'A mano';
-const isManual = t => t && t.bank === MANUAL;
-const manualTxs = () => Object.values(S.txs).filter(isManual);
-// Momento del último saldo conocido (de un extracto, al final de ese día; o el que escribiste tú, al minuto).
-function balanceTs() {
-  return Math.max(0, ...Object.values(S.balances).filter(Boolean).map(b => b.ts || Date.parse(b.date + 'T23:59:00')));
-}
-// Lo apuntado a mano después del último saldo: aún no está en el saldo, así que se resta aparte.
-function manualSinceBalance() {
-  const ts = balanceTs();
-  return Fin.round2(manualTxs().filter(t => (t.ts || 0) > ts).reduce((a, t) => a + t.amt, 0));
-}
 // El cálculo de Hoy, con las deudas que vencen antes de cobrar y los apuntes a mano.
 function allowance() {
   const owe = debtList().filter(d => d.dir === 'debo' && debtLeft(d) > 0 && (!d.due || d.due <= AN.current.end));
@@ -146,7 +134,9 @@ function bigTransferPending() {
 }
 function mainMessage(A, rate, endAt) {
   const age = balanceAge(), big = bigTransferPending();
+  const fj = fijoSinCobrar();
   if (big) return { tone: 'blue', ic: 'handshake', t: `¿Te van a devolver los ${eur0(-big.amt)} del ${fdate(big.date)}?`, d: `${esc(big.shop)}. Si es un préstamo, márcalo y deja de contar como gasto: tus números de la semana y del mes saldrán bien.`, btn: [`data-bigtx="${esc(big.id)}"`, 'Sí, me lo devuelven'], btn2: [`data-bigno="${esc(big.id)}"`, 'No, era un gasto'] };
+  if (fj) return { tone: 'blue', ic: 'repeat', t: `${esc(fj.r.shop)} no se ha cobrado este mes`, d: `Solía salir sobre el día ${fj.r.day} (${eur(fj.r.amount)}). Sigo restándolo de tu número por si llega. Si ya no lo pagas, tu día sube unos <b>${eur(fj.r.amount / A.days)}</b>.`, btn: ['data-fijono', 'Ya no lo pago'], btn2: ['data-fijosi', 'Sí, llegará'] };
   if (age != null && age >= 3) return { tone: 'blue', ic: 'refresh-cw', t: `Tu saldo es ${ageTxt(age)}`, d: 'Lo que has gastado desde entonces aún no cuenta. Actualízalo y el número de arriba será el de verdad.', btn: ['data-ra-saldo', 'Actualizar saldo'] };
   if (A.free > 0 && endAt < 0) return { tone: 'warm', ic: 'trending-down', t: `A tu ritmo no llegas al cobro`, d: `Estas semanas vas a unos ${eur0(rate)} al día. Así te faltarían unos <b>${eur0(-endAt)}</b>. Si te quedas en ${eur0(Math.max(0, A.perDay))} al día, llegas justo sin quedarte en negativo.`, btn: ['data-go="prev"', 'Ver la previsión'] };
   const r = typeof priceRises === 'function' ? priceRises() : [];
@@ -190,10 +180,12 @@ function vHoy2() {
     <div class="h-msg ${m.tone}">${ico(m.ic)}<div><b>${m.t}</b><p>${m.d}</p>${m.btn ? `<button class="lnkb" ${m.btn[0]}>${m.btn[1]} ${ico('chevron-right')}</button>` : ''}${m.btn2 ? ` <button class="lnkb muted-b" ${m.btn2[0]}>${m.btn2[1]}</button>` : ''}</div></div>
 
     ${(() => { const r = retoSemana(); if (!r) return ''; const n = r.n(); return `<button class="h-reto" data-go="asesor">${ico('target')}<span><small>Reto de la semana</small><b>${r.t}</b></span><em class="${n > r.max ? 'over' : ''}">${n}/${r.max}</em></button>`; })()}
+    ${vieneHoy()}
     <div class="card h-week"><div class="h-row"><h2>Esta semana</h2><span class="small muted">quedan ${weekLeftDays} ${weekLeftDays === 1 ? 'día' : 'días'}</span></div>
       <div class="h-big"><b>${eur0(spent)}</b><span>gastados · tu semana normal, ${eur0(usual)}</span></div>
       <div class="bar"><i class="${spent > usual * 1.1 ? 'warm' : ''}" style="width:${Math.min(100, cap ? spent / cap * 100 : 0)}%"></i></div>
       <p class="small muted" style="margin:8px 0 0">Hasta el domingo puedes gastar <b>${eur0(leftWeek)}</b> más.${lastDataDate() < t0 ? ` Movimientos hasta el ${fdate(lastDataDate())}.` : ''}</p>
+      ${sobreHTML(leftWeek)}
       ${dow0 === 0 || dow0 === 6 || dow0 === 1 ? `<button class="lnkb" data-go="semana">Tu resumen de la semana ${ico('chevron-right')}</button>` : ''}</div>
 
     ${up.length ? `<div class="card"><h2>Próximos 7 días</h2>${up.map(u => `<div class="h-up"><span class="h-up-d"><b>${new Date(u.date + 'T12:00:00').getDate()}</b><small>${new Date(u.date + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short' })}</small></span><span class="h-up-t">${esc(u.what)}</span><span class="num ${u.amount > 0 ? 'pos' : ''}">${u.amount == null ? '' : eur(u.amount)}</span></div>`).join('')}</div>` : ''}
@@ -339,5 +331,5 @@ function bindPlus() {
   on('[data-bigtx]', el => { const t = AN.list.find(x => x.id === el.dataset.bigtx); if (t) openLend(t); });
   on('[data-bigno]', el => { set('settings', 'bigSeen', Object.assign({}, S.settings.bigSeen, { [el.dataset.bigno]: 1 })); save(); render(); });
   on('[data-tourok]', () => { set('settings', 'tourOk', true); save(); render(); });
-  bindAsesor(); bindDeseos();
+  bindAsesor(); bindDeseos(); bindContexto();
 }
