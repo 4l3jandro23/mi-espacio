@@ -505,7 +505,7 @@ function vFijos() {
   const fees = AN.list.filter(t => t.cat === 'Comisiones del banco');
   const servicios = AN.list.filter(t => /servicios del piso/i.test(t.shop));
   const lastServ = servicios[servicios.length - 1];
-  let h = risesHTML() + `<div class="card"><h2>Fijos de cada mes: ${eur0(totalRec)}</h2>
+  let h = risesHTML() + watchHTML() + `<div class="card"><h2>Fijos de cada mes: ${eur0(totalRec)}</h2>
     ${why('Son los pagos que salen solos cada mes. Los detecto porque se repiten en al menos 2 de los últimos 3 meses. Se restan del número de “Hoy” hasta que se cobran, para que ese dinero no te parezca libre.')}
     ${rec.map(r => { const e = fixedEnd(r), done = e && e < todayISO(); return `<div class="row" style="${done ? 'opacity:.55' : ''}"><span class="l">${Fin.CATS[r.cat].icon} ${esc(r.shop)} <span class="small muted">· día ${r.day}</span>${e ? ` <span class="pill ${done ? 'blue' : ''}">${done ? 'terminado' : 'hasta ' + fdate(e) + '/' + e.slice(0, 4)}</span>` : ''}<br><label class="small muted">Termina el <input type="date" data-end="${esc(fixedKey(r))}" value="${esc(e)}" style="padding:2px 6px;font-size:12px"></label></span><span class="num">${eur(r.amount)}</span></div>`; }).join('')}
     ${later < totalRec ? `<div class="note" style="margin-top:10px">Cuando acaben los que tienen fecha, tus fijos bajarán a <b>${eur0(later)}</b> al mes.</div>` : ''}

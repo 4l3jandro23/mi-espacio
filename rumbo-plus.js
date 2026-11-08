@@ -141,6 +141,8 @@ function mainMessage(A, rate, endAt) {
   if (A.free > 0 && endAt < 0) return { tone: 'warm', ic: 'trending-down', t: `A tu ritmo no llegas al cobro`, d: `Estas semanas vas a unos ${eur0(rate)} al día. Así te faltarían unos <b>${eur0(-endAt)}</b>. Si te quedas en ${eur0(Math.max(0, A.perDay))} al día, llegas justo sin quedarte en negativo.`, btn: ['data-go="prev"', 'Ver la previsión'] };
   const r = typeof priceRises === 'function' ? priceRises() : [];
   if (r.length) return { tone: 'warm', ic: 'trending-up', t: `${esc(r[0].shop)} te ha subido el precio`, d: `De ${eur(r[0].from)} a ${eur(r[0].to)} al mes (${eur0(r[0].yearly)} más al año). Si ya no te compensa, es buen momento para mirarlo.`, btn: ['data-go="fijos"', 'Ver tus fijos'] };
+  const w = typeof watchAlerts === 'function' ? watchAlerts() : [];
+  if (w.length) return { tone: 'warm', ic: 'triangle-alert', t: w[0].t, d: `Importe: ${eur(w[0].amt)}. ${w[0].d}`, btn: ['data-go="fijos"', 'Revisarlo'] };
   if (A.free > 0) return { tone: '', ic: 'circle-check', t: 'Vas bien', d: `A tu ritmo de estas semanas (${eur0(rate)} al día) llegarías al cobro con unos <b>${eur0(endAt)}</b> de margen.`, btn: ['data-go="prev"', 'Ver la previsión'] };
   return { tone: 'warm', ic: 'life-buoy', t: 'Este mes va justo', d: 'El dinero que tienes ya está comprometido en los fijos. Prioriza lo básico, y mira en Fijos si hay algo que puedas pausar.', btn: ['data-go="fijos"', 'Ver tus fijos'] };
 }

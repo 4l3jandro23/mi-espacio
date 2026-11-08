@@ -25,7 +25,7 @@ vm.runInContext(`
   function set(M, k, v) { S[M] = S[M] || {}; if (v == null) delete S[M][k]; else S[M][k] = v; }
   function save() {} function render() {} function goTab(t) { tab = t; }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
-  function eur(n) { return n + ' €'; } function eur0(n) { return n + ' €'; } function debtList() { return []; } function debtLeft() { return 0; }
+  function eur(n) { return n + ' €'; } function eur0(n) { return n + ' €'; } function fdate(d) { return d.slice(8) + '/' + d.slice(5, 7); } function isManual(t) { return t && t.bank === 'Manual'; } function debtList() { return []; } function debtLeft() { return 0; }
 `, ctx);
 const FILES = ['iconos-data.js', 'iconos.js', 'engine.js', 'ui.js', 'deudas.js', 'cuaderno.js', 'hub.js', 'trabajo.js', 'festivos.js', 'tiempo.js', 'rapido.js', 'calendario.js', 'apps.js', 'ics.js', 'avisos.js', 'efemerides.js', 'planes.js', 'barcelona.js', 'extras.js', 'tareas.js', 'copias.js', 'mas.js', 'futbol.js', 'noticias.js', 'mejoras.js', 'viajes.js', 'mas2.js', 'nuevo.js', 'asistente.js', 'rutinas.js', 'apple.js', 'rumbo-extra.js'];
 for (const f of FILES) {
@@ -155,6 +155,43 @@ T('rumbo: detecta que te suben una suscripción (y no se lía con varios cargos 
       tx('2026-07-10', 0.99, 'Apple'), tx('2026-07-20', 2.99, 'Apple'), tx('2026-08-10', 0.99, 'Apple'), tx('2026-08-20', 2.99, 'Apple'), tx('2026-09-10', 0.99, 'Apple'), tx('2026-09-20', 2.99, 'Apple')] };`);
   const r = run(`priceRises()`); run(`AN = null`);
   return r.length === 1 && r[0].shop === 'Spotify' && r[0].from === 17.99 && r[0].to === 20.99 || r;
+});
+T('rumbo: el vigilante avisa de un cobro doble, pero no de dos copas iguales', () => {
+  run(`var lastDataDate = () => '2026-09-20';
+    const w = (d, a, s, c) => ({ date: d, amt: -a, cat: c, shop: s, bank: 'BBVA', desc: s, kind: '' });
+    S.settings.watchOk = {};
+    AN = { list: [w('2026-05-01', 30, 'Tienda vieja', 'Ropa'), w('2026-09-10', 40, 'Zapatos Paco', 'Ropa'), w('2026-09-10', 40, 'Zapatos Paco', 'Ropa'), w('2026-09-12', 6, 'Sala', 'Ocio y noche'), w('2026-09-12', 6, 'Sala', 'Ocio y noche')] };`);
+  const r = run(`watchAlerts().map(x => x.k)`); run(`AN = null`);
+  return r.length === 1 && /^doble\|Zapatos Paco/.test(r[0]) || r;
+});
+const watchKeys = rows => { run(`S.settings.watchOk = {}; var lastDataDate = () => '2026-09-20'; AN = { list: ${JSON.stringify(rows)} };`); const r = run(`watchAlerts().map(x => x.k)`); run(`AN = null`); return r; };
+const wx = (date, a, shop, cat, more) => Object.assign({ date, amt: -a, shop, cat, bank: 'BBVA', desc: shop, kind: '' }, more);
+const OLD = wx('2026-05-01', 30, 'Vieja', 'Ropa');
+T('rumbo: una subida ya asentada no sale como suscripción nueva', () => { const r = watchKeys([OLD, wx('2026-07-15', 17.99, 'Spotify', 'Suscripciones'), wx('2026-08-15', 20.99, 'Spotify', 'Suscripciones'), wx('2026-09-15', 20.99, 'Spotify', 'Suscripciones')]); return r.length === 0 || r; });
+T('rumbo: un importe nuevo junto a los de siempre avisa como importe nuevo', () => { const r = watchKeys([OLD, wx('2026-08-05', 0.99, 'Apple', 'Suscripciones'), wx('2026-09-05', 0.99, 'Apple', 'Suscripciones'), wx('2026-09-10', 4.99, 'Apple', 'Suscripciones')]); return r.length === 1 && /^importe\|Apple/.test(r[0]) || r; });
+T('rumbo: el cobro mensual se detecta aunque antes hubiera un hueco', () => { const r = watchKeys([wx('2026-02-15', 9.5, 'App', 'Otros'), wx('2026-07-15', 9.5, 'App', 'Otros'), wx('2026-08-15', 9.5, 'App', 'Otros'), wx('2026-09-15', 9.5, 'App', 'Otros')]); return r.length === 1 && /^mensual\|App/.test(r[0]) || r; });
+T('rumbo: apuntes a mano y transferencias no generan avisos', () => { const r = watchKeys([OLD, wx('2026-09-10', 40, 'Mío', 'Otros', { bank: 'Manual' }), wx('2026-09-10', 40, 'Mío', 'Otros', { bank: 'Manual' }), wx('2026-09-11', 50, 'Pepe', 'Otros', { kind: 'Transferencia realizada' }), wx('2026-09-11', 50, 'Pepe', 'Otros', { kind: 'Transferencia realizada' })]); return r.length === 0 || r; });
+T('rumbo: un banco recién cargado no llena esto de avisos', () => { const r = watchKeys([OLD, wx('2026-09-10', 40, 'Nuevo', 'Otros', { bank: 'Revolut' })]); return r.length === 0 || r; });
+T('rumbo: una devolución anula un solo cobro, y una compra devuelta no avisa', () => { const r = watchKeys([OLD, wx('2026-09-01', 40, 'Doble', 'Ropa'), wx('2026-09-01', 40, 'Doble', 'Ropa'), wx('2026-09-03', -40, 'Doble', 'Ropa'), wx('2026-09-04', 15, 'Tri', 'Ropa'), wx('2026-09-04', 15, 'Tri', 'Ropa'), wx('2026-09-04', 15, 'Tri', 'Ropa'), wx('2026-09-06', -15, 'Tri', 'Ropa'), wx('2026-09-10', 25, 'Devuelta', 'Otros'), wx('2026-09-12', -25, 'Devuelta', 'Otros')]); return r.length === 1 && /^doble\|Tri/.test(r[0]) || r; });
+T('rumbo: un cobro doble en un sitio nuevo avisa una sola vez', () => {
+  run(`const w4 = (d, a, s, c) => ({ date: d, amt: -a, cat: c, shop: s, bank: 'BBVA', desc: s, kind: '' });
+    S.settings.watchOk = {};
+    AN = { list: [w4('2026-05-01', 30, 'Vieja', 'Ropa'), w4('2026-09-10', 40, 'Desconocido', 'Otros'), w4('2026-09-10', 40, 'Desconocido', 'Otros')] };`);
+  const r = run(`watchAlerts().map(x => x.k)`); run(`AN = null`);
+  return r.length === 1 && /^doble\|/.test(r[0]) || r;
+});
+T('rumbo: el vigilante no repite lo que ya marcaste como correcto, ni un doble ya devuelto', () => {
+  run(`const w2 = (d, a, s) => ({ date: d, amt: -a, cat: 'Ropa', shop: s, bank: 'BBVA', desc: s, kind: '' });
+    AN = { list: [w2('2026-05-01', 30, 'Vieja'), w2('2026-09-10', 40, 'A'), w2('2026-09-10', 40, 'A'), w2('2026-09-11', 25, 'B'), w2('2026-09-11', 25, 'B'), Object.assign(w2('2026-09-14', -25, 'B'), { amt: 25 })] };
+    S.settings.watchOk = { 'doble|A|-40.00|2026-09-10': 1 };`);
+  const r = run(`watchAlerts().length`); run(`AN = null; S.settings.watchOk = {}`);
+  return r === 0 || r;
+});
+T('rumbo: el vigilante detecta un cobro mensual de un sitio desconocido', () => {
+  run(`const w3 = (d, a, s) => ({ date: d, amt: -a, cat: 'Otros', shop: s, bank: 'BBVA', desc: s, kind: '' });
+    AN = { list: [w3('2026-06-15', 9.5, 'App rara'), w3('2026-07-15', 9.5, 'App rara'), w3('2026-08-15', 9.5, 'App rara'), w3('2026-09-15', 9.5, 'App rara')] };`);
+  const r = run(`watchAlerts().map(x => x.k)`); run(`AN = null`);
+  return r.length === 1 && /^mensual\|App rara/.test(r[0]) || r;
 });
 console.log(`${bad ? '✗' : '✓'} ${ok} bien${bad ? `, ${bad} mal` : ''}`);
 process.exit(bad ? 1 : 0);

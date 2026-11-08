@@ -121,8 +121,67 @@ function risesHTML() {
   return `<div class="note warm"><b class="t">📈 ${r.length === 1 ? 'Te han subido un precio' : 'Te han subido precios'}</b>${r.map(x => `<b>${esc(x.shop)}</b>: de ${eur(x.from)} a ${eur(x.to)} al mes (${eur0(x.yearly)} más al año).`).join('<br>')} Si ya no te compensa, es buen momento para mirarlo.</div>`;
 }
 
+// ===================== vigilante de cargos =====================
+// Mira lo que la lista de suscripciones no ve: cobros dobles, comercios nuevos que no encajan y cobros mensuales de sitios que no conozco.
+// Copas, cafés, súper y transporte quedan fuera: ahí repetir el mismo importe es lo normal y solo daría falsas alarmas.
+const WATCH_NOT = ['Efectivo', 'Bizums enviados', 'Devolver a familia', 'Préstamo', 'Alquiler y piso', 'Comisiones del banco', 'Transporte'];
+function watchAlerts() {
+  if (!AN || !AN.list.length) return [];
+  const last = lastDataDate(), seen = S.settings.watchOk || {}, out = [];
+  const gap = (a, b) => Fin.daysBetween(new Date(a), new Date(b)), ago = d => gap(d, last);
+  const add = (k, t, d, amt) => { if (!seen[k] && !out.some(o => o.k === k)) out.push({ k, t, d, amt }); };
+  const charges = AN.list.filter(t => t.amt < 0 && !isManual(t) && !/transfer/i.test(t.desc + ' ' + t.kind) && (Fin.CATS[t.cat] || {}).type !== 'internal' && !WATCH_NOT.includes(t.cat) && !Fin.HORMIGA_CATS.includes(t.cat));
+  // Cada devolución anula un solo cobro: el más reciente de ese sitio e importe anterior a ella.
+  const gone = new Set();
+  for (const r of AN.list) if (r.amt > 0) { const c = charges.filter(t => !gone.has(t) && t.shop === r.shop && Math.abs(r.amt + t.amt) < 0.005 && t.date <= r.date).pop(); if (c) gone.add(c); }
+  const spend = charges.filter(t => !gone.has(t));
+  const groups = {};
+  for (const t of spend) (groups[t.shop + '|' + t.amt.toFixed(2)] = groups[t.shop + '|' + t.amt.toFixed(2)] || []).push(t);
+  // Cobros dobles: mismo sitio, mismo importe y mismo banco, el mismo día o al siguiente.
+  for (const [key, x] of Object.entries(groups)) {
+    if (x[0].amt > -5) continue;
+    for (let i = 1; i < x.length; i++) {
+      const a = x[i - 1], b = x[i];
+      if (a.bank !== b.bank || gap(a.date, b.date) > 1 || ago(b.date) > 45) continue;
+      add(`doble|${key}|${a.date}`, `¿Cobro doble en ${esc(a.shop)}?`, `${fdate(a.date)} y ${fdate(b.date)}, el mismo importe dos veces. Si solo compraste una vez, reclámalo al comercio o al banco.`, -a.amt);
+      i++;
+    }
+  }
+  // Cobros nuevos: cada banco necesita 90 días de historial, para no marcar como nuevo todo lo de un extracto recién cargado.
+  const firstBank = {}, firstShop = {}, firstCharge = {};
+  for (const t of AN.list) { firstBank[t.bank] = firstBank[t.bank] || t.date; if (t.amt < 0) { firstShop[t.shop] = firstShop[t.shop] || t.date; const k = t.shop + '|' + t.amt.toFixed(2); firstCharge[k] = firstCharge[k] || t.date; } }
+  for (const t of spend) {
+    if (ago(t.date) > 45 || gap(firstBank[t.bank], t.date) < 90) continue;
+    const key = t.shop + '|' + t.amt.toFixed(2);
+    if (Object.keys(seen).concat(out.map(o => o.k)).some(k => k.startsWith(`doble|${key}|`))) continue; // ya avisado como cobro doble
+    if (t.cat === 'Suscripciones' && firstCharge[key] === t.date) {
+      const before = AN.list.filter(o => o.amt < 0 && o.shop === t.shop && o.date < t.date && gap(o.date, t.date) <= 62);
+      if (!before.length) add(`nueva|${key}`, `Suscripción nueva: ${esc(t.shop)}`, `Primer cobro de este importe el ${fdate(t.date)}. Si era una prueba gratis, ya han empezado a cobrarte.`, -t.amt);
+      else if (before.some(o => gap(o.date, t.date) < 20 || AN.list.some(n => n.shop === t.shop && n.amt === o.amt && n.date >= t.date))) add(`importe|${key}`, `Importe nuevo en ${esc(t.shop)}`, `El ${fdate(t.date)} te cobró una cantidad que no habías pagado antes, además de las de siempre.`, -t.amt);
+      // Si el importe antiguo ya no vuelve, es un cambio de precio: de eso avisa «Te han subido un precio».
+    } else if (t.cat === 'Otros' && t.amt <= -20 && firstShop[t.shop] === t.date) add(`nuevo|${key}`, `¿Reconoces ${esc(t.shop)}?`, `Primer cobro de este sitio, el ${fdate(t.date)}, y no sé en qué categoría ponerlo.`, -t.amt);
+  }
+  // Cobros mensuales de sitios que no están entre las suscripciones conocidas: basta con que los últimos 3 o más vayan seguidos.
+  for (const [key, x] of Object.entries(groups)) {
+    if (x.length < 3 || ['Suscripciones', 'Gimnasio', 'Seguros'].includes(x[0].cat) || ago(x[x.length - 1].date) > 40) continue;
+    let n = 1;
+    for (let i = x.length - 1; i > 0; i--) { const g = gap(x[i - 1].date, x[i].date); if (g < 25 || g > 36) break; n++; }
+    if (n >= 3) add(`mensual|${key}`, `Parece un cobro mensual: ${esc(x[0].shop)}`, `${n} cobros seguidos del mismo importe, unos ${eur0(-x[0].amt * 12)} al año. ¿Te sigue compensando?`, -x[0].amt);
+  }
+  return out;
+}
+function watchHTML() {
+  const a = watchAlerts();
+  const info = why('Repaso tus movimientos y busco cobros dobles, comercios nuevos que no reconozco y cobros que se repiten cada mes. Solo veo lo que hay en tus extractos: no sé si usas un servicio, y un cargo solo aparece cuando ya te lo han cobrado. No miro súper, cafés, restaurantes, copas ni transporte, porque ahí repetir importe es normal.');
+  if (!a.length) return `<div class="card"><h2>Vigilante de cargos</h2><div class="small muted">Nada raro en los 45 días anteriores a tu último extracto.</div>${info}</div>`;
+  return `<div class="card"><h2>Vigilante de cargos: ${a.length} ${a.length === 1 ? 'cosa que mirar' : 'cosas que mirar'}</h2>${info}
+    ${a.map(x => `<div class="row"><span class="l"><b>${x.t}</b><br><span class="small muted">${x.d}</span></span><span style="text-align:right;flex:none"><span class="num">${eur(x.amt)}</span><br><button data-watchok="${esc(x.k)}" style="margin-top:6px">Todo bien</button></span></div>`).join('')}
+  </div>`;
+}
+
 function bindRumboExtra() {
   const $ = id => document.getElementById(id);
+  document.querySelectorAll('[data-watchok]').forEach(el => el.onclick = () => { set('settings', 'watchOk', Object.assign({}, S.settings.watchOk, { [el.dataset.watchok]: 1 })); save(); render(); });
   if ($('afin')) $('afin').oninput = e => { affAmt = e.target.value; $('afout').innerHTML = affordText(affA); };
   document.querySelectorAll('[data-cgm]').forEach(el => el.onclick = () => { cgOff += +el.dataset.cgm; render(); });
   bindHuchas();
