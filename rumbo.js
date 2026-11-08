@@ -789,7 +789,7 @@ function render() {
   }
   const needsData = !has && ['hoy', 'prev', 'mes', 'hormiga', 'fijos', 'movs', 'cargos', 'semana', 'asesor', 'deseo'].includes(tab);
   paintChrome(); paintSync();
-  app.innerHTML = tab === 'bienvenida' ? vWelcome() : needsData ? vNoData() : ({ hoy: vHoy2, prev: vPrev, deudas: vDeudas, movs: vMovs2, mas: vRMas, semana: vSemana, como: vComo, asesor: vAsesor, deseo: vDeseo, mes: vMes, hormiga: vHormiga, fijos: vFijos, guia: vGuia, ajustes: vAjustes, huchas: vHuchas, cargos: vCargos })[tab]();
+  app.innerHTML = tab === 'bienvenida' ? vWelcome() : needsData ? vNoData() : ({ hoy: vHoy3, prev: vPrev, deudas: vDeudas, movs: vMovs2, mas: vRMas, semana: vSemana, como: vComo, asesor: vAsesor, deseo: vDeseo, mes: vMes, hormiga: vHormiga, fijos: vFijos, guia: vGuia, ajustes: vAjustes, huchas: vHuchas, cargos: vCargos })[tab]();
   bind();
 }
 const goTab = t => { tab = t; render(); scrollTo(0, 0); };

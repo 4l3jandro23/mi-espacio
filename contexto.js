@@ -74,8 +74,31 @@ function fijoSinCobrar() {
 }
 
 // ---------- tus otras apps ----------
+// En el iPhone cada app instalada guarda lo suyo: Ejercicio se lee de la copia que ella misma deja en tus gists,
+// con el token de la sincronización de Rumbo. Solo lectura, y como mucho cada 6 horas.
+const EJ_CACHE = 'rumbo.ejercicio', EJ_FILE = 'plan-ejercicio-sync.json';
+let ejBusy = false;
+async function ejTraer(force) {
+  const tok = typeof syncCfg === 'function' && syncCfg().token, c = cxLeer(EJ_CACHE, {}) || {};
+  if (ejBusy || !tok || !navigator.onLine || (!force && c.at && Date.now() - c.at < 6 * 3600e3)) return false;
+  ejBusy = true;
+  try {
+    const gh = async p => { const r = await fetch('https://api.github.com' + p, { cache: 'no-store', headers: { Accept: 'application/vnd.github+json', Authorization: 'Bearer ' + tok } }); if (!r.ok) throw new Error('github ' + r.status); return r.json(); };
+    let id = c.id || cxLeer('planEjercicioGistId', null);
+    if (typeof id !== 'string' || !id) { const g = (await gh('/gists?per_page=100')).find(x => x.files && x.files[EJ_FILE]); id = g && g.id; }
+    if (!id) { localStorage.setItem(EJ_CACHE, JSON.stringify({ at: Date.now() })); return false; }
+    const g = await gh('/gists/' + id), f = g.files && g.files[EJ_FILE]; if (!f) throw new Error('sin archivo');
+    const doc = JSON.parse(f.truncated ? await (await fetch(f.raw_url, { cache: 'no-store' })).text() : f.content);
+    const raw = doc.datos && doc.datos.planEjercicioEntrenos, ent = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    localStorage.setItem(EJ_CACHE, JSON.stringify({ at: Date.now(), id, entrenos: ent || {} }));
+    return true;
+  } catch (e) { try { localStorage.setItem(EJ_CACHE, JSON.stringify(Object.assign({}, c, { at: Date.now() - 5.5 * 3600e3, id: undefined }))); } catch (_) {} return false; }
+  finally { ejBusy = false; }
+}
 function gymMes() {
-  const ent = cxLeer('planEjercicioEntrenos', null) || (cxLeer('miespacio.apps', {}).ej && cxLeer('miespacio.apps', {}).ej.datos && (() => { try { return JSON.parse(cxLeer('miespacio.apps', {}).ej.datos.planEjercicioEntrenos); } catch (e) { return null; } })());
+  const loc = cxLeer('planEjercicioEntrenos', null), nube = (cxLeer(EJ_CACHE, {}) || {}).entrenos, apx = cxLeer('miespacio.apps', {}), apxD = apx && apx.ej && apx.ej.datos && apx.ej.datos.planEjercicioEntrenos;
+  let otra = null; if (!nube && apxD) { try { otra = JSON.parse(apxD); } catch (e) {} }
+  const ent = loc || nube || otra ? Object.assign({}, otra, nube, loc) : null;
   if (!ent || typeof ent !== 'object') return null;
   const from = addD(todayISO(), -30), n = Object.entries(ent).filter(([d, e]) => d >= from && e && (e.min || e.andar || e.cinta || (e.ej || []).length)).length;
   return { n };
@@ -111,6 +134,7 @@ function contextoCard() {
 
 function bindContexto() {
   const on = (sel, fn) => document.querySelectorAll(sel).forEach(el => el.onclick = e => { e.preventDefault(); fn(el); });
+  if (!bindContexto._ej) { bindContexto._ej = true; ejTraer().then(ok => { if (ok && typeof softRender === 'function') softRender(); }); }
   on('[data-sobre]', () => { set('settings', 'sobre', !S.settings.sobre); save(); render(); });
   on('[data-fijono]', () => { const f = fijoSinCobrar(); if (!f) return; const key = fixedKey(f.r), old = S.fixedEnds[key] || null; set('fixedEnds', key, addD(f.d, -1)); save(); render(); toast(`${f.r.shop}: fuera de tus fijos`, { actions: [{ n: 'Deshacer', fn: () => { set('fixedEnds', key, old); save(); render(); } }] }); });
   on('[data-fijosi]', () => { const f = fijoSinCobrar(); if (!f) return; set('settings', 'fijoOk', Object.assign({}, S.settings.fijoOk, { [fixedKey(f.r) + '|' + f.mes]: 1 })); save(); render(); });

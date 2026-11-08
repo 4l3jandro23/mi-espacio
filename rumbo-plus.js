@@ -256,7 +256,7 @@ function vMovs2() {
   return `<div class="mv-top"><div class="buscar-r">${ico('search')}<input id="q" type="search" placeholder="Buscar: glovo, farmacia, bizum…" value="${esc(search)}" autocomplete="off"></div>
     <div class="mv-chips">${MV_KINDS.map(([k, n]) => `<button data-mvk="${k}" class="${mvKind === k ? 'on' : ''}">${n}</button>`).join('')}${filterCat ? `<button class="on" data-mvcat>${esc(filterCat === '__h' ? 'Pequeñas' : filterCat)} ${ico('x')}</button>` : ''}</div>
     <p class="small muted mv-sum">${list.length} movimientos${out ? ` · salen ${eur0(out)}` : ''}${inn ? ` · entran ${eur0(inn)}` : ''}${list.length > 250 ? ' · los 250 últimos' : ''}</p></div>
-    ${byDay.map(g => { const tot = g.l.reduce((a, t) => a + (t.cat === 'Entre mis cuentas' ? 0 : t.amt), 0); return `<div class="mv-day"><div class="mv-dh"><span>${dayName(g.d)}</span><span class="num">${eur(tot)}</span></div><div class="ms-g">${g.l.map(t => `<button class="mv" data-mv="${esc(t.id)}"><span class="mv-ic ${t.amt > 0 ? 'in' : ''}">${(Fin.CATS[t.cat] || Fin.CATS.Otros).icon}</span><span class="mv-l"><b>${esc(t.shop)}</b><small>${esc(t.cat)}${isManual(t) ? ' · apuntado a mano' : ' · ' + esc(t.bank)}${t.hormiga ? ' · pequeña' : ''}</small></span><span class="num ${t.amt > 0 ? 'pos' : ''}">${t.amt > 0 ? '+' : ''}${eur(t.amt)}</span></button>`).join('')}</div></div>`; }).join('') || '<p class="r-intro">No hay movimientos con ese filtro.</p>'}`;
+    ${byDay.map(g => { const tot = g.l.reduce((a, t) => a + (t.cat === 'Entre mis cuentas' ? 0 : t.amt), 0); return `<div class="mv-day"><div class="mv-dh"><span>${dayName(g.d)}</span><span class="num">${eur(tot)}</span></div><div class="ms-g">${g.l.map(t => `<button class="mv" data-mv="${esc(t.id)}"><span class="mv-ic ${catClass(t)}">${(Fin.CATS[t.cat] || Fin.CATS.Otros).icon}</span><span class="mv-l"><b>${esc(t.shop)}</b><small>${esc(t.cat)}${isManual(t) ? ' · apuntado a mano' : ' · ' + esc(t.bank)}${t.hormiga ? ' · pequeña' : ''}</small></span><span class="num ${t.amt > 0 ? 'pos' : ''}">${t.amt > 0 ? '+' : ''}${eur(t.amt)}</span></button>`).join('')}</div></div>`; }).join('') || '<p class="r-intro">No hay movimientos con ese filtro.</p>'}`;
 }
 function openMov(id) {
   const t = AN.list.find(x => x.id === id); if (!t) return;
@@ -268,7 +268,7 @@ function openMov(id) {
   let solo = !!S.overrides['tx:' + id] || n === 1 || /^bizum/i.test(t.shop);
   const box = rSheet('rmov', 'Movimiento', '');
   const paint = () => {
-    box.querySelector('.r-sheet-in').innerHTML = `<div class="mv-head"><span class="mv-ic lg ${t.amt > 0 ? 'in' : ''}">${(Fin.CATS[t.cat] || Fin.CATS.Otros).icon}</span><div><h2>${esc(t.shop)}</h2><p class="num ${t.amt > 0 ? 'pos' : ''}">${t.amt > 0 ? '+' : ''}${eur(t.amt)}</p></div></div>
+    box.querySelector('.r-sheet-in').innerHTML = `<div class="mv-head"><span class="mv-ic lg ${catClass(t)}">${(Fin.CATS[t.cat] || Fin.CATS.Otros).icon}</span><div><h2>${esc(t.shop)}</h2><p class="num ${t.amt > 0 ? 'pos' : ''}">${t.amt > 0 ? '+' : ''}${eur(t.amt)}</p></div></div>
     <div class="mv-det"><span>Día</span><b>${fdateL(t.date)}</b><span>Banco</span><b>${esc(t.bank)}</b><span>Concepto</span><b>${esc(t.desc)}</b>${t.kind ? `<span>Tipo</span><b>${esc(t.kind)}</b>` : ''}${t.obs ? `<span>Nota</span><b>${esc(t.obs)}</b>` : ''}</div>
     ${adviceHTML(t)}
     ${debt ? `<div class="h-msg">${ico('handshake')}<div><b>${debt.dir === 'meDeben' ? `${esc(debt.who)} te lo devuelve` : `Se lo devuelves a ${esc(debt.who)}`}</b><p>No cuenta como gasto ni como ingreso. ${debtLeft(debt) > 0 ? `Quedan ${eur(debtLeft(debt))}${debt.due ? ', para el ' + fdate(debt.due) : ''}.` : 'Ya está saldado.'}</p><button class="lnkb" data-mvdebt>Ver en Deudas ${ico('chevron-right')}</button></div></div>`
@@ -331,5 +331,5 @@ function bindPlus() {
   on('[data-bigtx]', el => { const t = AN.list.find(x => x.id === el.dataset.bigtx); if (t) openLend(t); });
   on('[data-bigno]', el => { set('settings', 'bigSeen', Object.assign({}, S.settings.bigSeen, { [el.dataset.bigno]: 1 })); save(); render(); });
   on('[data-tourok]', () => { set('settings', 'tourOk', true); save(); render(); });
-  bindAsesor(); bindDeseos(); bindContexto();
+  bindAsesor(); bindDeseos(); bindContexto(); bindPortada();
 }
