@@ -1,0 +1,64 @@
+/* ==========================================================================
+   DISEÑO DE FAMILIA (noviembre 2026) — Mi Espacio y Rumbo
+   --------------------------------------------------------------------------
+   Va la última y manda. La misma casa que Alimentación, Ejercicio, Estilo y
+   Cimientos: página blanca, paneles en un tono suave, títulos grandes en
+   Instrument Serif y todo lo demás en Instrument Sans. El color solo marca
+   datos; el botón principal es casi negro. En oscuro se quedan los tonos
+   neutros que ya tenía cada app.
+   ========================================================================== */
+@font-face{font-family:'Instrument Sans';src:url(fonts/instrument-sans.woff2) format('woff2');font-weight:400 700;font-display:swap}
+@font-face{font-family:'Instrument Serif';src:url(fonts/instrument-serif.woff2) format('woff2');font-weight:400;font-display:swap}
+
+:root{
+  --bg:#ffffff; --card:#f2f4f7; --ink:#1f201d; --muted:#636361; --line:#e3e6eb; --bar:#dfe3e9; --control:#c3c8d0;
+  --accent:#1b6e66; --accent-soft:#dcefed; --warm:#92400e; --warm-soft:#fdf1dc; --blue:#2456d6; --blue-soft:#e4eafb;
+  --shadow:none; --r-card:22px;
+  --display:'Banderas','Instrument Sans',system-ui,sans-serif; --body:'Banderas','Instrument Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --serif:'Instrument Serif','New York',ui-serif,Georgia,serif;
+}
+body.rumbo{
+  --bg:#ffffff; --card:#f1f4f2; --ink:#1f201d; --muted:#636361; --line:#e2e7e4; --bar:#dfe5e1; --control:#c3cbc6;
+  --accent:#0f5c8a; --accent-soft:#dcebf5; --r-card:22px;
+  font-family:'Banderas','Instrument Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+html, body{ font-variant-numeric:tabular-nums; -webkit-font-smoothing:antialiased; }
+h1, h2, .big, .kpi b, .lockbox h2,
+body.rumbo h1, body.rumbo h2, body.rumbo .r-sheet-h, body.rumbo .h-msg b, body.rumbo .h-big b{
+  font-family:'Banderas','Instrument Sans',system-ui,sans-serif; letter-spacing:-.015em;
+}
+/* Los títulos de pantalla y de hoja, en serif */
+h1, body.rumbo h1, body.rumbo .r-sheet-h, .lockbox h2, .sheet h2, .modal h2{
+  font-family:var(--serif); font-weight:400; letter-spacing:-.012em; line-height:1.05;
+}
+h1, body.rumbo h1{ font-size:34px; }
+body.rumbo .r-sheet-h, .lockbox h2, .sheet h2, .modal h2{ font-size:30px; }
+.card, body.rumbo .card{ border-radius:var(--r-card); border:0; box-shadow:none; }
+button{ border-radius:999px; }
+button.primary{ background:var(--ink); border-color:var(--ink); color:var(--bg); }
+input, textarea, select{ font-family:inherit; }
+:focus-visible{ outline:2px solid var(--ink); outline-offset:2px; }
+*{ text-transform:none !important; }
+
+/* Oscuro: los mismos neutros que Alimentación y Ejercicio */
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]), :root:not([data-theme="light"]) body.rumbo{
+  --bg:#0e0e0d; --card:#1b1b19; --ink:#f3f2ee; --muted:#a9a8a2; --line:#2a2a27; --bar:#2f2f2c; --control:#55554f;
+  --accent:#6fd0c4; --accent-soft:#16302d; --blue:#8fb0ff; --blue-soft:#18233f;
+}}
+:root[data-theme="dark"], :root[data-theme="dark"] body.rumbo{
+  --bg:#0e0e0d; --card:#1b1b19; --ink:#f3f2ee; --muted:#a9a8a2; --line:#2a2a27; --bar:#2f2f2c; --control:#55554f;
+  --accent:#6fd0c4; --accent-soft:#16302d; --blue:#8fb0ff; --blue-soft:#18233f;
+}
+:root:not([data-theme="light"]) body.rumbo{ --accent:#8cc7f0; --accent-soft:#14293a; }
+
+/* El saludo del cielo, en serif como en las demás */
+.sky-h{ font-family:var(--serif) !important; font-weight:400 !important; font-size:38px !important; line-height:1.04; letter-spacing:-.012em !important; }
+
+/* Barra de abajo: plana, con la pastilla gris detrás del icono activo */
+.hubnav, nav#nav{ left:0 !important; right:0 !important; bottom:0 !important; max-width:none !important; margin:0 !important;
+  border:0 !important; border-top:1px solid var(--line) !important; border-radius:0 !important; box-shadow:none !important;
+  background:var(--bg) !important; padding:6px 8px calc(6px + env(safe-area-inset-bottom)) !important; }
+.hubnav button, nav#nav button{ background:none !important; color:var(--muted) !important; font-weight:500 !important; }
+.hubnav button.on, nav#nav button.on{ color:var(--ink) !important; font-weight:600 !important; }
+.hubnav button b, nav#nav button b{ display:grid; place-items:center; width:56px; height:30px; border-radius:15px; margin:0 auto 2px; }
+.hubnav button.on b, nav#nav button.on b{ background:var(--bar); }
