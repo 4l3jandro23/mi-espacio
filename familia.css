@@ -62,3 +62,39 @@ input, textarea, select{ font-family:inherit; }
 .hubnav button.on, nav#nav button.on{ color:var(--ink) !important; font-weight:600 !important; }
 .hubnav button b, nav#nav button b{ display:grid; place-items:center; width:56px; height:30px; border-radius:15px; margin:0 auto 2px; }
 .hubnav button.on b, nav#nav button.on b{ background:var(--bar); }
+
+/* ===== Estilo cálido (noviembre 2026) — manda sobre lo anterior =====
+   Crema cálida, tarjetas blancas que flotan con sombra suave, títulos en
+   Fraunces y barra flotante. Mi Espacio en morado; Rumbo en verde azulado. */
+@font-face{font-family:'Fraunces';src:url(fonts/fraunces-600.woff2) format('woff2');font-weight:600;font-display:swap}
+:root, :root body.rumbo{
+  --bg:#fbf6f0; --card:#ffffff; --ink:#2a2018; --muted:#7a6b5e; --line:#f0e5d9; --bar:#f3e8dc; --control:#e0cfbd;
+  --serif:'Fraunces','New York',ui-serif,Georgia,serif;
+  --sh-card:0 1px 2px rgba(110,70,30,.06), 0 10px 28px rgba(110,70,30,.09); --sh-float:0 12px 40px rgba(110,70,30,.18);
+  --r-card:24px;
+}
+:root{ --accent:#6d4ad6; --accent-soft:#ece6ff; }
+:root body.rumbo{ --accent:#1b6e66; --accent-soft:#d9f1ee; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]), :root:not([data-theme="light"]) body.rumbo{
+  --bg:#16110d; --card:#221a14; --ink:#f8eee4; --muted:#c4b2a2; --line:#30251c; --bar:#33271e; --control:#5a4636;
+  --sh-card:0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35); --sh-float:0 12px 40px rgba(0,0,0,.6);
+  --accent:#b4a0ff; --accent-soft:#2c2347;
+}}
+:root[data-theme="dark"], :root[data-theme="dark"] body.rumbo{
+  --bg:#16110d; --card:#221a14; --ink:#f8eee4; --muted:#c4b2a2; --line:#30251c; --bar:#33271e; --control:#5a4636;
+  --sh-card:0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35); --sh-float:0 12px 40px rgba(0,0,0,.6);
+  --accent:#b4a0ff; --accent-soft:#2c2347;
+}
+:root:not([data-theme="light"]) body.rumbo{ }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) body.rumbo{ --accent:#6fd0c4; --accent-soft:#16302d; } }
+:root[data-theme="dark"] body.rumbo{ --accent:#6fd0c4; --accent-soft:#16302d; }
+html, body{ background:var(--bg); }
+.sky-h, h1, body.rumbo h1, body.rumbo .r-sheet-h, .lockbox h2, .sheet h2, .modal h2{ font-family:var(--serif) !important; font-weight:600 !important; letter-spacing:-.025em !important; }
+.sky{ box-shadow:var(--sh-card); }
+.card, body.rumbo .card, body.rumbo .ms-g, .work-setup{ background:var(--card) !important; box-shadow:var(--sh-card) !important; border:0 !important; }
+button.primary{ background:var(--accent); border-color:var(--accent); color:#fff; box-shadow:0 6px 18px rgba(109,74,214,.28); }
+body.rumbo button.primary{ box-shadow:0 6px 18px rgba(27,110,102,.28); }
+.hubnav, nav#nav{ left:12px !important; right:12px !important; bottom:calc(10px + env(safe-area-inset-bottom)) !important; max-width:520px !important; margin:0 auto !important;
+  border:0 !important; border-radius:28px !important; background:var(--card) !important; box-shadow:var(--sh-float) !important; padding:6px !important; transform:none !important; width:auto !important; }
+.hubnav button.on, nav#nav button.on{ color:var(--accent) !important; }
+.hubnav button.on b, nav#nav button.on b{ background:var(--accent-soft); }
